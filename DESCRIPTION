@@ -1,0 +1,9 @@
+Package: qrbp
+Type: Package
+Title: quasi-random background point generation for Poisson point process modelling
+Version: 0.1.0
+Author: Skipton Woolley
+Maintainer: Skipton Woolley <skip.woolley@csiro.au>
+Description: qrbp is a package to create quasi-random background points for use in Poisson point process modelling in R.
+License: GPL-3
+LazyData: TRUE
