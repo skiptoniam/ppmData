@@ -43,6 +43,21 @@ qrbp <- function(n,
 
      coords <- coords_match_dim(coords,dimension)
 
+     #need to create possible sample locations from scratch, grid or raster'
+     #Scott currently uses X <- as.matrix( expand.grid( 1:sqrt( N), 1:sqrt(N)) / sqrt(N) - 1/(2*sqrt(N)))
+     #cell number and
+
+     #if no study area is provided create a polygon around coordinates.
+     if(is.null(study.area)) study.area <- default_study_area(coords)
+
+
+     if(!is.null(inclusion.probs) & !is.null(coords)){
+       sprintf('coords included in qrbp and so are inclusion.probs calling on
+alterInclProbs to adjust sampling probabilities with legacy site information')
+       # p2 <- alterInclProbs( X[legacySites,], X, p)
+       }
+
+
 }
 
 # convert coordinates (in whatever format they arrive in) into a dataframe that matches the dimensions
@@ -82,5 +97,20 @@ coords_match_dim <- function (coords,dimension){
     colnames(df) <- c("x","y")
   }
   return (df)
+}
+
+## new function: create_grid
+## This function will create a grid from scratch, polygon or raster.
+default_study_area <- function (coords) {
+  # get limits
+  xlim <- range(coords$x)
+  ylim <- range(coords$y)
+
+    # make a SpatialPolygons object
+  p <- Polygon(cbind(x = xlim[c(1, 1, 2, 2)],
+                     y = ylim[c(1, 2, 2, 1)]))
+  ps <- Polygons(list(p), 1)
+  sp <- SpatialPolygons(list(ps))
+  return (sp)
 }
 
