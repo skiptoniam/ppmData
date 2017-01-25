@@ -7,8 +7,9 @@
 \description{
 qrbp is a package to create quasi-random background points for use in
   Poisson point process modelling in R. The main function is \code{qrbp}, which takes some
-  coordinates, an area of interest and covariates and produces a \code{qrbp}
-  dataset. It is essentially a wrapper around the existing \code{\link[MBHdesign]{quasiSamp}} package which alreay implements
-  quasi-random sampling within a basic domain.
+  coordinates, an area of interest and covariates (and other parameters) and produces a \code{qrbp}
+  dataset. It is essentially a wrapper around the existing \code{\link[MBHdesign]{quasiSamp}}
+  function in the MBHdesign package which alreay implements quasi-random sampling within a
+  basic domain.
 }
 

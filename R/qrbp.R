@@ -19,6 +19,10 @@ NULL
 #' @param n integer The number of background point to produce.
 #' @param dimension The number of dimensions to sample the study extent.
 #' \code{dimension=2} is the default and samples an area from an areal perspective.
+#' @param coords a matrix, dataframe or SpatialPoints* object giving the
+#'   coordinates of the points to use in sampling (of size Nxdimension).
+#'   Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
+#'   If NULL (default) N=10000 samples are placed on a regular grid.
 #' @param study.area an optional extent, SpatialPolygons* or Raster* object giving the
 #'   area over which to generate background points. If ignored, a rectangle
 #'   defining the extent of \code{coords} will be used instead.
@@ -26,7 +30,8 @@ NULL
 #' N potential sampling sites. This is the probability that each site will be included
 #' in the final sample. Locations are ordered the same as the potential.sites argument.
 #' If NULL (default) equal inclusion probabilities are specified.
-#'
+#' @param covariates an optional Raster* object containing covariates for
+#'   modelling the point process (best use a Raster* stack or Raster* brick)
 
 
 qrbp <- function(n,
@@ -70,8 +75,12 @@ coords_match_dim <- function (coords,dimension){
   }
 
   # set column names
-  if (ncol(coords)>2) colnames(df) <- c("x","y",paste0("var",seq_len(ncol(coords)-2)))
-  else colnames(df) <- c('x', 'y')
+  if (ncol(coords)>2) {
+    if(!is.null(colnames(coords))) colnames(df) <- c("x","y",colnames(coords)[-1:-2])
+    colnames(df) <- c("x","y",paste0("var",seq_len(ncol(coords)-2)))
+  } else {
+    colnames(df) <- c("x","y")
+  }
   return (df)
 }
 

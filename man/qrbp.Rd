@@ -13,6 +13,11 @@ qrbp(n, dimension = 2, coords = NULL, study.area = NULL,
 \item{dimension}{The number of dimensions to sample the study extent.
 \code{dimension=2} is the default and samples an area from an areal perspective.}
 
+\item{coords}{a matrix, dataframe or SpatialPoints* object giving the
+coordinates of the points to use in sampling (of size Nxdimension).
+Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
+If NULL (default) N=10000 samples are placed on a regular grid.}
+
 \item{study.area}{an optional extent, SpatialPolygons* or Raster* object giving the
 area over which to generate background points. If ignored, a rectangle
 defining the extent of \code{coords} will be used instead.}
@@ -21,5 +26,8 @@ defining the extent of \code{coords} will be used instead.}
 N potential sampling sites. This is the probability that each site will be included
 in the final sample. Locations are ordered the same as the potential.sites argument.
 If NULL (default) equal inclusion probabilities are specified.}
+
+\item{covariates}{an optional Raster* object containing covariates for
+modelling the point process (best use a Raster* stack or Raster* brick)}
 }
 
