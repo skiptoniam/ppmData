@@ -4,8 +4,9 @@
 \alias{qrbp}
 \title{create quasi-random background points from study area or point data}
 \usage{
-qrbp(n, dimension = 2, coords = NULL, study.area = NULL,
-  inclusion.probs = NULL, covariates = NULL)
+qrbp(n, dimension = 2, known.sites = NULL, include.known.sites = FALSE,
+  study.area = NULL, inclusion.probs = NULL, covariates = NULL,
+  res = 0.1, sigma = NULL)
 }
 \arguments{
 \item{n}{integer The number of background point to produce.}
@@ -13,14 +14,17 @@ qrbp(n, dimension = 2, coords = NULL, study.area = NULL,
 \item{dimension}{The number of dimensions to sample the study extent.
 \code{dimension=2} is the default and samples an area from an areal perspective.}
 
-\item{coords}{a matrix, dataframe or SpatialPoints* object giving the
+\item{known.sites}{a matrix, dataframe or SpatialPoints* object giving the
 coordinates of the points to use in sampling (of size Nxdimension).
 Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
 If NULL (default) N=10000 samples are placed on a regular grid.}
 
+\item{include.known.sites}{logical If set to TRUE (default = FALSE), then will attempt
+to use known.sites as legacy.sites. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
+
 \item{study.area}{an optional extent, SpatialPolygons* or Raster* object giving the
 area over which to generate background points. If ignored, a rectangle
-defining the extent of \code{coords} will be used instead.}
+defining the extent of \code{known.sites} will be used instead.}
 
 \item{inclusion.probs}{a vector specifying the inclusion probability for each of the
 N potential sampling sites. This is the probability that each site will be included
@@ -29,5 +33,10 @@ If NULL (default) equal inclusion probabilities are specified.}
 
 \item{covariates}{an optional Raster* object containing covariates for
 modelling the point process (best use a Raster* stack or Raster* brick)}
+
+\item{res}{resolution to convert polygon to grid (default is .1).
+This call is only used if the study.area object is polygon.}
+
+\item{sigma}{Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
 }
 

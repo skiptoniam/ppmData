@@ -19,91 +19,120 @@ NULL
 #' @param n integer The number of background point to produce.
 #' @param dimension The number of dimensions to sample the study extent.
 #' \code{dimension=2} is the default and samples an area from an areal perspective.
-#' @param coords a matrix, dataframe or SpatialPoints* object giving the
+#' @param known.sites a matrix, dataframe or SpatialPoints* object giving the
 #'   coordinates of the points to use in sampling (of size Nxdimension).
 #'   Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
 #'   If NULL (default) N=10000 samples are placed on a regular grid.
+#' @param include.known.sites logical If set to TRUE (default = FALSE), then will attempt
+#'  to use known.sites as legacy.sites. See \code{\link[MBHdesign]{alterInclProbs}} for details.
 #' @param study.area an optional extent, SpatialPolygons* or Raster* object giving the
 #'   area over which to generate background points. If ignored, a rectangle
-#'   defining the extent of \code{coords} will be used instead.
+#'   defining the extent of \code{known.sites} will be used instead.
 #' @param inclusion.probs a vector specifying the inclusion probability for each of the
 #' N potential sampling sites. This is the probability that each site will be included
 #' in the final sample. Locations are ordered the same as the potential.sites argument.
 #' If NULL (default) equal inclusion probabilities are specified.
 #' @param covariates an optional Raster* object containing covariates for
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
+#' @param res resolution to convert polygon to grid (default is .1).
+#' This call is only used if the study.area object is polygon.
+#' @param sigma Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.
 
 
 qrbp <- function(n,
                  dimension = 2,
-                 coords = NULL,
+                 known.sites = NULL,
+                 include.known.sites=FALSE,
                  study.area = NULL,
                  inclusion.probs = NULL,
                  covariates = NULL,
-                 res=.1){
+                 res=.1,
+                 sigma=NULL){
 
-     coords <- coords_match_dim(coords,dimension)
+     known.sites <- coords_match_dim(known.sites,dimension)
 
      #if no study area is provided create a polygon around coordinates.
-     if(is.null(study.area)) study.area <- default_study_area(coords)
+     if(is.null(study.area)) study.area <- default_study_area(known.sites)
 
+     # create a gridded area based on a raster or polygon - resolution for polygon must be defined.
+     # while resolution for raster in based on crs projection.
      X <- studyarea_to_gridded_points(study.area, res = res)
 
-     if(!is.null(inclusion.probs) & !is.null(coords)){
-       sprintf('coords included in qrbp and so are inclusion.probs calling on
+     #extract potential sites from spatial data frame
+     potential.sites <- X@coords
+
+     #make a nameless matrix otherwise Scott's function flips out.
+     rownames(potential.sites) <- colnames(potential.sites) <- NULL
+
+     if(include.known.sites){
+       sprintf('known.sites included in qrbp to alter inclusion.probs. Calling on
 alterInclProbs to adjust sampling probabilities with legacy site information')
-       # p2 <- alterInclProbs( X[legacySites,], X, p)
+       legacy.sites <- find_known_sites(study.area = study.area, known.sites = known.sites)
+       if(is.null(inclusion.probs)){
+            p <- rep(1,nrow(potential.sites))
+            inclusion.probs <- length(legacy.sites) * p / sum( p)
+       }
+       inclusion.probs <- MBHdesign::alterInclProbs(legacy.sites=potential.sites[legacy.sites,],
+                                                    potential.sites = potential.sites,
+                                                    n=NULL,
+                                                    inclusion.probs = inclusion.probs,
+                                                    sigma=sigma)
        }
 
-     bg_points <- quasiSamp(n=n,dimension = dimension, study.area = NULL,
-                            potential.sites = X, inclusion.probs = inclusion.probs)
+     bg_points <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
+                            potential.sites = potential.sites, inclusion.probs = inclusion.probs)
+
+     return(bg_points)
 
 }
 
 # convert coordinates (in whatever format they arrive in) into a dataframe that matches the dimensions
 # used for sampling.
-coords_match_dim <- function (coords,dimension){
+coords_match_dim <- function (known.sites,dimension){
 
   # check object classes
-  expectClasses(coords,
+  expectClasses(known.sites,
                 c('matrix',
                   'data.frame',
                   'SpatialPoints',
                   'SpatialPointsDataFrame'),
-                name = 'coords')
+                name = 'known.sites')
 
-  if (is.matrix(coords) | is.data.frame(coords)) {
+  if (is.matrix(known.sites) | is.data.frame(known.sites)) {
 
     # for matrices/dataframes, make sure there are only two columns
-    if (ncol(coords) != dimension ) {
-      stop (sprintf('coords should match the number of dimensions used in quasi-random sampling.
-                    The object passed had %i columns, while the sampling dimensions are %i',NCOL(coords),dimension))
+    if (ncol(known.sites) != dimension ) {
+      stop (sprintf('known.sites should match the number of dimensions used in quasi-random sampling.
+                    The object passed had %i columns, while the sampling dimensions are %i',NCOL(known.sites),dimension))
     }
 
     # otherwise, coerce into a data.frame and rename the columns
-    df <- data.frame(coords)
+    df <- data.frame(known.sites)
 
   } else {
     # otherwise, for SpatialPoints* objects, just grab the coordinates
-    df <- data.frame(coords@coords)
+    df <- data.frame(known.sites@coords)
   }
 
   # set column names
-  if (ncol(coords)>2) {
-    if(!is.null(colnames(coords))) colnames(df) <- c("x","y",colnames(coords)[-1:-2])
-    colnames(df) <- c("x","y",paste0("var",seq_len(ncol(coords)-2)))
+  if (ncol(known.sites)>2) {
+    if(!is.null(colnames(known.sites))) colnames(df) <- c("x","y",colnames(known.sites)[-1:-2])
+    colnames(df) <- c("x","y",paste0("var",seq_len(ncol(known.sites)-2)))
   } else {
     colnames(df) <- c("x","y")
   }
   return (df)
 }
 
-## new function: create_grid
-## This function will create a grid from scratch, polygon or raster.
-default_study_area <- function (coords) {
+#create a default study area based on known.sites - produces a simple box.
+default_study_area <- function (known.sites) {
   # get limits
-  xlim <- range(coords$x)
-  ylim <- range(coords$y)
+  xlim <- range(known.sites$x)
+  ylim <- range(known.sites$y)
+
+  # add on 5%
+  xlim <- xlim + c(-1, 1) * diff(xlim) * 0.05
+  ylim <- ylim + c(-1, 1) * diff(ylim) * 0.05
 
     # make a SpatialPolygons object
   p <- Polygon(cbind(x = xlim[c(1, 1, 2, 2)],
@@ -114,7 +143,7 @@ default_study_area <- function (coords) {
 }
 
 #study.area needs to be a shapefile atm. I need to add an option for raster.
-studyarea_to_gridded_points <- function(study.area,res=1,dimension=2){
+studyarea_to_gridded_points <- function(study.area,res=1){
 
   if(inherits(study.area, c('SpatialPolygons', 'SpatialPolygonsDataFrame'))){
     #create a bounding box around polygons/shapefile
@@ -126,21 +155,62 @@ studyarea_to_gridded_points <- function(study.area,res=1,dimension=2){
                        cellsize = c(res, res),
                        cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/res) + 1)
 
-    bg_pts <- SpatialPoints(gt, proj4string = CRS(proj4string(study.area)))
-
-    #mask out points outside shapefile
+    # bg_pts <- SpatialPoints(gt,proj4string = CRS(proj4string(study.area)))
+    bg_pts <- SpatialPointsDataFrame(gt,data.frame(id=1:nrow(bg_pts@coords)),
+                                      proj4string = CRS(proj4string(study.area)))
+    #
+    #mask out points outside shapefile and keep an index of cell ids.
     vals <- over(bg_pts, study.area)
-    bg_pts_vals <- cbind(coordinates(bg_pts), vals)
-    x <- bg_pts_vals[!is.na(bg_pts_vals[,3]),]
-    # do I want a spatial points data frame?
-    # x2 <- SpatialPoints(x[,1:2], proj4string = CRS(proj4string(study.area)))
-    # x2
+    bg_pts_vals <- cbind(coordinates(bg_pts), vals, id=1:nrow(bg_pts@coords))
+    x <- bg_pts_vals[!is.na(bg_pts_vals[,3]),-3]
+    # do I want a spatial points data frame? yes,
+    x <- SpatialPointsDataFrame(x[,1:2],data.frame(id=x[,3]), proj4string = CRS(proj4string(study.area)))
+
   }
   if(inherits(study.area, c('RasterLayer','RasterStack','RasterBrick'))){
-    x <- rasterToPoints(study.area)#if you want a SpatialPointsDataFrame object spatial=TRUE
+    r <- raster(study.area)
+    r[] <- 1:ncell(r)
+    r <- mask(r,study.area)
+    x <- rasterToPoints(r,spatial = TRUE)#if you want a SpatialPointsDataFrame object spatial=TRUE
   }
-  x<-x[,1:dimension]
   rownames(x)<-colnames(x)<-NULL
   return(x)
 }
 
+find_known_sites <- function(study.area,known.sites){
+  if(inherits(study.area, c('SpatialPolygons', 'SpatialPolygonsDataFrame'))){
+    bb <- bbox(study.area)
+    #clean up the bounding box
+    bb <- res*round(bb/res)
+    #create a grid to generate points
+    gt <- GridTopology(cellcentre.offset = bb[,1],
+                       cellsize = c(res, res),
+                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/res) + 1)
+
+    # bg_pts <- SpatialPoints(gt,proj4string = CRS(proj4string(study.area)))
+    bg_pts <- SpatialPointsDataFrame(gt,data.frame(id=1:nrow(bg_pts@coords)),
+                                     proj4string = CRS(proj4string(study.area)))
+    #
+    #mask out points outside shapefile and keep an index of cell ids.
+    vals <- over(bg_pts, study.area)
+    bg_pts_vals <- cbind(coordinates(bg_pts), vals, id=1:nrow(bg_pts@coords))
+    x <- bg_pts_vals[!is.na(bg_pts_vals[,3]),-3]
+    r <- rasterFromXYZ(as.data.frame(x))
+
+    #re-define index and get out cell numbers.
+    r[]<-1:ncell(r)
+    cn <- extract(r,known.sites)
+    cn_clean <- cn[!is.na(cn)]
+  }
+
+  if(inherits(study.area, c('RasterLayer','RasterStack','RasterBrick'))){
+
+  r <- study.area
+  r[!is.na(r[])] <- 1:length(r[!is.na(r[])])
+  cn <- cellFromXY(r,known.sites)
+  na_sites <- extract(r,known.sites)
+  cn_na <- cbind(cn,na_sites)
+  cn_clean <- cn_na[!is.na(cn_na[,2]),2]
+  }
+  return(cn_clean)
+}
