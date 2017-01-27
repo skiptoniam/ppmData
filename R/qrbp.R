@@ -39,17 +39,15 @@ qrbp <- function(n,
                  coords = NULL,
                  study.area = NULL,
                  inclusion.probs = NULL,
-                 covariates = NULL){
+                 covariates = NULL,
+                 res=.1){
 
      coords <- coords_match_dim(coords,dimension)
-
-     #need to create possible sample locations from scratch, grid or raster'
-     #Scott currently uses X <- as.matrix( expand.grid( 1:sqrt( N), 1:sqrt(N)) / sqrt(N) - 1/(2*sqrt(N)))
-     #cell number and
 
      #if no study area is provided create a polygon around coordinates.
      if(is.null(study.area)) study.area <- default_study_area(coords)
 
+     X <- studyarea_to_gridded_points(study.area, res = res)
 
      if(!is.null(inclusion.probs) & !is.null(coords)){
        sprintf('coords included in qrbp and so are inclusion.probs calling on
@@ -57,6 +55,8 @@ alterInclProbs to adjust sampling probabilities with legacy site information')
        # p2 <- alterInclProbs( X[legacySites,], X, p)
        }
 
+     bg_points <- quasiSamp(n=n,dimension = dimension, study.area = NULL,
+                            potential.sites = X, inclusion.probs = inclusion.probs)
 
 }
 
@@ -76,8 +76,7 @@ coords_match_dim <- function (coords,dimension){
 
     # for matrices/dataframes, make sure there are only two columns
     if (ncol(coords) != dimension ) {
-      stop (sprintf('coords should match the number of dimensions used in quasi-random sampling,
-                    giving the horizontal (x/longitude) then vertical (y/latitude) coordinates.
+      stop (sprintf('coords should match the number of dimensions used in quasi-random sampling.
                     The object passed had %i columns, while the sampling dimensions are %i',NCOL(coords),dimension))
     }
 
@@ -112,5 +111,36 @@ default_study_area <- function (coords) {
   ps <- Polygons(list(p), 1)
   sp <- SpatialPolygons(list(ps))
   return (sp)
+}
+
+#study.area needs to be a shapefile atm. I need to add an option for raster.
+studyarea_to_gridded_points <- function(study.area,res=1,dimension=2){
+
+  if(inherits(study.area, c('SpatialPolygons', 'SpatialPolygonsDataFrame'))){
+    #create a bounding box around polygons/shapefile
+    bb <- bbox(study.area)
+    #clean up the bounding box
+    bb <- res*round(bb/res)
+    #create a grid to generate points
+    gt <- GridTopology(cellcentre.offset = bb[,1],
+                       cellsize = c(res, res),
+                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/res) + 1)
+
+    bg_pts <- SpatialPoints(gt, proj4string = CRS(proj4string(study.area)))
+
+    #mask out points outside shapefile
+    vals <- over(bg_pts, study.area)
+    bg_pts_vals <- cbind(coordinates(bg_pts), vals)
+    x <- bg_pts_vals[!is.na(bg_pts_vals[,3]),]
+    # do I want a spatial points data frame?
+    # x2 <- SpatialPoints(x[,1:2], proj4string = CRS(proj4string(study.area)))
+    # x2
+  }
+  if(inherits(study.area, c('RasterLayer','RasterStack','RasterBrick'))){
+    x <- rasterToPoints(study.area)#if you want a SpatialPointsDataFrame object spatial=TRUE
+  }
+  x<-x[,1:dimension]
+  rownames(x)<-colnames(x)<-NULL
+  return(x)
 }
 
