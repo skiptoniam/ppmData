@@ -6,7 +6,7 @@
 \usage{
 qrbp(n, dimension = 2, known.sites = NULL, include.known.sites = FALSE,
   study.area = NULL, inclusion.probs = NULL, covariates = NULL,
-  res = 0.1, sigma = NULL)
+  reso = NULL, sigma = NULL)
 }
 \arguments{
 \item{n}{integer The number of background point to produce.}
@@ -34,8 +34,10 @@ If NULL (default) equal inclusion probabilities are specified.}
 \item{covariates}{an optional Raster* object containing covariates for
 modelling the point process (best use a Raster* stack or Raster* brick)}
 
-\item{res}{resolution to convert polygon to grid (default is .1).
-This call is only used if the study.area object is polygon.}
+\item{reso}{resolution to convert polygon to grid (default is .1).
+This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
+the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
+Default is NULL, and will setup resolution on 100X100 grid.}
 
 \item{sigma}{Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
 }

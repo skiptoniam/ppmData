@@ -22,7 +22,6 @@ NULL
 #' @param known.sites a matrix, dataframe or SpatialPoints* object giving the
 #'   coordinates of the points to use in sampling (of size Nxdimension).
 #'   Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
-#'   If NULL (default) N=10000 samples are placed on a regular grid.
 #' @param include.known.sites logical If set to TRUE (default = FALSE), then will attempt
 #'  to use known.sites as legacy.sites. See \code{\link[MBHdesign]{alterInclProbs}} for details.
 #' @param study.area an optional extent, SpatialPolygons* or Raster* object giving the
@@ -34,19 +33,21 @@ NULL
 #' If NULL (default) equal inclusion probabilities are specified.
 #' @param covariates an optional Raster* object containing covariates for
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
-#' @param res resolution to convert polygon to grid (default is .1).
-#' This call is only used if the study.area object is polygon.
+#' @param reso resolution to convert polygon to grid (default is .1).
+#' This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
+#' the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
+#' Default is NULL, and will setup resolution on 100X100 grid.
 #' @param sigma Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.
 
 
 qrbp <- function(n,
                  dimension = 2,
-                 known.sites = NULL,
+                 known.sites,
                  include.known.sites=FALSE,
                  study.area = NULL,
                  inclusion.probs = NULL,
                  covariates = NULL,
-                 res=.1,
+                 reso=NULL,
                  sigma=NULL){
 
      known.sites <- coords_match_dim(known.sites,dimension)
@@ -56,7 +57,8 @@ qrbp <- function(n,
 
      # create a gridded area based on a raster or polygon - resolution for polygon must be defined.
      # while resolution for raster in based on crs projection.
-     X <- studyarea_to_gridded_points(study.area, res = res)
+     if(is.null(reso))reso <- null_reso(study.area)
+     X <- studyarea_to_gridded_points(study.area, reso = reso)
 
      #extract potential sites from spatial data frame
      potential.sites <- X@coords
@@ -143,19 +145,19 @@ default_study_area <- function (known.sites) {
 }
 
 #study.area needs to be a shapefile atm. I need to add an option for raster.
-studyarea_to_gridded_points <- function(study.area,res=1){
+studyarea_to_gridded_points <- function(study.area,reso=reso){
 
   if(inherits(study.area, c('SpatialPolygons', 'SpatialPolygonsDataFrame'))){
     #create a bounding box around polygons/shapefile
     bb <- bbox(study.area)
     #clean up the bounding box
-    bb <- res*round(bb/res)
+    bb <- reso*round(bb/reso)
     #create a grid to generate points
     gt <- GridTopology(cellcentre.offset = bb[,1],
-                       cellsize = c(res, res),
-                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/res) + 1)
+                       cellsize = c(reso, reso),
+                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/reso) + 1)
 
-    # bg_pts <- SpatialPoints(gt,proj4string = CRS(proj4string(study.area)))
+    bg_pts <- SpatialPoints(gt,proj4string = CRS(proj4string(study.area)))
     bg_pts <- SpatialPointsDataFrame(gt,data.frame(id=1:nrow(bg_pts@coords)),
                                       proj4string = CRS(proj4string(study.area)))
     #
@@ -181,11 +183,11 @@ find_known_sites <- function(study.area,known.sites){
   if(inherits(study.area, c('SpatialPolygons', 'SpatialPolygonsDataFrame'))){
     bb <- bbox(study.area)
     #clean up the bounding box
-    bb <- res*round(bb/res)
+    bb <- reso*round(bb/reso)
     #create a grid to generate points
     gt <- GridTopology(cellcentre.offset = bb[,1],
-                       cellsize = c(res, res),
-                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/res) + 1)
+                       cellsize = c(reso, reso),
+                       cells.dim = (c(diff(bb[1,]), diff(bb[2,]))/reso) + 1)
 
     # bg_pts <- SpatialPoints(gt,proj4string = CRS(proj4string(study.area)))
     bg_pts <- SpatialPointsDataFrame(gt,data.frame(id=1:nrow(bg_pts@coords)),
@@ -213,4 +215,12 @@ find_known_sites <- function(study.area,known.sites){
   cn_clean <- cn_na[!is.na(cn_na[,2]),2]
   }
   return(cn_clean)
+}
+
+null_reso <- function (study.area) {
+  ext <- extent(study.area)
+  height <- abs(diff(ext[1:2]))
+  width <-  abs(diff(ext[3:4]))
+  reso <- round(abs(seq(min(ext[1]),max(ext[2]),length.out = 100)[1]-seq(min(ext[1]),max(ext[2]),length.out = 100)[2]))
+  return (reso)
 }
