@@ -4,7 +4,7 @@
 \alias{qrbp}
 \title{create quasi-random background points from study area or point data}
 \usage{
-qrbp(n, dimension = 2, known.sites = NULL, include.known.sites = FALSE,
+qrbp(n, dimension = 2, known.sites, include.known.sites = FALSE,
   study.area = NULL, inclusion.probs = NULL, covariates = NULL,
   reso = NULL, sigma = NULL)
 }
@@ -16,8 +16,7 @@ qrbp(n, dimension = 2, known.sites = NULL, include.known.sites = FALSE,
 
 \item{known.sites}{a matrix, dataframe or SpatialPoints* object giving the
 coordinates of the points to use in sampling (of size Nxdimension).
-Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
-If NULL (default) N=10000 samples are placed on a regular grid.}
+Note: SpatialPoints* will only be suitiable for \code{dimension=2}.}
 
 \item{include.known.sites}{logical If set to TRUE (default = FALSE), then will attempt
 to use known.sites as legacy.sites. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
