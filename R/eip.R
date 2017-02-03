@@ -8,6 +8,7 @@
 #' @param study.area an optional extent, SpatialPolygons* or Raster* object giving the
 #'   area over which to generate background points. If ignored, a rectangle
 #'   defining the extent of \code{known.sites} will be used instead.
+#' @param probs a vector specifying the inclusion probability for each of the N sampling sites
 #' @param params needs to be changed to actual parameters used to estimate the density layer.... more to follow.
 #' @description Estimating the probabilty of presence from a series of spatial points.
 #' The probability of *absence in an area of size A* according to the poisson distribution is
@@ -17,7 +18,18 @@
 #'                 = 1-exp(-\lambda(u)*A)}
 #' \eqn{\lambda(u)} = the intensity value at point \eqn{u}. This is estimated using \code{\link[spatstat]{density}}
 
-eip <- function(known.sites,study.area=NULL,params){
+eip <- function(n,known.sites,study.area=NULL,probs=NULL,params){
+
+  N <- nrow(known.sites)
+  if (is.null(probs) & is.null(study.area)) {
+    message("No probs and no study area supplied, assuming uniform")
+    known.sites <- coords_match_dim(known.sites,dimension)
+    study.area <- default_study_area(known.sites)
+    reso <- null_reso(study.area)
+    X <- studyarea_to_gridded_points(study.area, reso = reso)
+    N<-nrow(X@data)
+    probs <- n * rep(1/N, N)
+  }
 
 }
 
