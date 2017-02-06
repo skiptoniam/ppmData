@@ -222,5 +222,5 @@ null_reso <- function (study.area) {
   height <- abs(diff(ext[1:2]))
   width <-  abs(diff(ext[3:4]))
   reso <- round(abs(seq(min(ext[1]),max(ext[2]),length.out = 100)[1]-seq(min(ext[1]),max(ext[2]),length.out = 100)[2]))
-  return (reso)
+  return (reso/2)
 }

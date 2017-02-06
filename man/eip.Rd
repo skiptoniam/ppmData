@@ -5,7 +5,7 @@
 \title{eip (estimate inclusion probabilties) creates a probability surface based on
  the location of known survey sites}
 \usage{
-eip(known.sites, study.area = NULL, params)
+eip(known.sites, study.area = NULL, proj = NULL, params)
 }
 \arguments{
 \item{known.sites}{a matrix, dataframe or SpatialPoints* object giving the
@@ -16,7 +16,13 @@ Note: SpatialPoints* will only be suitiable for \code{dimension=2}.}
 area over which to generate background points. If ignored, a rectangle
 defining the extent of \code{known.sites} will be used instead.}
 
-\item{params}{needs to be changed to actual parameters used to estimate the density layer.... more to follow.}
+\item{probs}{a vector specifying the inclusion probability for each of the N sampling sites}
+
+\item{pfr}{(projection for raster) a equal area projection appropriate for the region. This will be
+used when setting up the ppp density layer.}
+
+\item{sigma}{A numeric value or a function to estimate sigma see \code{\link[spatstat]{density.ppp}}
+for details.}
 }
 \description{
 Estimating the probabilty of presence from a series of spatial points.
