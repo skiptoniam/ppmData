@@ -12,6 +12,7 @@
 #' used when setting up the ppp density layer.
 #' @param sigma A numeric value or a function to estimate sigma see \code{\link[spatstat]{density.ppp}}
 #' for details.
+#' @param plot.
 #' @description Estimating the probabilty of presence from a series of spatial points.
 #' The probability of *absence in an area of size A* according to the poisson distribution is
 #'  \deqn{pr(y=0) = exp(-\lambda(u)*A)}
@@ -20,10 +21,18 @@
 #'                 = 1-exp(-\lambda(u)*A)}
 #' \eqn{\lambda(u)} = the intensity value at point \eqn{u}. This is estimated using \code{\link[spatstat]{density}}
 
+#' @examples
+#' n <- 100
+#' ks <- as.data.frame( cbind( x1=runif( n, min=-10, max=10), x2=runif( n, min=-10, max=10)))
+#' sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
+#' sa[]<-rnorm(10000)
+#' inclusion.probs <- eip(known.sites = ks, study.area = sa,sigma = 1)
+
 eip <- function(known.sites,
                 study.area = NULL,
                 pfr = NULL,
-                sigma){
+                sigma = NULL,
+                plot.prbs=TRUE){
 
   if (is.null(study.area)) {
     message("No study area supplied generating bounding box")
@@ -52,6 +61,7 @@ eip <- function(known.sites,
     surveys.ppp <- as.ppp(coordinates(surveys),w)
 
     #create a density layer
+    if(is.null(sigma))sigma <- reso
     dpp <- density.ppp(surveys.ppp,sigma=sigma,w=w)
 
     #work out the area per unit - this could be an issue if non-equal area. I'm sure there is away to work this out.

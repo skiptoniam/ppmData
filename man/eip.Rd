@@ -5,7 +5,8 @@
 \title{eip (estimate inclusion probabilties) creates a probability surface based on
  the location of known survey sites}
 \usage{
-eip(known.sites, study.area = NULL, proj = NULL, params)
+eip(known.sites, study.area = NULL, pfr = NULL, sigma = NULL,
+  plot.prbs = TRUE)
 }
 \arguments{
 \item{known.sites}{a matrix, dataframe or SpatialPoints* object giving the
@@ -15,8 +16,6 @@ Note: SpatialPoints* will only be suitiable for \code{dimension=2}.}
 \item{study.area}{an optional extent, SpatialPolygons* or Raster* object giving the
 area over which to generate background points. If ignored, a rectangle
 defining the extent of \code{known.sites} will be used instead.}
-
-\item{probs}{a vector specifying the inclusion probability for each of the N sampling sites}
 
 \item{pfr}{(projection for raster) a equal area projection appropriate for the region. This will be
 used when setting up the ppp density layer.}
@@ -32,5 +31,12 @@ The probability of *absence in an area of size A* according to the poisson distr
  \deqn{pr( y=1) = 1-pr(y=0)
                 = 1-exp(-\lambda(u)*A)}
 \eqn{\lambda(u)} = the intensity value at point \eqn{u}. This is estimated using \code{\link[spatstat]{density}}
+}
+\examples{
+n <- 100
+ks <- as.data.frame( cbind( x1=runif( n, min=-10, max=10), x2=runif( n, min=-10, max=10)))
+sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
+sa[]<-rnorm(10000)
+inclusion.probs <- eip(known.sites = ks, study.area = sa,sigma = 1)
 }
 
