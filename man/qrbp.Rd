@@ -45,14 +45,14 @@ Default is NULL, and will setup resolution on 100X100 grid.}
 \examples{
 # Generate some random points and a raster to represent study area.
 N <- 100
-ks <- as.data.frame( cbind( x1=runif(N, min=-10, max=10), x2=runif(N, min=-10, max=10)))
+ks <- as.data.frame(cbind(x1=runif(N, min=-10, max=10),x2=runif(N, min=-10, max=10)))
 sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
 sa[]<-rnorm(10000)
 projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 
-# How many qausiRandom background point do we need?
-set.seed()
-n <- 50
+# How many qausiRandom background points do we need?
+set.seed(123)
+n <- 200
 bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
               study.area = sa,inclusion.probs = NULL,sigma=1,plot.prbs=TRUE)
 

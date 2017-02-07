@@ -93,7 +93,7 @@ qrbp <- function(n,
        }
       bg_points <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
                             potential.sites = potential.sites, inclusion.probs = inclusion.probs)
-      if(plot.prbs)points(bg_points[,1:2],col='springgreen',pch=16)
+      if(plot.prbs)points(bg_points[,1:2],col='springgreen',pch=16,cex=.4)
       return(bg_points)
 
 }
