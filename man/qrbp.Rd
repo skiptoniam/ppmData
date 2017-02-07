@@ -6,7 +6,7 @@
 \usage{
 qrbp(n, dimension = 2, known.sites, include.known.sites = FALSE,
   study.area = NULL, inclusion.probs = NULL, sigma = NULL,
-  covariates = NULL, reso = NULL)
+  covariates = NULL, reso = NULL, plot.prbs = TRUE)
 }
 \arguments{
 \item{n}{integer The number of background point to produce.}
@@ -39,5 +39,22 @@ modelling the point process (best use a Raster* stack or Raster* brick)}
 This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
 the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
 Default is NULL, and will setup resolution on 100X100 grid.}
+
+\item{plot.prbs}{logical if TRUE plots the underlying probability layer an background points on top.}
+}
+\examples{
+# Generate some random points and a raster to represent study area.
+N <- 100
+ks <- as.data.frame( cbind( x1=runif(N, min=-10, max=10), x2=runif(N, min=-10, max=10)))
+sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
+sa[]<-rnorm(10000)
+projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
+
+# How many qausiRandom background point do we need?
+set.seed()
+n <- 50
+bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
+              study.area = sa,inclusion.probs = NULL,sigma=1,plot.prbs=TRUE)
+
 }
 
