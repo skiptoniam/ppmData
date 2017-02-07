@@ -5,8 +5,8 @@
 \title{create quasi-random background points from study area or point data}
 \usage{
 qrbp(n, dimension = 2, known.sites, include.known.sites = FALSE,
-  study.area = NULL, inclusion.probs = NULL, covariates = NULL,
-  reso = NULL, sigma = NULL)
+  study.area = NULL, inclusion.probs = NULL, sigma = NULL,
+  covariates = NULL, reso = NULL)
 }
 \arguments{
 \item{n}{integer The number of background point to produce.}
@@ -30,6 +30,8 @@ N potential sampling sites. This is the probability that each site will be inclu
 in the final sample. Locations are ordered the same as the potential.sites argument.
 If NULL (default) equal inclusion probabilities are specified.}
 
+\item{sigma}{Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
+
 \item{covariates}{an optional Raster* object containing covariates for
 modelling the point process (best use a Raster* stack or Raster* brick)}
 
@@ -37,7 +39,5 @@ modelling the point process (best use a Raster* stack or Raster* brick)}
 This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
 the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
 Default is NULL, and will setup resolution on 100X100 grid.}
-
-\item{sigma}{Shape parameter for gaussian kernel. See \code{\link[MBHdesign]{alterInclProbs}} for details.}
 }
 

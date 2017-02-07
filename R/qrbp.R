@@ -46,9 +46,9 @@ qrbp <- function(n,
                  include.known.sites=FALSE,
                  study.area = NULL,
                  inclusion.probs = NULL,
+                 sigma=NULL,
                  covariates = NULL,
-                 reso=NULL,
-                 sigma=NULL){
+                 reso=NULL){
 
      known.sites <- coords_match_dim(known.sites,dimension)
 
@@ -68,23 +68,18 @@ qrbp <- function(n,
 
      if(include.known.sites){
        sprintf('known.sites included in qrbp to alter inclusion.probs. Calling on
-alterInclProbs to adjust sampling probabilities with legacy site information')
+                eip to adjust sampling probabilities with legacy site information')
+       if(is.null(sigma)) sprintf('you need a sigma - go on have a guess or estiamte it using a
+                                  spatstat function - see density.ppp for details.')
        legacy.sites <- find_known_sites(study.area = study.area, known.sites = known.sites)
-       if(is.null(inclusion.probs)){
-            p <- rep(1,nrow(potential.sites))
-            inclusion.probs <- length(legacy.sites) * p / sum( p)
+       inclusion.probs <- eip(known.sites = known.sites, study.area = study.area,
+                              sigma = sigma,plot.prbs = plot.prbs)
+       inclusion.probs <- n * inclusion.probs / sum(inclusion.probs)
        }
-       inclusion.probs <- MBHdesign::alterInclProbs(legacy.sites=potential.sites[legacy.sites,],
-                                                    potential.sites = potential.sites,
-                                                    n=NULL,
-                                                    inclusion.probs = inclusion.probs,
-                                                    sigma=sigma)
-       }
-
-     bg_points <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
+      bg_points <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
                             potential.sites = potential.sites, inclusion.probs = inclusion.probs)
-
-     return(bg_points)
+      if(plot.prbs)points(bg_points[,1:2],col='springgreen',pch=16)
+      return(bg_points)
 
 }
 

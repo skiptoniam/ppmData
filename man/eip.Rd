@@ -22,6 +22,8 @@ used when setting up the ppp density layer.}
 
 \item{sigma}{A numeric value or a function to estimate sigma see \code{\link[spatstat]{density.ppp}}
 for details.}
+
+\item{plot.prb}{plot the return probabiltiy surface.}
 }
 \description{
 Estimating the probabilty of presence from a series of spatial points.
@@ -30,13 +32,17 @@ The probability of *absence in an area of size A* according to the poisson distr
  The prob of *presence* is then
  \deqn{pr( y=1) = 1-pr(y=0)
                 = 1-exp(-\lambda(u)*A)}
-\eqn{\lambda(u)} = the intensity value at point \eqn{u}. This is estimated using \code{\link[spatstat]{density}}
+where \eqn{\lambda(u)} = the intensity value at point \eqn{u} and A is the area of the sampling unit (cell size).
+This is estimated using \code{\link[spatstat]{density}}
 }
 \examples{
+#generate some random points and a raster to represent study area.
 n <- 100
 ks <- as.data.frame( cbind( x1=runif( n, min=-10, max=10), x2=runif( n, min=-10, max=10)))
 sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
 sa[]<-rnorm(10000)
+projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
+# run eip sigma in this case is chosen as ~5 times cell size.
 inclusion.probs <- eip(known.sites = ks, study.area = sa,sigma = 1)
 }
 
