@@ -1,7 +1,7 @@
 qrbp is an r package for generating quasi random background points for Poisson point process models.
 ----------------------------------------------------------------------------------------------------
 
-The package aims to generate background points that...
+The package aims to generate quasi-random background point for use in Poisson point process models. Quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomisations or grid designs). A quasi-random bacground point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial autocorrelation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
 
 ``` r
 devtools::install_github('skiptoniam/qrbp')
