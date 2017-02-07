@@ -34,15 +34,12 @@ sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
 sa[]<-rnorm(10000)
 projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 plot(sa)
-points(ks$x1,ks$x2,pch=16,add=TRUE)
+points(ks$x1,ks$x2,pch=16)
 ```
-
-    ## Warning in plot.xy(xy.coords(x, y), type = type, ...): "add" is not a
-    ## graphical parameter
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-1-1.png)
 
-How many qausiRandom background points do we need?
+How many qausiRandom background points do we need? Let start with 200. The function will plot the underlying probability of sampling intensity, the presence points (white) amd the generated quasi-random background points.
 
 ``` r
 library(qrbp)
@@ -57,5 +54,9 @@ bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
     ## Number of samples considered (number of samples found): 2000(0)
 
     ## Finished
+
+``` r
+points(ks$x1,ks$x2,pch=16,col='white')
+```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-2-1.png)
