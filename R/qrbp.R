@@ -51,8 +51,22 @@ NULL
 #' set.seed(123)
 #' n <- 200
 #' bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
-#'               study.area = sa,inclusion.probs = NULL,sigma=1,plot.prbs=TRUE)
+#'               study.area = sa,inclusion.probs = NULL,
+#'               sigma=1,plot.prbs=TRUE)
 #'
+#'# extract model covariates
+#'# if we have a series of environmental data we can extract that data as our pts dataset
+#'# generate some random covariates (these are meaningless).
+#' covars <- stack(sa,sa,sa,sa)
+#' xy <- coordinates(sa)
+#' covars[[1]][]<-poly(xy[,1],degree=3)[,2]
+#' covars[[2]][]<-poly(xy[,1],degree=3)[,3]
+#' covars[[3]][]<-poly(xy[,2],degree=3)[,2]
+#' covars[[4]][]<-poly(xy[,2],degree=3)[,3]
+#' set.seed(123)
+#' bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
+#'               study.area = sa,inclusion.probs = NULL,covariates=covars,
+#'               sigma=1,plot.prbs=TRUE)
 
 qrbp <- function(n,
                  dimension = 2,
@@ -86,16 +100,41 @@ qrbp <- function(n,
                 eip to adjust sampling probabilities with legacy site information')
        if(is.null(sigma)) sprintf('you need a sigma - go on have a guess or estiamte it using a
                                   spatstat function - see density.ppp for details.')
-       legacy.sites <- find_known_sites(study.area = study.area, known.sites = known.sites)
+       # legacy.sites <- find_known_sites(study.area = study.area, known.sites = known.sites)
        inclusion.probs <- eip(known.sites = known.sites, study.area = study.area,
                               sigma = sigma,plot.prbs = plot.prbs)
        inclusion.probs <- n * inclusion.probs / sum(inclusion.probs)
        }
-      bg_points <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
+      bg_pts <- MBHdesign::quasiSamp(n=n,dimension = dimension, study.area = NULL,
                             potential.sites = potential.sites, inclusion.probs = inclusion.probs)
-      if(plot.prbs)points(bg_points[,1:2],col='springgreen',pch=16,cex=.4)
-      return(bg_points)
+      if(plot.prbs)points(bg_pts[,1:2],col='springgreen',pch=16,cex=.4)
 
+      #report the presence points and add them to the bg_points - create a new column that gives presence.
+      eps <- sqrt(.Machine$double.eps)
+      pres_pts <- data.frame(presence=1,x=known.sites[,1],y=known.sites[,2],weights = eps,ID=cellFromXY(study.area,known.sites))
+      bg_pts <- data.frame(presence=0,bg_pts)
+      colnames(bg_pts)<-colnames(pres_pts)
+      pts <- rbind(pres_pts,bg_pts)
+
+      #make zero weights very small weights.
+      pts[pts$weights<eps,'weights']<-eps
+
+      if (!is.null(covariates)) {
+        # extract covariates using raster functions.
+        covs <- data.frame(extract(covariates, pts[, c('x', 'y')]))
+        names(covs) <- names(covariates)
+
+        # make sure there aren't naming conflicts -
+        names(covs) <- ifelse(names(covs) %in% names(pts),
+                              paste0(names(covs), '.1'),
+                              names(covs))
+
+        # add to pts
+        pts <- cbind(pts, covs)
+
+      }
+      pts <- rm_na_pts(pts)
+      return(pts)
 }
 
 # convert coordinates (in whatever format they arrive in) into a dataframe that matches the dimensions
@@ -234,3 +273,36 @@ null_reso <- function (study.area) {
   reso <- round(abs(seq(min(ext[1]),max(ext[2]),length.out = 100)[1]-seq(min(ext[1]),max(ext[2]),length.out = 100)[2]))
   return (reso/2)
 }
+
+# remove NA values from a pts object
+rm_na_pts <- function (pts) {
+
+  # remove any points that are NA and issue a warning
+  if (any(is.na(pts))) {
+
+    # copy the original data
+    pts_old <- pts
+    # remove NAs
+    pts <- na.omit(pts)
+
+    # report which ones were removed
+    rm <- as.vector(attributes(pts)$na.action)
+    which_rm <- pts_old$points[rm]
+
+    if (any(which_rm == 0)) {
+      warning(sprintf('Removed %i integration points for which covariate values could not be assigned.
+                      This may affect the results of the model, please check alignment between covariates and area.',
+                      sum(which_rm == 0)))
+    }
+
+    if (any(which_rm == 1)) {
+      warning(sprintf('Removed %i observed points for which covariate values could not be assigned.
+                      This may affect the results of the model, please check alignment between covariates and coords.',
+                      sum(which_rm == 0)))
+    }
+
+  }
+
+  return (pts)
+
+    }

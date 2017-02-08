@@ -54,7 +54,21 @@ projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 set.seed(123)
 n <- 200
 bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
-              study.area = sa,inclusion.probs = NULL,sigma=1,plot.prbs=TRUE)
+              study.area = sa,inclusion.probs = NULL,
+              sigma=1,plot.prbs=TRUE)
 
+# extract model covariates
+# if we have a series of environmental data we can extract that data as our pts dataset
+# generate some random covariates (these are meaningless).
+covars <- stack(sa,sa,sa,sa)
+xy <- coordinates(sa)
+covars[[1]][]<-poly(xy[,1],degree=3)[,2]
+covars[[2]][]<-poly(xy[,1],degree=3)[,3]
+covars[[3]][]<-poly(xy[,2],degree=3)[,2]
+covars[[4]][]<-poly(xy[,2],degree=3)[,3]
+set.seed(123)
+bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE,
+              study.area = sa,inclusion.probs = NULL,covariates=covars,
+              sigma=1,plot.prbs=TRUE)
 }
 
