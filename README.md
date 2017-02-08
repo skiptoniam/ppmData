@@ -1,15 +1,15 @@
 qrbp is an r package for generating quasi random background points for Poisson point process models.
 ----------------------------------------------------------------------------------------------------
 
-The package aims to generate quasi-random background point for use in Poisson point process models. Quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomisations or grid designs). A quasi-random bacground point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial autocorrelation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
+The package aims to generate quasi-random background point for use in Poisson point process models. Quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomisations or grid designs). A quasi-random background point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial auto-correlation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
 
 ``` r
 devtools::install_github('skiptoniam/qrbp')
 ```
 
-There are two main functions in the `qrbp` package, the first and main function can be used to generate `n` quasirandom background points within a spatial domain. The for background points can be used in Poisson point process modelling in R. The main function is , which takes some coordinates, an area of interest and covariates (and other parameters) and produces a dataset. It is essentially a wrapper around the (excellent and existing) function in the MBHdesign package which alreay implements quasi-random sampling within a basic domain.
+There are two main functions in the `qrbp` package, the first and main function can be used to generate `n` quasi-random background points within a spatial domain. The for background points can be used in Poisson point process modelling in R. The main function is , which takes some coordinates, an area of interest and covariates (and other parameters) and produces a dataset. It is essentially a wrapper around the (excellent and existing) function in the MBHdesign package which already implements quasi-random sampling within a basic domain.
 
-Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probabiltiy of sampling intenstiy. The probablity of estimating the probabilty of presence from a series of spatial points. The probability of *absence in an area of size A* according to the poisson distribution is:
+Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probability of sampling intensity. The probability of estimating the probability of presence from a series of spatial points. The probability of *absence in an area of size A* according to the Poisson distribution is:
 
 *p**r*(*y* = 0)=*e**x**p*(−*λ*(*u*)\**A*)
 
@@ -28,6 +28,7 @@ library(raster)
     ## Loading required package: sp
 
 ``` r
+set.seed(123)
 N <- 100
 ks <- as.data.frame(cbind(x1=runif(N, min=-10, max=10),x2=runif(N, min=-10, max=10)))
 sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
@@ -39,7 +40,7 @@ points(ks$x1,ks$x2,pch=16)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-1-1.png)
 
-How many qausiRandom background points do we need? Let start with 200. The function will plot the underlying probability of sampling intensity, the presence points (white) amd the generated quasi-random background points.
+How many quasi-random background points do we need? Let start with 200. The function will plot the underlying probability of sampling intensity, the presence points (white) and the generated quasi-random background points.
 
 ``` r
 library(qrbp)
@@ -60,3 +61,9 @@ points(ks$x1,ks$x2,pch=16,col='white')
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-2-1.png)
+
+### References
+
+Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
+
+Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
