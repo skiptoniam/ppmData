@@ -73,7 +73,8 @@ eip <- function(known.sites,
     unit_area <- dpp$xstep*dpp$ystep
 
     #this will produce the probabiltiy intensity for qausi-random sampling.
-    prb_ppp <- 1-exp(-dpp*unit_area)
+    # prb_ppp <- 1-exp(-dpp*unit_area)
+    prb_ppp <- exp(-dpp*unit_area)
     if(plot.prbs==TRUE)plot(prb_ppp,main='probability of sampling intensity')
     # convert to a spatial grid data frame and export results.
     prb_sgdf <- maptools::as.SpatialGridDataFrame.im(prb_ppp)
@@ -111,7 +112,8 @@ eip <- function(known.sites,
   unit_area <- dpp$xstep*dpp$ystep
 
   #this will produce the probabiltiy intensity for qausi-random sampling.
-  prb_ppp <- 1-exp(-dpp*unit_area)
+  # prb_ppp <- 1-exp(-dpp*unit_area)
+  prb_ppp <- exp(-dpp*unit_area)
   if(plot.prbs==TRUE)plot(prb_ppp,main='probability of sampling intensity')
   # convert to a spatial grid data frame and export results.
   prb_sgdf <- maptools::as.SpatialGridDataFrame.im(prb_ppp)
