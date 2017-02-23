@@ -79,7 +79,7 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ```{r}
 library(qrbp)
 POdata <- species[species$Occurrence == 1,]
-bkpts <- generate_background_points(number_of_background_points = 10000,
+bkpts <- generate_background_points(number_of_background_points = 1000,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
