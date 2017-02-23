@@ -1,4 +1,4 @@
-#' @name qrbp2
+#' @name generate_background_points
 #' @title create background points for study area or point data
 #' @export
 #' @param number_of_background_points number of back ground points to create - only applicable to quasirandom.
@@ -7,7 +7,7 @@
 #'   Note: SpatialPoints* will only be suitiable for \code{dimension=2}.
 #' @param study_area a Raster* object giving the area over which to generate background points.
 #'  If ignored, a rectangle defining the extent of \code{known_sites} will be used.
-#' @param covariates an optional Raster* object containing covariates for
+#' @param model_covariates an optional Raster* object containing covariates for
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
 #' @param resolution resolution to convert polygon to grid (default is .1).
 #' This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
@@ -17,16 +17,17 @@
 #' probably need to setup an index to identify collection method.
 #' eg. PO abs = 0, PO pres = 1, PA abs = 2, PA pres = 3, it would be easy to then assign any new collection methods with
 #' PA-trawl-presence = 4, PA-trawl-abs = 5
-#'
-qrbp2 <- function(number_of_background_points = 2000, # number of back ground points to create.
-                  known_sites = NULL,  #a set of coordinates,
-                  study_area = NULL,  #raster
-                  model_covariates = NULL, # a set of covariates.
-                  resolution = 1, #resolution to setup quadriature points in lat/lon
-                  multispecies_points = NULL, #a community matrix of speciesXsites - still need to thing about how to set this up.
-                  method = c('grid','quasirandom','multispecies')){
 
+generate_background_points <- function(number_of_background_points = 2000, # number of back ground points to create.
+                                       known_sites = NULL,  #a set of coordinates,
+                                       study_area = NULL,  #raster
+                                       model_covariates = NULL, # a set of covariates.
+                                       resolution = 1, #resolution to setup quadriature points in lat/lon
+                                       multispecies_points = NULL, #a community matrix of speciesXsites - still need to thing about how to set this up.
+                                       method = c('grid','quasirandom','multispecies')){
 
+  #this function was built to match the dimensions of coordinates and other dimensions
+  known_sites <- coords_match_dim(known_sites,dim(known_sites)[2])
   eps <- sqrt(.Machine$double.eps)
 
   if(is.null(known_sites))stop('come on mate, you need some occurrence points.')
@@ -35,25 +36,13 @@ qrbp2 <- function(number_of_background_points = 2000, # number of back ground po
   #this could be a set of multi-species observations or a layer of observation bias/points.
   #hopefully in the future I can setup a fitian style offset based on collection method. e.g PO, PA, Abundance, ect.
   if(!is.null(multispecies_points) | method == 'multispecies'){
-    stop("multispecies point generation isn't workingn yet \n
-          Using 'multispecies_points' or method='multispecies' will only make things worse\n
-          hopefully I'll have it up and running soon.")
+    stop("multispecies point generation isn't workingn yet \n Using 'multispecies_points' or method='multispecies' will only make things worse\n hopefully I'll have it up and running soon.")
   }
 
   #if there is no study_area generate potential sites for halton function and a study area.
   if (is.null(study_area)) {
-      message("no study area provided, generating a regular grid based on extent of 'known_sites'.")
-      N <- 100
-      potential_sites <- as.matrix(expand.grid(as.data.frame(matrix(rep(1:N,
-                                                                        times = 2), ncol = 2)))/N -
-                                     1/(2 * N))
-      study_area <- as.matrix(expand.grid(as.data.frame(matrix(c(rep(0,
-                                                                     2), rep(1, 2)), nrow = 2, byrow = TRUE))))
-      colnames(potential_sites) <- colnames(study_area) <- paste0("2",
-                                                                  1:2)
-
-      study_area <- study_area[c(1, 3, 4, 2), ]
-      study_area_ext <- c(study_area[,1])
+      message("no study area provided, a raster based on the extent of 'known_sites'\n with a default resolution of 1 deg will be returned.")
+      study_area <- default_study_area(known_sites)
   }
 
   # create background points based on method.
@@ -70,29 +59,39 @@ qrbp2 <- function(number_of_background_points = 2000, # number of back ground po
    if (!is.null(covariates)){
      if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
        stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
+
+       # extract covariate data for background points
        bk_cvr <- extract(covariates,bkgrd_pts[,c("x","y")],method='simple',na.rm=TRUE)
        bk_pts <- cbind(bkgrd_pts,bk_cvr)
 
+       # extract covariate data for presence points
        po_cvr <- extract(covariates,known_sites,method='simple',na.rm=TRUE)
        po_pts <- cbind(known_sites,po_cvr)
-       names(po_pts)[1:2]<-c('x','y')
-       bkgrd_wts <- bkgrd_pts$weights
-       covar_data <- rbind(po_pts,bk_pts[,-3:-4])
-  }
 
-  po_wts <- rep(eps,nrow(known_sites))
-  bkgrd_wts <- bkgrd_pts$weights
-  dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(bkgrd_pts))),
-                  covar_data,
-                  weights=c(po_wts,bkgrd_wts))
+       #join the two dataset together
+       covar_data <- rbind(po_pts,bk_pts[,-3])
 
+       #create near zero weights for presence points
+       po_wts <- rep(eps,nrow(known_sites))
 
-#small function clean_pts (remove NA data)
-cat(nrow(bk_pts)-nrow(bk_pts2),"background points had NA data,\n now only",
-    nrow(bk_pts2),"background points from the original\n",
-    nrow(bk_pts),"background points")
+       # create an entire dataset
+       dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(bkgrd_pts))),
+                         covar_data,
+                         weights=c(po_wts,getElement(bkgrd_pts, "weights")))
+   } else {
+     message('just creating background points with no associated covariate data')
 
-return(dat)
+     #create near zero weights for presence points
+     po_wts <- rep(eps,nrow(known_sites))
+
+     # create an entire dataset
+     dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(bkgrd_pts))),
+                       x=c(known_sites$x,bkgrd_pts$x),y=c(known_sites$y,bkgrd_pts$y),
+                       weights=c(po_wts,bkgrd_pts$weights))
+   }
+
+  dat <- rm_na_pts(dat)
+  return(dat)
 }
 
 grid_method <- function(resolution=1,study_area){
@@ -116,7 +115,8 @@ grid_method <- function(resolution=1,study_area){
     areas_w_data <- mask(areas,dd)
 
     #create a dataframe of coordinates w/ area
-    grid <- rasterToPoints(areas_w_data)
+    grid <- as.data.frame(rasterToPoints(areas_w_data))
+    colnames(grid) <- c('x','y','weights')
   }
 
   return(grid)
@@ -168,13 +168,104 @@ quasirandom_method <- function(number_of_background_points, study_area){
   colnames(samp) <- c(colnames(potential_sites), "ID")
 
   #get area percell/point
-  area_rast <- area(study_area)
+  area_rast <- area(study_area)*1000
   area_study <- mask(area_rast,study_area)
 
   # get the area of each pixel in meters^2 - will need to be careful if equal area map - it'll be in meters already.
-  samp$weights <- extract(area_study,samp[,1:2],na.rm=TRUE)*1000
+  samp$weights <- extract(area_study,samp[,1:2],na.rm=TRUE)
 
-  return(samp)
+  #test if area/n points is a better weighting scheme.
+  # region_size <- cellStats(area_study,sum, na.rm=TRUE)*1000
+  # samp$weights <- rep(region_size/nrow(samp),nrow(samp))
+
+  return(as.data.frame(samp[,c('x','y','weights')]))
 }
 
+coords_match_dim <- function (known.sites,dimension){
 
+  # check object classes
+  expectClasses(known.sites,
+                c('matrix',
+                  'data.frame',
+                  'SpatialPoints',
+                  'SpatialPointsDataFrame'),
+                name = 'known.sites')
+
+  if (is.matrix(known.sites) | is.data.frame(known.sites)) {
+
+    # for matrices/dataframes, make sure there are only two columns
+    if (ncol(known.sites) != dimension ) {
+      stop (sprintf('known.sites should match the number of dimensions used in quasi-random sampling.
+                    The object passed had %i columns, while the sampling dimensions are %i',NCOL(known.sites),dimension))
+    }
+
+    # otherwise, coerce into a data.frame and rename the columns
+    df <- data.frame(known.sites)
+
+    } else {
+      # otherwise, for SpatialPoints* objects, just grab the coordinates
+      df <- data.frame(known.sites@coords)
+    }
+
+  # set column names
+  if (ncol(known.sites)>2) {
+    if(!is.null(colnames(known.sites))) colnames(df) <- c("x","y",colnames(known.sites)[-1:-2])
+    colnames(df) <- c("x","y",paste0("var",seq_len(ncol(known.sites)-2)))
+  } else {
+    colnames(df) <- c("x","y")
+  }
+  return (df)
+}
+
+default_study_area <- function (known_sites) {
+  # get limits
+  xlim <- range(known_sites$x)
+  ylim <- range(known_sites$y)
+
+  # add on 5%
+  xlim <- xlim + c(-1, 1) * diff(xlim) * 0.1
+  ylim <- ylim + c(-1, 1) * diff(ylim) * 0.1
+
+  xlim[1] <- floor(xlim[1])
+  xlim[2] <- ceiling(xlim[2])
+  ylim[1] <- floor(ylim[1])
+  ylim[2] <- ceiling(ylim[2])
+
+  e <- extent(c(xlim,ylim))
+  sa <- raster(e,res=1, crs="+proj=longlat +datum=WGS84")
+  sa[]<- 1:ncell(sa)
+  return (sa)
+}
+
+# remove NA values from a pts object
+rm_na_pts <- function (pts) {
+
+  # remove any points that are NA and issue a warning
+  if (any(is.na(pts))) {
+
+    # copy the original data
+    pts_old <- pts
+    # remove NAs
+    pts <- na.omit(pts)
+
+    # report which ones were removed
+    rm <- as.vector(attributes(pts)$na.action)
+    which_rm <- pts_old$points[rm]
+
+    if (any(which_rm == 0)) {
+      warning(sprintf('Removed %i integration points for which covariate values could not be assigned.
+                      This may affect the results of the model, please check alignment between covariates and area.',
+                      sum(which_rm == 0)))
+    }
+
+    if (any(which_rm == 1)) {
+      warning(sprintf('Removed %i observed points for which covariate values could not be assigned.
+                      This may affect the results of the model, please check alignment between covariates and coords.',
+                      sum(which_rm == 0)))
+    }
+
+  }
+
+  return (pts)
+
+}
