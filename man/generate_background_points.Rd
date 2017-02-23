@@ -22,10 +22,7 @@ If ignored, a rectangle defining the extent of \code{known_sites} will be used.}
 \item{model_covariates}{an optional Raster* object containing covariates for
 modelling the point process (best use a Raster* stack or Raster* brick)}
 
-\item{resolution}{resolution to convert polygon to grid (default is .1).
-This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
-the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
-Default is NULL, and will setup resolution on 100X100 grid.}
+\item{resolution}{resolution setup grid for integration points (default is 1 deg).}
 
 \item{multispecies_points}{a community matrix of speciesXsites collection methods - still need to think about how to set this up.
 probably need to setup an index to identify collection method.

@@ -9,10 +9,7 @@
 #'  If ignored, a rectangle defining the extent of \code{known_sites} will be used.
 #' @param model_covariates an optional Raster* object containing covariates for
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
-#' @param resolution resolution to convert polygon to grid (default is .1).
-#' This call is needed if no Raster* is provided as the study.area - make sure that the resolution matches
-#' the coordinate system. i.e if lat/lon = .1, while if equal area (meters), reso = 10000 (~.1).
-#' Default is NULL, and will setup resolution on 100X100 grid.
+#' @param resolution resolution setup grid for integration points (default is 1 deg).
 #' @param multispecies_points a community matrix of speciesXsites collection methods - still need to think about how to set this up.
 #' probably need to setup an index to identify collection method.
 #' eg. PO abs = 0, PO pres = 1, PA abs = 2, PA pres = 3, it would be easy to then assign any new collection methods with
@@ -56,16 +53,16 @@ generate_background_points <- function(number_of_background_points = 2000, # num
   # region_size <- cellStats(area_study,sum, na.rm=TRUE)*1000
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
-   if (!is.null(covariates)){
+   if (!is.null(model_covariates)){
      if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
-       stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
+       stop("model_covariates must be a raster, rasterstack or rasterbrick of model_covariates desired for modelling")
 
        # extract covariate data for background points
-       bk_cvr <- extract(covariates,bkgrd_pts[,c("x","y")],method='simple',na.rm=TRUE)
+       bk_cvr <- extract(model_covariates,bkgrd_pts[,c("x","y")],method='simple',na.rm=TRUE)
        bk_pts <- cbind(bkgrd_pts,bk_cvr)
 
        # extract covariate data for presence points
-       po_cvr <- extract(covariates,known_sites,method='simple',na.rm=TRUE)
+       po_cvr <- extract(model_covariates,known_sites,method='simple',na.rm=TRUE)
        po_pts <- cbind(known_sites,po_cvr)
 
        #join the two dataset together
@@ -108,14 +105,9 @@ grid_method <- function(resolution=1,study_area){
     if(fct>=1) dd <- disaggregate(study_area, fct, na.rm=TRUE)
     else dd <- aggregate(study_area, 1/fct, na.rm=TRUE)
 
-    #get area from new raster resolution - make it in meters^2
-    areas <- area(dd)*1000
-
-    #mask out NA data
-    areas_w_data <- mask(areas,dd)
-
     #create a dataframe of coordinates w/ area
-    grid <- as.data.frame(rasterToPoints(areas_w_data))
+    grid <- as.data.frame(rasterToPoints(dd)[,-3])
+    grid$weights <- estimate_area(dd,grid)
     colnames(grid) <- c('x','y','weights')
   }
 
@@ -130,6 +122,14 @@ quasirandom_method <- function(number_of_background_points, study_area){
 
   #generate a set of potential sites for quasirandom generation
   potential_sites <- raster::rasterToPoints(study_area)[,-3]
+
+  #if number_of_background_points>nrow(potential_sites) recursively create a finer grid.
+  fct <- 2
+  while(number_of_background_points>nrow(potential_sites)){
+    study_area <- disaggregate(study_area, fct, na.rm=TRUE)
+    potential_sites <- raster::rasterToPoints(study_area)[,-3]
+  }
+
   study_area_ext <- extent(study_area)[1:4]
 
   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
@@ -167,16 +167,16 @@ quasirandom_method <- function(number_of_background_points, study_area){
                               sampIDs))
   colnames(samp) <- c(colnames(potential_sites), "ID")
 
-  #get area percell/point
-  area_rast <- area(study_area)*1000
-  area_study <- mask(area_rast,study_area)
-
-  # get the area of each pixel in meters^2 - will need to be careful if equal area map - it'll be in meters already.
-  samp$weights <- extract(area_study,samp[,1:2],na.rm=TRUE)
-
+  #replaced this with a function
+  # #get area percell/point
+  # area_rast <- area(study_area)*1000
+  # area_study <- mask(area_rast,study_area)
   #test if area/n points is a better weighting scheme.
   # region_size <- cellStats(area_study,sum, na.rm=TRUE)*1000
   # samp$weights <- rep(region_size/nrow(samp),nrow(samp))
+
+  #new way to estimate weights
+  samp$weights <- estimate_area(study_area,samp)
 
   return(as.data.frame(samp[,c('x','y','weights')]))
 }
@@ -254,13 +254,13 @@ rm_na_pts <- function (pts) {
 
     if (any(which_rm == 0)) {
       warning(sprintf('Removed %i integration points for which covariate values could not be assigned.
-                      This may affect the results of the model, please check alignment between covariates and area.',
+                      This may affect the results of the model, please check alignment between model_covariates and area.',
                       sum(which_rm == 0)))
     }
 
     if (any(which_rm == 1)) {
       warning(sprintf('Removed %i observed points for which covariate values could not be assigned.
-                      This may affect the results of the model, please check alignment between covariates and coords.',
+                      This may affect the results of the model, please check alignment between model_covariates and coords.',
                       sum(which_rm == 0)))
     }
 
@@ -268,4 +268,20 @@ rm_na_pts <- function (pts) {
 
   return (pts)
 
+}
+
+estimate_area <- function(study_area,samp){
+  if(raster::isLonLat(study_area)){
+    #calculate area based on area function
+    #convert kms to ms
+    area_rast <- area(study_area)*1000
+    area_study <- mask(area_rast,study_area)
+    wts <- extract(area_study,samp[,1:2],na.rm=TRUE)
+    } else {
+    # calculate area based on equal area cell resolution
+    # mode equal area should be in meters
+    cell_area <- res(study_area)[1]*res(study_area)[2]
+    wts <- rep(cell_area,nrow(samp))
+    }
+   return(wts)
 }
