@@ -154,7 +154,7 @@ fm3 <- gam(occurrence ~ s(elevation) +
 p3 <- predict(object=preds,
              model=fm3,
              type = 'response')
-plot(p2)
+plot(p3)
 ```
 
 The second function can be used to develop a bias layer which can be included as probabilities of including background points in the generation of quasirandom background points. 

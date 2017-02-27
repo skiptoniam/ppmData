@@ -175,7 +175,7 @@ fm3 <- gam(occurrence ~ s(elevation) +
 p3 <- predict(object=preds,
              model=fm3,
              type = 'response')
-plot(p2)
+plot(p3)
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
