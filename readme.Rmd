@@ -119,9 +119,19 @@ plot(p_cell)
 Let's compare to a PA sdm - hopefully we are in the right ball park
 ```{r,message=FALSE,error=FALSE,warning=FALSE}
 d <- sdmData(formula= ~., train=species, predictors=preds)
-m1 <- sdm(Occurrence~.,data=d,methods=c('gam'))
-p1 <- predict(m1,newdata=preds)
-plot(p1)
+dat <- cbind(species$Occurrence,d@features)
+colnames(dat)[1]<-'occurrence'
+fm2 <- gam(occurrence ~ s(elevation) +
+              s(precipitation) +
+              s(temperature) +
+              s(vegetation),
+              data = dat,
+              family = binomial())
+
+p2 <- predict(object=preds,
+             model=fm2,
+             type = 'response')
+plot(p2)
 ```
 ### References 
 Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
