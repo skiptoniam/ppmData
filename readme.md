@@ -70,12 +70,23 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ``` r
 library(qrbp)
 POdata <- species[species$Occurrence == 1,]
-bkpts <- generate_background_points(number_of_background_points = 1000,
+bkpts <- generate_background_points(number_of_background_points = 2000,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    method = 'quasirandom')
+                                    resolution = 2000,
+                                    method = 'quasirandom_covariates')
 ```
+
+    ## Number of samples considered (number of samples found): 20000(0)
+
+    ## Finished
+
+``` r
+nrow(bkpts)
+```
+
+    ## [1] 2094
 
 Now let's plot our background points
 
@@ -102,7 +113,7 @@ library(mgcv)
     ## 
     ##     getData
 
-    ## This is mgcv 1.8-16. For overview type 'help("mgcv-package")'.
+    ## This is mgcv 1.8-11. For overview type 'help("mgcv-package")'.
 
 ``` r
 fm1 <- gam(presence ~ s(elevation) +

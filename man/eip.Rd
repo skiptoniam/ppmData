@@ -45,4 +45,3 @@ projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 # run eip sigma in this case is chosen as ~5 times cell size.
 inclusion.probs <- eip(known.sites = ks, study.area = sa,sigma = 1)
 }
-

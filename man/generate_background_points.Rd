@@ -7,7 +7,7 @@
 generate_background_points(number_of_background_points = 2000,
   known_sites = NULL, study_area = NULL, model_covariates = NULL,
   resolution = 1, multispecies_points = NULL, method = c("grid",
-  "quasirandom", "multispecies"))
+  "quasirandom", "quasirandom_covariates", "multispecies"))
 }
 \arguments{
 \item{number_of_background_points}{number of back ground points to create - only applicable to quasirandom.}
@@ -28,5 +28,10 @@ modelling the point process (best use a Raster* stack or Raster* brick)}
 probably need to setup an index to identify collection method.
 eg. PO abs = 0, PO pres = 1, PA abs = 2, PA pres = 3, it would be easy to then assign any new collection methods with
 PA-trawl-presence = 4, PA-trawl-abs = 5}
-}
 
+\item{method}{the type of method that should be used to generate background points.
+'grid' generates a regular grid at a set resolution.
+'quasirandom' generates quasirandom background points based on the coordinates.
+'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyperdimensions.
+'multispecies' more to follow soon.}
+}
