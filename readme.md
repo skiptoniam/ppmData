@@ -182,7 +182,9 @@ plot(p3)
 
 The second function can be used to develop a bias layer which can be included as probabilities of including background points in the generation of quasirandom background points.
 
- (estimate inclusion probabilties)
+### Part two - estimating inclusion probabilities to use as a bias layer. (not finished yet)
+
+`eip` is a function which can be used to estimate inclusion probabilities. This layer of probabilities can be used as a bias offset in PPM modelling.
 
 Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probability of sampling intensity. The probability of estimating the probability of presence from a series of spatial points. The probability of *absence in an area of size A* according to the Poisson distribution is:
 
@@ -192,7 +194,7 @@ The prob of *presence* is then:
 
 *p**r*(*y* = 1)=1 − *p**r*(*y* = 0) =1 − *e**x**p*(−*λ*(*u*)\**A*)
 
-where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). $\\lammbda$ is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
+where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). *λ* is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
 
 ### References
 
