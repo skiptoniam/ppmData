@@ -7,7 +7,7 @@ The package aims to generate quasi-random background point for use in Poisson po
 devtools::install_github('skiptoniam/qrbp')
 ```
 
-There are two main functions in the `qrbp` package, the first and main function can be used to generate background points within a spatial domain. Generation of background points can be used in Poisson point process modelling in R. The main function is , which takes a Raster\* as a study area, covariates - which are a Raster stack on the of the same resolution and extent as the study area. It is essentially a wrapper around the (excellent and existing) function in the MBHdesign package which already implements quasi-random sampling within a basic domain.
+There are two main functions in the `qrbp` package, the first and main function can be used to generate background points within a spatial domain. Generation of background points can be used in Poisson point process modelling in R. The main function is `generate_background_points`, which takes a Raster\* as a study area, covariates - which are a Raster stack on the of the same resolution and extent as the study area.
 
 <!-- Generate some random points and a raster to represent study area. -->
 <!-- ```{r} -->
@@ -55,7 +55,7 @@ points(species[species$Occurrence == 1,],col='red',pch=16,cex=.5)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
-For a laugh, let's generate some quasirandom background points and plot them against the presence points
+For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton *et al.,* 2010.
 
 ``` r
 library(qrbp)
@@ -201,3 +201,5 @@ where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sa
 Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
+
+Warton, D. I., and L. C. Shepherd. "Poisson point process models solve the ???pseudo-absence problem??? for presence-only data in ecology." The Annals of Applied Statistics 4.3 (2010): 1383-1402.
