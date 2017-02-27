@@ -64,7 +64,6 @@ bkpts_quasi <- generate_background_points(number_of_background_points = 10000,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    resolution = 2000,
                                     method = 'quasirandom_covariates')
 ```
 
@@ -77,11 +76,10 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ``` r
 library(qrbp)
 POdata <- species[species$Occurrence == 1,]
-bkpts_grid <- generate_background_points(number_of_background_points = 10000,
-                                    known_sites = POdata@coords,
+bkpts_grid <- generate_background_points(known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    resolution = 2000,
+                                    resolution = 2000, # this needs to be relative to raster resolution - this is about half the input resolution of the raster.
                                     method = 'grid')
 nrow(bkpts_grid)
 ```
