@@ -7,17 +7,7 @@ The package aims to generate quasi-random background point for use in Poisson po
 devtools::install_github('skiptoniam/qrbp')
 ```
 
-There are two main functions in the `qrbp` package, the first and main function can be used to generate `n` quasi-random background points within a spatial domain. The for background points can be used in Poisson point process modelling in R. The main function is , which takes some coordinates, an area of interest and covariates (and other parameters) and produces a dataset. It is essentially a wrapper around the (excellent and existing) function in the MBHdesign package which already implements quasi-random sampling within a basic domain.
-
-Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probability of sampling intensity. The probability of estimating the probability of presence from a series of spatial points. The probability of *absence in an area of size A* according to the Poisson distribution is:
-
-*p**r*(*y* = 0)=*e**x**p*(−*λ*(*u*)\**A*)
-
-The prob of *presence* is then:
-
-*p**r*(*y* = 1)=1 − *p**r*(*y* = 0) =1 − *e**x**p*(−*λ*(*u*)\**A*)
-
-where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). $\\lammbda$ is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
+There are two main functions in the `qrbp` package, the first and main function can be used to generate background points within a spatial domain. Generation of background points can be used in Poisson point process modelling in R. The main function is , which takes a Raster\* as a study area, covariates - which are a Raster stack on the of the same resolution and extent as the study area. It is essentially a wrapper around the (excellent and existing) function in the MBHdesign package which already implements quasi-random sampling within a basic domain.
 
 <!-- Generate some random points and a raster to represent study area. -->
 <!-- ```{r} -->
@@ -70,7 +60,7 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ``` r
 library(qrbp)
 POdata <- species[species$Occurrence == 1,]
-bkpts <- generate_background_points(number_of_background_points = 2000,
+bkpts_quasi <- generate_background_points(number_of_background_points = 10000,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
@@ -78,25 +68,39 @@ bkpts <- generate_background_points(number_of_background_points = 2000,
                                     method = 'quasirandom_covariates')
 ```
 
-    ## Number of samples considered (number of samples found): 20000(0)
+    ## Number of samples considered (number of samples found): 1e+05(0)
 
     ## Finished
 
+For a laugh, let's generate some quasirandom background points and plot them against the presence points
+
 ``` r
-nrow(bkpts)
+library(qrbp)
+POdata <- species[species$Occurrence == 1,]
+bkpts_grid <- generate_background_points(number_of_background_points = 10000,
+                                    known_sites = POdata@coords,
+                                    study_area = preds[[1]],
+                                    model_covariates = preds,
+                                    resolution = 2000,
+                                    method = 'grid')
+nrow(bkpts_grid)
 ```
 
-    ## [1] 2094
+    ## [1] 20526
 
 Now let's plot our background points
 
 ``` r
+par(mfrow=c(1,2))
 plot(preds[[1]])
-points(bkpts[bkpts$presence == 0,c("x","y")],col='blue',pch=16,cex=.5)
-points(bkpts[bkpts$presence == 1,c("x","y")],col='red',pch=16,cex=1)
+points(bkpts_quasi[bkpts_quasi$presence == 0,c("x","y")],col='blue',pch=16,cex=.5)
+points(bkpts_quasi[bkpts_quasi$presence == 1,c("x","y")],col='red',pch=16,cex=1)
+plot(preds[[1]])
+points(bkpts_grid[bkpts_grid$presence == 0,c("x","y")],col='pink',pch=16,cex=.2)
+points(bkpts_grid[bkpts_quasi$presence == 1,c("x","y")],col='red',pch=16,cex=1)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 Now let's try and generate a ppm using a poisson gam
 
@@ -121,40 +125,77 @@ fm1 <- gam(presence ~ s(elevation) +
               s(temperature) +
               s(vegetation) + 
               offset(log(weights)),
-              data = bkpts,
+              data = bkpts_quasi,
               family = poisson())
 
-p <- predict(object=preds,
+p1 <- predict(object=preds,
              model=fm1,
              type = 'response',
              const=data.frame(weights = 1))
 
-p_cell <- p*res(preds)[1]*res(preds)[2]
+p1_cell <- p1*(res(preds)[1]*res(preds)[2])
 
-plot(p_cell)
+par(mfrow=c(1,2))
+
+plot(p1_cell)
+
+fm2 <- gam(presence ~ s(elevation) +
+              s(precipitation) +
+              s(temperature) +
+              s(vegetation) + 
+              offset(log(weights)),
+              data = bkpts_grid,
+              family = poisson())
+
+p2 <- predict(object=preds,
+             model=fm2,
+             type = 'response',
+             const=data.frame(weights = 1))
+
+p2_cell <- p2*(res(preds)[1]*res(preds)[2])
+
+plot(p2_cell)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
-Let's compare to a PA sdm - hopefully we are in the right ball park
+Let's compare the spatial prediction of the PPM against the PA species distribution model - hopefully we are in the right ball park
 
 ``` r
 d <- sdmData(formula= ~., train=species, predictors=preds)
 dat <- cbind(species$Occurrence,d@features)
 colnames(dat)[1]<-'occurrence'
-fm2 <- gam(occurrence ~ s(elevation) +
+fm3 <- gam(occurrence ~ s(elevation) +
               s(precipitation) +
               s(temperature) +
               s(vegetation),
               data = dat,
               family = binomial())
 
-p2 <- predict(object=preds,
-             model=fm2,
+p3 <- predict(object=preds,
+             model=fm3,
              type = 'response')
 plot(p2)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png) \#\#\# References Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
+![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
+
+The second function can be used to develop a bias layer which can be included as probabilities of including background points in the generation of quasirandom background points.
+
+ (estimate inclusion probabilties)
+
+Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probability of sampling intensity. The probability of estimating the probability of presence from a series of spatial points. The probability of *absence in an area of size A* according to the Poisson distribution is:
+
+*p**r*(*y* = 0)=*e**x**p*(−*λ*(*u*)\**A*)
+
+The prob of *presence* is then:
+
+*p**r*(*y* = 1)=1 − *p**r*(*y* = 0) =1 − *e**x**p*(−*λ*(*u*)\**A*)
+
+where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). $\\lammbda$ is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
+
+### References
+
+Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
