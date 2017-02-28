@@ -60,14 +60,14 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ``` r
 library(qrbp)
 POdata <- species[species$Occurrence == 1,]
-bkpts_quasi <- generate_background_points(number_of_background_points = 10000,
+bkpts_quasi <- generate_background_points(number_of_background_points = 300,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
                                     method = 'quasirandom_covariates')
 ```
 
-    ## Number of samples considered (number of samples found): 1e+05(0)
+    ## Number of samples considered (number of samples found): 3000(0)
 
     ## Finished
 
@@ -79,28 +79,25 @@ POdata <- species[species$Occurrence == 1,]
 bkpts_grid <- generate_background_points(known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    resolution = 2000, # this needs to be relative to raster resolution - this is about half the input resolution of the raster.
+                                    resolution = 16000, # this needs to be relative to raster resolution - this is about half the input resolution of the raster.
                                     method = 'grid')
-nrow(bkpts_grid)
 ```
 
-    ## [1] 20526
-
-Now let's plot our background points
+Now let's plot our background points. We can see on the left plot that the points look randomly distributed, these are the quasi-random background points. While the right plot is a regular grid.
 
 ``` r
 par(mfrow=c(1,2))
 plot(preds[[1]])
-points(bkpts_quasi[bkpts_quasi$presence == 0,c("x","y")],col='blue',pch=16,cex=.5)
-points(bkpts_quasi[bkpts_quasi$presence == 1,c("x","y")],col='red',pch=16,cex=1)
+points(bkpts_quasi[bkpts_quasi$presence == 0,c("x","y")],col='blue',pch=16,cex=.3)
+points(bkpts_quasi[bkpts_quasi$presence == 1,c("x","y")],col='red',pch=16,cex=.6)
 plot(preds[[1]])
-points(bkpts_grid[bkpts_grid$presence == 0,c("x","y")],col='pink',pch=16,cex=.2)
-points(bkpts_grid[bkpts_quasi$presence == 1,c("x","y")],col='red',pch=16,cex=1)
+points(bkpts_grid[bkpts_grid$presence == 0,c("x","y")],col='blue',pch=16,cex=.3)
+points(bkpts_grid[bkpts_grid$presence == 1,c("x","y")],col='red',pch=16,cex=.6)
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-Now let's try and generate a ppm using a poisson gam
+Now let's try and generate a ppm using a poisson gam. We are going to need more integration points (background points) inorder to develop a robust Poisson Point Process model. If you look at the great Fithian & Hastie (2014) or Warton & Shepard (2010) papers they show that if you start to approach an infiniate number of integration points you should converge on the correct estimate of the intensity of occurrence (not quite correct) within the stufy region. Infinity is a big number - so how about we aim for about 20,000 background points. If are getting close the summed relative likelihood of occurrence should approximately equal the number of presence points, in this case study 94 occurrence points.
 
 ``` r
 library(mgcv)
@@ -116,6 +113,18 @@ library(mgcv)
     ##     getData
 
     ## This is mgcv 1.8-11. For overview type 'help("mgcv-package")'.
+
+``` r
+bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
+                                    known_sites = POdata@coords,
+                                    study_area = preds[[1]],
+                                    model_covariates = preds,
+                                    method = 'quasirandom_covariates')
+```
+
+    ## Number of samples considered (number of samples found): 2e+05(0)
+
+    ## Finished
 
 ``` r
 fm1 <- gam(presence ~ s(elevation) +
@@ -136,6 +145,14 @@ p1_cell <- p1*(res(preds)[1]*res(preds)[2])
 par(mfrow=c(1,2))
 
 plot(p1_cell)
+POdata <- species[species$Occurrence == 1,]
+bkpts_grid <- generate_background_points(known_sites = POdata@coords,
+                                    study_area = preds[[1]],
+                                    model_covariates = preds,
+                                    resolution = 2110, # this needs to be relative to raster resolution - this is about half the input resolution of the raster.
+                                    method = 'grid')
+
+
 
 fm2 <- gam(presence ~ s(elevation) +
               s(precipitation) +
@@ -157,6 +174,20 @@ plot(p2_cell)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
+No let's check out estimates
+
+``` r
+cellStats(p1_cell,sum)
+```
+
+    ## [1] 117.7808
+
+``` r
+cellStats(p2_cell,sum)
+```
+
+    ## [1] 94
+
 Let's compare the spatial prediction of the PPM against the PA species distribution model - hopefully we are in the right ball park
 
 ``` r
@@ -176,7 +207,7 @@ p3 <- predict(object=preds,
 plot(p3)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 The second function can be used to develop a bias layer which can be included as probabilities of including background points in the generation of quasirandom background points.
 
