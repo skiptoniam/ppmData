@@ -35,7 +35,6 @@ Import some species data and covariates for modelling
 
 ``` r
 library(sdm)
-library(rgdal)
 library(raster)
 
 file <- system.file("external/species.shp", package="sdm") # 
@@ -112,7 +111,7 @@ library(mgcv)
     ## 
     ##     getData
 
-    ## This is mgcv 1.8-11. For overview type 'help("mgcv-package")'.
+    ## This is mgcv 1.8-17. For overview type 'help("mgcv-package")'.
 
 ``` r
 bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
@@ -180,7 +179,7 @@ No let's check out estimates
 cellStats(p1_cell,sum)
 ```
 
-    ## [1] 117.7808
+    ## [1] 117.2322
 
 ``` r
 cellStats(p2_cell,sum)
@@ -224,6 +223,70 @@ The prob of *presence* is then:
 *p**r*(*y* = 1)=1 − *p**r*(*y* = 0) =1 − *e**x**p*(−*λ*(*u*)\**A*)
 
 where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). *λ* is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
+
+Here we can use the example data from above to set up a layer that will inform inclusion.probabilties for quasirandom background points. In this example, I'm using the absence data too, in reality you'd just construct a presence-absence model - but I thought it'd be fun to play with a bit more data.
+
+``` r
+bias_layer <- eip(known_sites = species@coords,
+                  study_area = preds[[1]],
+                  sigma = 10000)
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-9-1.png)
+
+Now let's generate some back ground points using our bias layer
+
+``` r
+bkpts_bias <- generate_background_points(number_of_background_points = 1000,
+                                    known_sites = POdata@coords,
+                                    study_area = preds[[1]],
+                                    model_covariates = preds,
+                                    bias_layer = bias_layer,
+                                    method = 'bias')
+```
+
+    ## Number of samples considered (number of samples found): 10000(0)
+
+    ## Finished
+
+``` r
+plot(preds[[1]])
+points(bkpts_bias[bkpts_bias$presence==0,c("x","y")],cex=.5,pch=16)
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+Now let's try and fit a model.
+
+``` r
+fm4 <- gam(presence ~ s(elevation) +
+              s(precipitation) +
+              s(temperature) +
+              s(vegetation) + 
+              offset(log(weights)),
+              data = bkpts_bias,
+              family = poisson())
+```
+
+    ## Warning in newton(lsp = lsp, X = G$X, y = G$y, Eb = G$Eb, UrS = G$UrS, L =
+    ## G$L, : Fitting terminated with step failure - check results carefully
+
+    ## Warning: glm.fit: fitted rates numerically 0 occurred
+
+    ## Warning: glm.fit: fitted rates numerically 0 occurred
+
+``` r
+p4 <- predict(object=preds,
+             model=fm4,
+             type = 'response',
+             const=data.frame(weights = 1))
+
+p4_cell <- p4*(res(preds)[1]*res(preds)[2])
+
+plot(p4_cell)
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ### References
 

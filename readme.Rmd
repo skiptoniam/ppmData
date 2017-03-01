@@ -43,7 +43,6 @@ There are two main functions in the `qrbp` package, the first and main function 
 Import some species data and covariates for modelling
 ```{r,message=FALSE}
 library(sdm)
-library(rgdal)
 library(raster)
 
 file <- system.file("external/species.shp", package="sdm") # 
@@ -190,6 +189,49 @@ $pr( y=1) = 1-pr(y=0)$
          $= 1-exp(-\lambda(u)*A)$
          
 where $\lambda(u)$ = the intensity value at point $u$ and $A$ is the area of the sampling unit (cell size). $\lambda$ is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
+
+Here we can use the example data from above to set up a layer that will inform inclusion.probabilties for quasirandom background points. In this example, I'm using the absence data too, in reality you'd just construct a presence-absence model - but I thought it'd be fun to play with a bit more data.
+
+```{r}
+bias_layer <- eip(known_sites = species@coords,
+                  study_area = preds[[1]],
+                  sigma = 10000)
+
+```
+
+Now let's generate some back ground points using our bias layer
+```{r}
+bkpts_bias <- generate_background_points(number_of_background_points = 1000,
+                                    known_sites = POdata@coords,
+                                    study_area = preds[[1]],
+                                    model_covariates = preds,
+                                    bias_layer = bias_layer,
+                                    method = 'bias')
+
+plot(preds[[1]])
+points(bkpts_bias[bkpts_bias$presence==0,c("x","y")],cex=.5,pch=16)
+```
+
+Now let's try and fit a model. Looking pretty good and we only used 1000 background points. 
+```{r}
+
+fm4 <- gam(presence ~ s(elevation) +
+              s(precipitation) +
+              s(temperature) +
+              s(vegetation) + 
+              offset(log(weights)),
+              data = bkpts_bias,
+              family = poisson())
+
+p4 <- predict(object=preds,
+             model=fm4,
+             type = 'response',
+             const=data.frame(weights = 1))
+
+p4_cell <- p4*(res(preds)[1]*res(preds)[2])
+
+plot(p4_cell)
+```
 
 ### References 
 

@@ -19,6 +19,8 @@
 #' 'quasirandom' generates quasirandom background points based on the coordinates.
 #' 'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyperdimensions.
 #' 'multispecies' more to follow soon.
+#'
+#' @importFrom mgcv in.out
 
 generate_background_points <- function(number_of_background_points = 2000, # number of back ground points to create.
                                        known_sites = NULL,  #a set of coordinates,
@@ -26,7 +28,8 @@ generate_background_points <- function(number_of_background_points = 2000, # num
                                        model_covariates = NULL, # a set of covariates.
                                        resolution = 1, #resolution to setup quadriature points in lat/lon
                                        multispecies_points = NULL, #a community matrix of speciesXsites - still need to thing about how to set this up.
-                                       method = c('grid','quasirandom','quasirandom_covariates','multispecies')){
+                                       bias_layer = NULL, #a raster with the probability of sampling bias
+                                       method = c('grid','quasirandom','quasirandom_covariates','multispecies','bias')){
 
   #this function was built to match the dimensions of coordinates and other dimensions
   known_sites <- coords_match_dim(known_sites,dim(known_sites)[2])
@@ -53,6 +56,7 @@ generate_background_points <- function(number_of_background_points = 2000, # num
                 quasirandom = quasirandom_method(number_of_background_points,study_area),
                 quasirandom_covariates = quasirandom_covariates_method(number_of_background_points,
                                                                        model_covariates),
+                bias = bias_method(number_of_background_points, study_area, bias_layer),
                 multispecies = NULL)
 
 
@@ -225,7 +229,7 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
   for (ii in 1:dimension) samp[, ii] <- myRange[1, ii] + (myRange[2,
                                                                   ii] - myRange[1, ii]) * samp[, ii]
   if (dimension == 2) {
-    tmp <- mgcv::in.out(study.area, samp[, 1:dimension])
+    tmp <- mgcv::in.out(study_area, samp[, 1:dimension])
     samp <- samp[tmp, ]
   }
   sampIDs <- rep(NA, nrow(samp))
@@ -263,6 +267,93 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
   return(samp[,c('x','y','weights')])
 }
 
+#need to think about how we are going to incorporate bias into single species?...
+bias_method <- function(number_of_background_points,study_area,bias_layer=NULL){
+
+  if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
+    stop("'quasirandom_study_area' method currently only works a raster input as a 'study_area'")
+
+  if(!is.null(bias_layer)){
+    if(!inherits(bias_layer, c('RasterLayer','RasterStack','RasterBrick')))
+      stop("'quasirandom_study_area' method currently only works a raster input as a 'study_area'")
+  }
+
+  #generate a set of potential sites for quasirandom generation
+  potential_sites <- raster::rasterToPoints(study_area)
+  potential_sites <- na.omit(potential_sites)
+
+  #if number_of_background_points>nrow(potential_sites) recursively create a finer grid.
+  if(number_of_background_points>nrow(potential_sites)){
+    fct <- 2
+    while(number_of_background_points>nrow(potential_sites)){
+      study_area <- disaggregate(study_area, fct, na.rm=TRUE)
+      potential_sites <- raster::rasterToPoints(study_area)[,-3]
+    }
+  }
+
+  study_area_ext <- extent(study_area)[1:4]
+
+  #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
+  dimension <- dim(potential_sites)[2]
+
+  # add includsion probs in the future, we can use this as a bias layer.
+
+  if (is.null(bias_layer)) {
+     N <- nrow(potential_sites)
+     inclusion_probs <- rep(1/N, N)
+  } else {
+     inclusion_probs <- bias_layer[!is.na(bias_layer)]
+  }
+  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
+  mult <- 10
+  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
+                                1, init = TRUE)
+  njump <- number_of_background_points * mult
+  samp <- randtoolbox::halton(max(njump, 5000), dim = dimension +
+                                1, init = FALSE)
+  myRange <- apply(potential_sites, -1, range)
+  for (ii in 1:dimension) samp[, ii] <- myRange[1, ii] + (myRange[2,
+                                                                  ii] - myRange[1, ii]) * samp[, ii]
+  if (dimension == 2) {
+    tmp <- mgcv::in.out(study_area, samp[, 1:dimension])
+    samp <- samp[tmp, ]
+  }
+  sampIDs <- rep(NA, nrow(samp))
+  kount <- 0
+  flag <- TRUE
+  while (flag & (kount < nrow(samp))) {
+    if (kount == 0)
+      message("Number of samples considered (number of samples found): ",
+              njump, "(0) ", sep = "")
+    else message(kount + njump, "(", length(sampIDs.2),
+                 ") ", sep = "")
+    sampIDs[kount + 1:min(njump, nrow(samp) - kount)] <- class::knn1(potential_sites,
+                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimension +
+                                                                                                                        1), drop = FALSE], 1:nrow(potential_sites))
+    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) -
+                                             kount)), dimension + 1] < inclusion_probs1[sampIDs[1:(kount +
+                                                                                                     min(njump, nrow(samp) - kount))]])
+    if (length(sampIDs.2) >= number_of_background_points) {
+      sampIDs <- sampIDs[sampIDs.2][1:number_of_background_points]
+      flag <- FALSE
+    }
+    kount <- kount + njump
+  }
+  message("Finished\n")
+  if (kount > nrow(samp))
+    stop("Failed to find a design. It is likely that the inclusion probabilities are very low and uneven. Please try again OR make inclusion probabilities more even")
+  samp <- as.data.frame(cbind(potential_sites[sampIDs, , drop = FALSE],
+                              inclusion_probs[sampIDs], sampIDs))
+  colnames(samp) <- c(colnames(potential_sites), "inclusion.probabilities",
+                      "ID")
+
+  #new way to estimate weights
+  area_of_region <- estimate_area_region(study_area)
+  samp$weights <- rep(area_of_region/nrow(samp),nrow(samp))
+
+  return(samp[,c('x','y','weights')])
+
+}
 
 coords_match_dim <- function (known.sites,dimension){
 
@@ -367,4 +458,19 @@ estimate_area <- function(study_area,samp){
     wts <- rep(cell_area,nrow(samp))
     }
    return(wts)
+}
+
+estimate_area_region <- function(study_area){
+  if(raster::isLonLat(study_area)){
+    #calculate area based on area function
+    #convert kms to ms
+    area_rast <- area(study_area)*1000
+    area_study <- mask(area_rast,study_area)
+    area_of_region <- cellStats(area_study,sum, na.rm=TRUE)*1000
+  } else {
+    # calculate area based on equal area cell resolution
+    # mode equal area should be in meters
+    area_of_region <- ncell(study_area[!is.na(study_area)])  * xres(study_area) * yres(study_area)
+  }
+  return(area_of_region)
 }

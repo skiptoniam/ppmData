@@ -6,8 +6,9 @@
 \usage{
 generate_background_points(number_of_background_points = 2000,
   known_sites = NULL, study_area = NULL, model_covariates = NULL,
-  resolution = 1, multispecies_points = NULL, method = c("grid",
-  "quasirandom", "quasirandom_covariates", "multispecies"))
+  resolution = 1, multispecies_points = NULL, bias_layer = NULL,
+  method = c("grid", "quasirandom", "quasirandom_covariates", "multispecies",
+  "bias"))
 }
 \arguments{
 \item{number_of_background_points}{number of back ground points to create - only applicable to quasirandom.}

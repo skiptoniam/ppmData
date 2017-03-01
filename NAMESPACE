@@ -2,3 +2,6 @@
 
 export(eip)
 export(generate_background_points)
+importFrom(maptools,as.SpatialGridDataFrame.im)
+importFrom(maptools,as.im.SpatialGridDataFrame)
+importFrom(mgcv,in.out)

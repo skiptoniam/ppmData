@@ -5,17 +5,17 @@
 \title{eip (estimate inclusion probabilties) creates a probability surface based on
  the location of known survey sites}
 \usage{
-eip(known.sites, study.area = NULL, pfr = NULL, sigma = NULL,
-  plot.prbs = TRUE)
+eip(known_sites, study_area = NULL, pfr = NULL, sigma = NULL,
+  plot_prbs = TRUE)
 }
 \arguments{
-\item{known.sites}{a matrix, dataframe or SpatialPoints* object giving the
+\item{known_sites}{a matrix, dataframe or SpatialPoints* object giving the
 coordinates of the points to use in sampling (of size Nxdimension).
 Note: SpatialPoints* will only be suitiable for \code{dimension=2}.}
 
-\item{study.area}{an optional extent, SpatialPolygons* or Raster* object giving the
+\item{study_area}{an optional extent Raster* object giving the
 area over which to generate background points. If ignored, a rectangle
-defining the extent of \code{known.sites} will be used instead.}
+defining the extent of \code{known_sites} will be used instead.}
 
 \item{pfr}{(projection for raster) a equal area projection appropriate for the region. This will be
 used when setting up the ppp density layer.}
@@ -23,7 +23,7 @@ used when setting up the ppp density layer.}
 \item{sigma}{A numeric value or a function to estimate sigma see \code{\link[spatstat]{density.ppp}}
 for details.}
 
-\item{plot.prb}{plot the return probabiltiy surface.}
+\item{plot_prb}{plot the return probabiltiy surface.}
 }
 \description{
 Estimating the probabilty of presence from a series of spatial points.
@@ -43,5 +43,6 @@ sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10)
 sa[]<-rnorm(10000)
 projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 # run eip sigma in this case is chosen as ~5 times cell size.
-inclusion.probs <- eip(known.sites = ks, study.area = sa,sigma = 1)
+inclusion.probs <- eip(known_sites = ks, study_area = sa,sigma = 1)
+
 }
