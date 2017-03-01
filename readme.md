@@ -9,28 +9,6 @@ devtools::install_github('skiptoniam/qrbp')
 
 There are two main functions in the `qrbp` package, the first and main function can be used to generate background points within a spatial domain. Generation of background points can be used in Poisson point process modelling in R. The main function is `generate_background_points`, which takes a Raster\* as a study area, covariates - which are a Raster stack on the of the same resolution and extent as the study area.
 
-<!-- Generate some random points and a raster to represent study area. -->
-<!-- ```{r} -->
-<!-- library(raster) -->
-<!-- set.seed(123) -->
-<!-- N <- 100 -->
-<!-- ks <- as.data.frame(cbind(x1=runif(N, min=-10, max=10),x2=runif(N, min=-10, max=10))) -->
-<!-- sa <- raster(nrows=100, ncols=100, xmn=-10, xmx=10,ymn=-10,ymx=10) -->
-<!-- sa[]<-rnorm(10000) -->
-<!-- projection(sa) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0" -->
-<!-- plot(sa) -->
-<!-- points(ks$x1,ks$x2,pch=16) -->
-<!-- ``` -->
-<!-- How many quasi-random background points do we need? Let start with 200. -->
-<!-- The function will plot the underlying probability of sampling intensity, the presence points (white) and the generated quasi-random background points. -->
-<!-- ```{r} -->
-<!-- library(qrbp) -->
-<!-- set.seed(123) -->
-<!-- n <- 200 -->
-<!-- bkpts <- qrbp(n,dimension = 2,known.sites=ks,include.known.sites=TRUE, -->
-<!--               study.area = sa,inclusion.probs = NULL,sigma=1,plot.prbs=TRUE) -->
-<!-- points(ks$x1,ks$x2,pch=16,col='white') -->
-<!-- ``` -->
 Import some species data and covariates for modelling
 
 ``` r
@@ -179,7 +157,7 @@ No let's check out estimates
 cellStats(p1_cell,sum)
 ```
 
-    ## [1] 117.2322
+    ## [1] 117.4095
 
 ``` r
 cellStats(p2_cell,sum)
@@ -212,7 +190,7 @@ The second function can be used to develop a bias layer which can be included as
 
 ### Part two - estimating inclusion probabilities to use as a bias layer. (not finished yet)
 
-`eip` is a function which can be used to estimate inclusion probabilities. This layer of probabilities can be used as a bias offset in PPM modelling.
+`estimate_bias_layer` is a function which can be used to inform the selection of quasirandom bias points to be used in as a bias offset in PPM modelling.
 
 Here is an example using a set of spatial points and a raster. In this example we use the location of the existing sample sites to help generate a new set of back ground points based on an underlying probability of sampling intensity. The probability of estimating the probability of presence from a series of spatial points. The probability of *absence in an area of size A* according to the Poisson distribution is:
 
@@ -227,9 +205,9 @@ where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sa
 Here we can use the example data from above to set up a layer that will inform inclusion.probabilties for quasirandom background points. In this example, I'm using the absence data too, in reality you'd just construct a presence-absence model - but I thought it'd be fun to play with a bit more data.
 
 ``` r
-bias_layer <- eip(known_sites = species@coords,
-                  study_area = preds[[1]],
-                  sigma = 10000)
+bias_layer <- estimate_bias_layer(known_sites = species@coords,
+                                  study_area = preds[[1]],
+                                  sigma = 10000)
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-9-1.png)
@@ -256,7 +234,7 @@ points(bkpts_bias[bkpts_bias$presence==0,c("x","y")],cex=.5,pch=16)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
-Now let's try and fit a model.
+Now let's try and fit a model. Looking pretty good and we only used 1000 background points.
 
 ``` r
 fm4 <- gam(presence ~ s(elevation) +

@@ -212,12 +212,8 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
 
   N <- nrow(potential_sites)
 
-  # add includsion probs in the future, we can use this as a bias layer.
-
-  #if (is.null(inclusion_probs)) {
-   # message("No inclusion.probs supplied, assuming uniform")
     inclusion_probs <- rep(1/N, N)
-  #
+
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   mult <- 10
   samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
@@ -275,7 +271,7 @@ bias_method <- function(number_of_background_points,study_area,bias_layer=NULL){
 
   if(!is.null(bias_layer)){
     if(!inherits(bias_layer, c('RasterLayer','RasterStack','RasterBrick')))
-      stop("'quasirandom_study_area' method currently only works a raster input as a 'study_area'")
+      stop("'quasirandom_study_area' method currently only works if 'bias_layer' is a raster")
   }
 
   #generate a set of potential sites for quasirandom generation

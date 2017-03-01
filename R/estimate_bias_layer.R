@@ -1,5 +1,5 @@
-#' @name eip
-#' @title eip (estimate inclusion probabilties) creates a probability surface based on
+#' @name estimate_bias_layer
+#' @title estimate_bias_layer creates a probability surface based on
 #'  the location of known survey sites
 #' @export
 #' @param known_sites a matrix, dataframe or SpatialPoints* object giving the
@@ -35,7 +35,7 @@
 #' inclusion.probs <- eip(known_sites = ks, study_area = sa,sigma = 1)
 #'
 
-eip <- function(known_sites,
+estimate_bias_layer <- function(known_sites,
                 study_area = NULL,
                 pfr = NULL,
                 sigma = NULL,
