@@ -74,7 +74,7 @@ points(bkpts_grid[bkpts_grid$presence == 1,c("x","y")],col='red',pch=16,cex=.6)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-Now let's try and generate a ppm using a poisson gam. We are going to need more integration points (background points) inorder to develop a robust Poisson Point Process model. If you look at the great Fithian & Hastie (2014) or Warton & Shepard (2010) papers they show that if you start to approach an infiniate number of integration points you should converge on the correct estimate of the intensity of occurrence (not quite correct) within the stufy region. Infinity is a big number - so how about we aim for about 20,000 background points. If are getting close the summed relative likelihood of occurrence should approximately equal the number of presence points, in this case study 94 occurrence points.
+Now let's try and generate a ppm using a Poisson gam. We are going to need more integration points (background points) in order to develop a robust Poisson Point Process model. If you look at the great Fithian & Hastie (2014) or Warton & Shepard (2010) papers they show that if you start to approach an infinite number of integration points you should converge on the correct estimate of the intensity of occurrence (not quite correct) within the study region. Infinity is a big number - so how about we aim for about 20,000 background points. If are getting close the summed relative likelihood of occurrence should approximately equal the number of presence points, in this case study 94 occurrence points.
 
 ``` r
 library(mgcv)
@@ -157,7 +157,7 @@ No let's check out estimates
 cellStats(p1_cell,sum)
 ```
 
-    ## [1] 117.4095
+    ## [1] 117.5897
 
 ``` r
 cellStats(p2_cell,sum)
@@ -202,7 +202,7 @@ The prob of *presence* is then:
 
 where *λ*(*u*) = the intensity value at point *u* and *A* is the area of the sampling unit (cell size). *λ* is estimated using `density.ppp` from the spatstat package and then converted into a `inclusion.prob` to inform quasi-random background point selection.
 
-Here we can use the example data from above to set up a layer that will inform inclusion.probabilties for quasirandom background points. In this example, I'm using the absence data too, in reality you'd just construct a presence-absence model - but I thought it'd be fun to play with a bit more data.
+Here we can use the example data from above to set up a layer that will inform inclusion.probabilities for quasirandom background points. In this example, I'm using the absence data too, in reality you'd just construct a presence-absence model - but I thought it'd be fun to play with a bit more data.
 
 ``` r
 bias_layer <- estimate_bias_layer(known_sites = species@coords,
@@ -272,4 +272,4 @@ Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with sprea
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
 
-Warton, D. I., and L. C. Shepherd. "Poisson point process models solve the ???pseudo-absence problem??? for presence-only data in ecology." The Annals of Applied Statistics 4.3 (2010): 1383-1402.
+Warton, D. I., and L. C. Shepherd. "Poisson point process models solve the pseudo-absence problem for presence-only data in ecology." The Annals of Applied Statistics 4.3 (2010): 1383-1402.
