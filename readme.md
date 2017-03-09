@@ -89,7 +89,7 @@ library(mgcv)
     ## 
     ##     getData
 
-    ## This is mgcv 1.8-17. For overview type 'help("mgcv-package")'.
+    ## This is mgcv 1.8-16. For overview type 'help("mgcv-package")'.
 
 ``` r
 bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
@@ -107,8 +107,8 @@ bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
 fm1 <- gam(presence ~ s(elevation) +
               s(precipitation) +
               s(temperature) +
-              s(vegetation) + 
-              offset(log(weights)),
+              s(vegetation) + offset(log(weights)),
+              # weights = weights,
               data = bkpts_quasi,
               family = poisson())
 
@@ -119,7 +119,7 @@ p1 <- predict(object=preds,
 
 p1_cell <- p1*(res(preds)[1]*res(preds)[2])
 
-par(mfrow=c(1,2))
+par(mfrow=c(1,3))
 
 plot(p1_cell)
 POdata <- species[species$Occurrence == 1,]
@@ -147,6 +147,21 @@ p2 <- predict(object=preds,
 p2_cell <- p2*(res(preds)[1]*res(preds)[2])
 
 plot(p2_cell)
+
+fm_warton2010 <- gam(presence/weights ~ s(elevation) +
+              s(precipitation) +
+              s(temperature) +
+              s(vegetation),
+              weights = weights,
+              data = bkpts_grid,
+              family = poisson())
+
+p_warton <- predict(object=preds,
+             model=fm_warton2010,
+             type = 'response',
+             const=data.frame(weights = 1))
+
+p_warton_cell <- p_warton*(res(preds)[1]*res(preds)[2])
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
@@ -157,7 +172,7 @@ No let's check out estimates
 cellStats(p1_cell,sum)
 ```
 
-    ## [1] 117.5897
+    ## [1] 118.1141
 
 ``` r
 cellStats(p2_cell,sum)
