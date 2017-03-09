@@ -118,10 +118,6 @@ p1 <- predict(object=preds,
              const=data.frame(weights = 1))
 
 p1_cell <- p1*(res(preds)[1]*res(preds)[2])
-
-par(mfrow=c(1,3))
-
-plot(p1_cell)
 POdata <- species[species$Occurrence == 1,]
 bkpts_grid <- generate_background_points(known_sites = POdata@coords,
                                     study_area = preds[[1]],
@@ -147,7 +143,11 @@ p2 <- predict(object=preds,
 p2_cell <- p2*(res(preds)[1]*res(preds)[2])
 
 plot(p2_cell)
+```
 
+![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
+
+``` r
 fm_warton2010 <- gam(presence/weights ~ s(elevation) +
               s(precipitation) +
               s(temperature) +
@@ -164,23 +164,19 @@ p_warton <- predict(object=preds,
 p_warton_cell <- p_warton*(res(preds)[1]*res(preds)[2])
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
-
-No let's check out estimates
+Now let's plot these models.
 
 ``` r
-cellStats(p1_cell,sum)
+jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
+par(mfrow=c(1,3),oma=c(4,4,4,4))
+plot(p1_cell,col=jet.colors(100),main='quasi_random offset')
+plot(p2_cell,col=jet.colors(100),main='grid offset')
+plot(p_warton_cell,col=jet.colors(100),main='grid ala Warton2010')
 ```
 
-    ## [1] 118.1141
+![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
-``` r
-cellStats(p2_cell,sum)
-```
-
-    ## [1] 94
-
-Let's compare the spatial prediction of the PPM against the PA species distribution model - hopefully we are in the right ball park
+Let's buld a PA species distribution based on the actuall occurrence data and see how we go.
 
 ``` r
 d <- sdmData(formula= ~., train=species, predictors=preds)
@@ -196,10 +192,20 @@ fm3 <- gam(occurrence ~ s(elevation) +
 p3 <- predict(object=preds,
              model=fm3,
              type = 'response')
-plot(p3)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-8-1.png)
+Now let's compare the spatial predictions of the PPM against the PA species distribution model, hopefully we are in the right ball park.
+
+``` r
+jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
+par(mfrow=c(2,2),oma=c(4,4,4,4))
+plot(p1_cell,col=jet.colors(100),main='quasi_random offset')
+plot(p2_cell,col=jet.colors(100),main='grid offset')
+plot(p_warton_cell,col=jet.colors(100),main='grid ala Warton2010')
+plot(p3,col=jet.colors(100),main='Bernoulli PA gam')
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 The second function can be used to develop a bias layer which can be included as probabilities of including background points in the generation of quasirandom background points.
 
@@ -225,7 +231,7 @@ bias_layer <- estimate_bias_layer(known_sites = species@coords,
                                   sigma = 10000)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-9-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
 Now let's generate some back ground points using our bias layer
 
@@ -247,7 +253,7 @@ plot(preds[[1]])
 points(bkpts_bias[bkpts_bias$presence==0,c("x","y")],cex=.5,pch=16)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 Now let's try and fit a model. Looking pretty good and we only used 1000 background points.
 
@@ -279,7 +285,7 @@ p4_cell <- p4*(res(preds)[1]*res(preds)[2])
 plot(p4_cell)
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ### References
 
