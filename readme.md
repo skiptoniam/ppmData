@@ -248,8 +248,7 @@ d <- distance(y)
 tas_dist_from_roads <- mask(d,tas_climate[[1]])
 ```
 
-now let's try and select a few key layers.
-==========================================
+Now let's try and select a few key layers.
 
 ``` r
 tassie_preds <- stack(tas_climate[[1]],tas_climate[[5]],tas_climate[[6]],
