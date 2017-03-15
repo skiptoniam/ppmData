@@ -138,7 +138,7 @@ plot(p2_cell,col=jet.colors(100),main='grid offset')
 plot(p_warton_cell,col=jet.colors(100),main='grid ala Warton2010')
 ```
 
-Let's buld a PA species distribution based on the actuall occurrence data and see how we go.
+Let's buld a PA species distribution based on the actual occurrence data and see how we go.
 
 ``` r
 d <- sdmData(formula= ~., train=species, predictors=preds)
@@ -167,11 +167,12 @@ plot(p_warton_cell,col=jet.colors(100),main='grid ala Warton2010')
 plot(p3,col=jet.colors(100),main='Bernoulli PA gam')
 ```
 
-### Part Two - dealing with sampling bias (not finished yet).
+Part Two - dealing with sampling bias.
+======================================
 
-In section 2.5 *Identifiability and sampling bias* from Fithian & Hastie (2014), they discuss the challanging concept of accounting for sampling bias in presence-only models. The discuss how obtaining the *observation process* is difficult to achieve using precence-only data, and only really be related to the *sighting process*. This is because absences aren't explicitly recorded, so we aren't recording occurrence records, rather we only have information on sightings (presences). They state that if detection is independent across occurrences, then the *observation process* within a PPM should be defined as:
+In section 2.5 *Identifiability and sampling bias* from Fithian & Hastie (2014), they discuss the challenging concept of accounting for sampling bias in presence-only models. The discuss how obtaining the *observation process* is difficult to achieve using precence-only data, and only really be related to the *sighting process*. This is because absences aren't explicitly recorded, so we aren't recording occurrence records, rather we only have information on sightings (presences). They state that if detection is independent across occurrences, then the *observation process* within a PPM should be defined as:
 
-$ (z) = (z) s(z)$
+$\\lambda(z) = \\tilde \\lambda(z) \\cdot s(z)$
 
 If we assume that there is no sampling bias, then by estimating *λ*(*z*) we are also estimating $\\tilde \\lambda(z)$, despite this assumption, we can only every obtain relative probabilities of occurrence (see Phillips and Elith 2013). Effectively this is what we have achieved in the sections above.
 
@@ -181,46 +182,61 @@ To estimate *s* we can pool information on the occurrence of all other presence-
 
 Here we are going to achieve this as a two part modelling process and firstly try and quantify the *sighting effort* as a function of covariates likely to inform *sighting process*.
 
-Here we are going to try and model the distribution of *Victaphanta lampra* a nifty canivirous snail form southern Australia. It's part of the Rhytididae family of gastropod snails, so we are going to use the occurrence records of other species within this family as an offset to try and disentangle some of the sampling biases for these little guys. Today we are going to concentrate on Tasmania. I like Tasmania.
+Here we are going to try and model the distribution of *Victaphanta lampra* a nifty carnivorous snail form southern Australia. It's part of the Rhytididae family of gastropod snails, so we are going to use the occurrence records of other species within this family as an offset to try and disentangle some of the sampling biases for these little guys. Today we are going to concentrate on Tasmania. I like Tasmania.
 
 ``` r
-# install.packages('ALA4R')
+install.packages('ALA4R')
 library(ALA4R)
-library(vegan)
-library(mgcv)
-library(geosphere)
-library(raster)
 ala_config(caching="off")
 ala_config(download_reason_id=0)
 wkt <- "POLYGON((148.5 -44,148.5 -40.5,144.5 -40.5,144.5 -44,148.5 -44))"
 x <- occurrences(taxon="family:Rhytididae",wkt=wkt,qa="all",download_reason_id = 7)
 x <- x$data ##
+write.csv(x,file = "./data_files/rhytididae_records_ala.csv")
+```
 
+Load in the previously downloaded occurrence (sightings) records.
+
+``` r
+library(mgcv)
+```
+
+    ## Loading required package: nlme
+
+    ## 
+    ## Attaching package: 'nlme'
+
+    ## The following object is masked from 'package:raster':
+    ## 
+    ##     getData
+
+    ## This is mgcv 1.8-16. For overview type 'help("mgcv-package")'.
+
+``` r
+library(raster)
+x <- read.csv("./data_files/rhytididae_records_ala.csv")
 rhytidaidae_sp <- subset(x,assumedPresentOccurrenceStatus==TRUE)
 v_lampra <- subset(x,species=='Victaphanta lampra')
 ```
 
-let's get some climate data
-===========================
+Let's get some climate data
 
 ``` r
 climate <- getData('worldclim', var='bio', res=0.5, lon=145, lat=-40)
 tas_climate <- crop(climate,e)
 ```
 
-now let's get humam population layers
-=====================================
+Now let's get human population layers, I've downloaded a raster from [NASA](https://neo.sci.gsfc.nasa.gov/view.php?datasetId=SEDAC_POP), which is a course scale representation of human population density. I've re-sampled this raster to be at the same extent and resolution as the climatic layers.
 
 ``` r
-pop <- raster('data_files/pop_density.tiff')
+pop <- raster('./data_files/pop_density.tiff')
 tas_pop <- crop(pop,e)
 tas_pop[tas_pop>20000]<- NA
 tas_pop_rs <- resample(tas_pop,tas_climate[[1]],method="bilinear")
 tas_pop<-mask(tas_pop_rs,tas_climate[[1]])
 ```
 
-now some roads.
-===============
+Now some roads, this is a shape file I've previously downloaded from [Listmap](http://maps.thelist.tas.gov.au/listmap/app/list/map). I developed a distance from main roads, including national and state highways and any major arterial roads. Using these roads, I've then created a raster that represents distance from roads.
 
 ``` r
 library(sp)
@@ -242,7 +258,7 @@ names(tassie_preds)<-c("annual_mean_temperature","annual_precipitation","max_tem
 writeRaster(tassie_preds, filename="./data_files/tassie_predictors.tif", options="INTERLEAVE=BAND", overwrite=TRUE)
 ```
 
-Now that we have environmental, social and inferstructural layers that could be meaningful to describe the distribution of *Victaphanta lampra*, we can used the distribution of other Rhytididae species and the covariates that might inform sighting processes to develop a model, that can be used as a covariate to inform *s*(*z*). Yay.
+Now that we have environmental, social and infrastructural layers that could be meaningful to describe the distribution of *Victaphanta lampra*, we can used the distribution of other Rhytididae species and the covariates that might inform sighting processes to develop a model, that can be used as a covariate to inform *s*(*z*). Yay.
 
 ``` r
 library(qrbp)
@@ -267,21 +283,21 @@ p_bias <- predict(object=tassie_preds,
              const=data.frame(weights = 1))
 
 p_bias_cell <- p_bias*area(tassie_preds)*1000
-
-plot(p_bias_cell)
+jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
+plot(p_bias_cell,col=jet.colors(100),main="s(z)")
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 The probability of *absence in an area of size A* according to the Poisson distribution is:
 
-$ pr(y=0) = exp(-s(z)\*A) $
+$pr(y=0) = exp(-s(z)\*A) $
 
 The prob of *presence* is then:
 
-$ pr( y=1) = 1-pr(y=0) $ $ = 1-exp(-s(z)\*A) $
+$pr( y=1) = 1-pr(y=0) $ $= 1-exp(-s(z)\*A) $
 
-where *s*(*z*) = the intensity value at point *z* and *A* is the area of the sampling unit (cell size). *s* is estimated based on the distribution of Rhytididae species and covariates that aim to explain sampling bias, in this example we have used human population density and distance from main roads. (i'm not sure if this is right? Maybe it's just *s*(*z*), I need to double check)
+where *s*(*z*) = the intensity value at point *z* and *A* is the area of the sampling unit (cell size). *s* is estimated based on the distribution of Rhytididae species and covariates that aim to explain sampling bias, in this example we have used human population density and distance from main roads. (I'm not sure if this is right? Maybe it's just *s*(*z*), I need to double check)
 
 ``` r
 po_v_lampra <- v_lampra[,c("longitude","latitude")]
@@ -295,11 +311,11 @@ bkpts_v_lampra <- generate_background_points(known_sites = po_v_lampra,
                                           method = 'grid')
 ```
 
-Now that we have estimated *s*(*z*) we can use it as an offset in the estimation of $ (z)$. If we refer to Fithian and Hastie 2014, we can see back in section 2.5 *Identifiability and sampling bias* that $ (z) = (z) s(z)$, so we can directly translate this into an offset within a model that aims to estimated the *observation process* for *Victaphanta lampra*. This is because:
+Now that we have estimated *s*(*z*) we can use it as an offset in the estimation of $ (z)$. If we refer to Fithian and Hastie 2014, we can see back in section 2.5 *Identifiability and sampling bias* that $\\lambda(z) = \\tilde \\lambda(z) \\cdot s(z)$, so we can directly translate this into an offset within a model that aims to estimated the *observation process* for *Victaphanta lampra*. This is because:
 
-$ (x)= e^{+ ^x\_1(z)} e<sup>{</sup>+ x\_2(x)}$
+$\\lambda(x)= e^{\\tilde \\alpha + \\tilde\\beta^\\prime x\_1(z)} e^{\\gamma^\\prime + \\delta x\_2(x)}$
 
-So we are assuming x1 and x2 are linearly independent. That is, there is little linear correlation betweem environmental covariates and our observation covariates, and we assume that the population and distance from roads explains sighting process, while the environmental covariates that describe various aspects of temperature and precipitation accounds for the occurrence process. This assumption of being linearly independent can fallover, in such a case, using information form presence-absence data like in Fithian *et al* 2015 can help address this problem.
+So we are assuming x1 and x2 are linearly independent. That is, there is little linear correlation between environmental covariates and our observation covariates, and we assume that the population and distance from roads explains sighting process, while the environmental covariates that describe various aspects of temperature and precipitation accounts for the occurrence process. This assumption of being linearly independent can fall over, in such a case, using information form presence-absence data like in Fithian *et al* 2015 can help address this problem.
 
 ``` r
 fm_v_lampra_w_s <- gam(presence/weights ~ s(annual_mean_temperature) +
@@ -344,13 +360,13 @@ plot(p_v_lampra_wo_s_cell,col=jet.colors(100),main='ignoring sighting bias')
 points(po_v_lampra,pch=16,cex=0.4,col=rgb(0, 0, 0, 0.3))
 ```
 
-![](readme_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](readme_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 ### References
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
 
-Fithian, William, and Trevor Hastie."Local case-control sampling: Efficient subsampling in imbalanced data sets." Annals of statistics 42.5 (2014): 1693.
+Fithian, William, and Trevor Hastie. "Finite-sample equivalence in statistical models for presence-only data." The annals of applied statistics 7.4 (2013): 1917.
 
 Fithian, William, et al. "Bias correction in species distribution models: pooling survey and collection data for multiple species." Methods in Ecology and Evolution 6.4 (2015): 424-438.
 
