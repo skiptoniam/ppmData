@@ -172,7 +172,7 @@ Part Two - dealing with sampling bias.
 
 In section 2.5 *Identifiability and sampling bias* from Fithian & Hastie (2014), they discuss the challenging concept of accounting for sampling bias in presence-only models. The discuss how obtaining the *observation process* is difficult to achieve using precence-only data, and only really be related to the *sighting process*. This is because absences aren't explicitly recorded, so we aren't recording occurrence records, rather we only have information on sightings (presences). They state that if detection is independent across occurrences, then the *observation process* within a PPM should be defined as:
 
-$\\lambda(z) = \\tilde \\lambda(z) \\cdot s(z)$
+$$\\lambda(z) = \\tilde \\lambda(z) \\cdot s(z)$$
 
 If we assume that there is no sampling bias, then by estimating *λ*(*z*) we are also estimating $\\tilde \\lambda(z)$, despite this assumption, we can only every obtain relative probabilities of occurrence (see Phillips and Elith 2013). Effectively this is what we have achieved in the sections above.
 
@@ -291,11 +291,12 @@ plot(p_bias_cell,col=jet.colors(100),main="s(z)")
 
 The probability of *absence in an area of size A* according to the Poisson distribution is:
 
-$pr(y=0) = exp(-s(z)\*A) $
+*p**r*(*y* = 0)=*e**x**p*(−*s*(*z*)\**A*)
 
 The prob of *presence* is then:
 
-$pr( y=1) = 1-pr(y=0) $ $= 1-exp(-s(z)\*A) $
+*p**r*(*y* = 1)=1 − *p**r*(*y* = 0)
+=1 − *e**x**p*(−*s*(*z*)\**A*)
 
 where *s*(*z*) = the intensity value at point *z* and *A* is the area of the sampling unit (cell size). *s* is estimated based on the distribution of Rhytididae species and covariates that aim to explain sampling bias, in this example we have used human population density and distance from main roads. (I'm not sure if this is right? Maybe it's just *s*(*z*), I need to double check)
 
@@ -313,7 +314,7 @@ bkpts_v_lampra <- generate_background_points(known_sites = po_v_lampra,
 
 Now that we have estimated *s*(*z*) we can use it as an offset in the estimation of $ (z)$. If we refer to Fithian and Hastie 2014, we can see back in section 2.5 *Identifiability and sampling bias* that $\\lambda(z) = \\tilde \\lambda(z) \\cdot s(z)$, so we can directly translate this into an offset within a model that aims to estimated the *observation process* for *Victaphanta lampra*. This is because:
 
-$\\lambda(x)= e^{\\tilde \\alpha + \\tilde\\beta^\\prime x\_1(z)} e^{\\gamma^\\prime + \\delta x\_2(x)}$
+$$\\lambda(x)= e^{\\tilde \\alpha + \\tilde\\beta^\\prime x\_1(z)} e^{\\gamma^\\prime + \\delta x\_2(x)}$$
 
 So we are assuming x1 and x2 are linearly independent. That is, there is little linear correlation between environmental covariates and our observation covariates, and we assume that the population and distance from roads explains sighting process, while the environmental covariates that describe various aspects of temperature and precipitation accounts for the occurrence process. This assumption of being linearly independent can fall over, in such a case, using information form presence-absence data like in Fithian *et al* 2015 can help address this problem.
 
