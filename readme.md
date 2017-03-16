@@ -302,7 +302,7 @@ where *s*(*z*) = the intensity value at point *z* and *A* is the area of the sam
 
 ``` r
 po_v_lampra <- v_lampra[,c("longitude","latitude")]
-tassie_preds_two <- stack(tassie_preds,(1 - exp(p_bias_cell*-1)))
+tassie_preds_two <- stack(tassie_preds,(1-exp(p_bias_cell*-1)))
 names(tassie_preds_two)[8] <- 'bias'
 
 bkpts_v_lampra <- generate_background_points(known_sites = po_v_lampra,
@@ -323,8 +323,8 @@ fm_v_lampra_w_s <- gam(presence/weights ~ s(annual_mean_temperature) +
                                       s(annual_precipitation) +
                                       s(max_temperature_of_warmest_month) +
                                       s(min_temperature_of_coldest_month) +
-                                      s(precipitation_of_driest_month) +
-                                      offset(log(bias)),
+                                      s(precipitation_of_driest_month),
+                                      offset=log(bias),
                                       weights = weights,
                                       data = bkpts_v_lampra,
                                       family = poisson())
