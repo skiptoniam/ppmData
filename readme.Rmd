@@ -332,9 +332,11 @@ p_v_lampra_wo_s_cell <- p_v_lampra_wo_s*area(tassie_preds_two)*1000
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
 
 par(mfrow=c(1,2),oma=c(4,4,4,4))
-plot(p_v_lampra_w_s_cell,col=jet.colors(100),main='accounting for sighting bias')
+plot(p_v_lampra_w_s_cell,col=jet.colors(100),main='accounting for sighting bias',
+  xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))
 points(po_v_lampra,pch=16,cex=0.4,col=rgb(0, 0, 0, 0.3))
-plot(p_v_lampra_wo_s_cell,col=jet.colors(100),main='ignoring sighting bias')
+plot(p_v_lampra_wo_s_cell,col=jet.colors(100),main='ignoring sighting bias',
+  xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))
 points(po_v_lampra,pch=16,cex=0.4,col=rgb(0, 0, 0, 0.3))
 
 ```
