@@ -278,7 +278,7 @@ where $s(z)$ = the intensity value at point $z$ and $A$ is the area of the sampl
 
 ```{r}
 po_v_lampra <- v_lampra[,c("longitude","latitude")]
-tassie_preds_two <- stack(tassie_preds,(1-exp(p_bias_cell*-1)))
+tassie_preds_two <- stack(tassie_preds,p_bias_cell)
 names(tassie_preds_two)[8] <- 'bias'
 
 bkpts_v_lampra <- generate_background_points(known_sites = po_v_lampra,
@@ -302,7 +302,7 @@ fm_v_lampra_w_s <- gam(presence/weights ~ s(annual_mean_temperature) +
                                       s(max_temperature_of_warmest_month) +
                                       s(min_temperature_of_coldest_month) +
                                       s(precipitation_of_driest_month),
-                                      offset=log(bias),
+                                      offset = log(bias),
                                       weights = weights,
                                       data = bkpts_v_lampra,
                                       family = poisson())
@@ -318,23 +318,26 @@ fm_v_lampra_wo_s <- gam(presence/weights ~ s(annual_mean_temperature) +
 
 
 p_v_lampra_w_s <- predict(object=tassie_preds_two,
-             model=fm_v_lampra_w_s,
-             type = 'response',
-             const=data.frame(weights = 1,bias=1))
+                          model=fm_v_lampra_w_s,
+                          type = 'response',
+                          const=data.frame(weights = 1,bias=1))
 
 p_v_lampra_wo_s <- predict(object=tassie_preds_two,
-             model=fm_v_lampra_wo_s,
-             type = 'response',
-             const=data.frame(weights = 1))
+                           model=fm_v_lampra_wo_s,
+                           type = 'response',
+                           const=data.frame(weights = 1))
 
 
 p_v_lampra_w_s_cell <- p_v_lampra_w_s*area(tassie_preds_two)*1000
 p_v_lampra_wo_s_cell <- p_v_lampra_wo_s*area(tassie_preds_two)*1000
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
 
+brks <- seq(min(p_v_lampra_w_s_cell[],na.rm = TRUE),.5,length.out=100)
+arg <- list(at=seq(0,.5,.05),labels=as.character(seq(0,.5,.05)))   
+
 par(mfrow=c(1,2),oma=c(4,4,4,4))
 plot(p_v_lampra_w_s_cell,col=jet.colors(100),main='accounting for sighting bias',
-  xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))
+  xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))#,breaks=brks,axis.args=arg)
 points(po_v_lampra,pch=16,cex=0.4,col=rgb(0, 0, 0, 0.3))
 plot(p_v_lampra_wo_s_cell,col=jet.colors(100),main='ignoring sighting bias',
   xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))
