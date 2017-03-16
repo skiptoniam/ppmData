@@ -283,7 +283,8 @@ p_bias <- predict(object=tassie_preds,
 
 p_bias_cell <- p_bias*area(tassie_preds)*1000
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
-plot(p_bias_cell,col=jet.colors(100),main="s(z)")
+plot(p_bias_cell,col=jet.colors(100),main="s(z)",
+  xlim=c(144.5, 148.5), ylim=c(-43.8,-40.5))
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-16-1.png)
