@@ -6,9 +6,9 @@
 \usage{
 generate_background_points(number_of_background_points = 2000,
   known_sites = NULL, study_area = NULL, model_covariates = NULL,
-  resolution = 1, multispecies_points = NULL, bias_layer = NULL,
-  method = c("grid", "quasirandom", "quasirandom_covariates", "multispecies",
-  "bias"))
+  resolution = 1, multispecies_presences = NULL, method = c("grid",
+  "quasirandom", "quasirandom_covariates", "multispecies"),
+  interpolation_method = "bilinear", coords = c("x", "y"))
 }
 \arguments{
 \item{number_of_background_points}{number of back ground points to create - only applicable to quasirandom.}
@@ -25,15 +25,16 @@ modelling the point process (best use a Raster* stack or Raster* brick)}
 
 \item{resolution}{resolution setup grid for integration points (default is 1 deg).}
 
-\item{multispecies_points}{a community matrix of speciesXsites collection methods - still need to think about how to set this up.
-probably need to setup an index to identify collection method.
-eg. PO abs = 0, PO pres = 1, PA abs = 2, PA pres = 3, it would be easy to then assign any new collection methods with
-PA-trawl-presence = 4, PA-trawl-abs = 5}
+\item{multispecies_presences}{a community matrix of species x sites - which has the columns "x","y","sp1,...,"spN". Presences as denoted with a 1, while non-presences are denoted with an NA, this is to distingish between non-species specific observations and generated background points.}
 
 \item{method}{the type of method that should be used to generate background points.
-'grid' generates a regular grid at a set resolution.
-'quasirandom' generates quasirandom background points based on the coordinates.
-'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyperdimensions.
-'multispecies' more to follow soon.}
+'grid' generates a regular grid at a set resolution with weights per-point. See Warton 2010 for details.
+'quasirandom' generates quasirandom background points based on the coordinates. See Foster 2015 for details.
+'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyper-dimensions. See Foster 2015 for details.
+'multispecies' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.}
+
+\item{interpolation_method}{either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
+
+\item{coords}{is the name of site coordinates. The default is c('x','y').}
 }
 

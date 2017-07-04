@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 data_files/
+old_functions/
+qrbp/
+figures/

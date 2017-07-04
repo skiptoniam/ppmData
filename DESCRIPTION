@@ -1,6 +1,6 @@
 Package: qrbp
 Type: Package
-Title: quasi-random background point generation for Poisson point process
+Title: quasi-random background point generation for single and multiple species Poisson point process
     modelling
 Version: 0.1.0
 Author: Skipton Woolley
