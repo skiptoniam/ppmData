@@ -102,13 +102,15 @@ jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
 plot(p_warton_cell,col=jet.colors(100))
 ```
 
+![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
+
 We expect that the overall predicted insensity should equal the number of observed presences in the dataset. Will a little data summary we can see that our predictions are close to the original numner of presence points
 
 ``` r
 raster::cellStats(p_warton_cell,sum)
 ```
 
-    ## [1] 94.29897
+    ## [1] 94.30268
 
 ``` r
 nrow(sp_sites)

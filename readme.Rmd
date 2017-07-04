@@ -95,7 +95,7 @@ p_warton_cell <- p_warton*(res(preds)[1]*res(preds)[2])/4 # resolution of raster
 ```
 
 Now let's plot these models.
-```{r,fig.width=12,fig.height=6, eval=FALSE}
+```{r,fig.width=8,fig.height=6}
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
 plot(p_warton_cell,col=jet.colors(100))
 ```
