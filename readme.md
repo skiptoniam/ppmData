@@ -79,7 +79,7 @@ bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
                                     method = 'quasirandom')
-fm_warton2010 <- gam(presence/weights ~ s(elevation) +
+fm <- gam(presence/weights ~ s(elevation) +
               s(precipitation) +
               s(temperature) +
               s(vegetation),
@@ -87,19 +87,19 @@ fm_warton2010 <- gam(presence/weights ~ s(elevation) +
               data = bkpts_quasi,
               family = poisson())
 
-p_warton <- predict(object=preds,
-             model=fm_warton2010,
+p <- predict(object=preds,
+             model=fm,
              type = 'response',
              const=data.frame(weights = 1))
 
-p_warton_cell <- p_warton*(res(preds)[1]*res(preds)[2])/4 # resolution of raster changes with bkpts_quasi - need to remember that. 
+p_cell <- p*(res(preds)[1]*res(preds)[2])/4 # resolution of raster changes with bkpts_quasi - need to remember that. 
 ```
 
 Now let's plot these models.
 
 ``` r
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
-plot(p_warton_cell,col=jet.colors(100))
+plot(p_cell,col=jet.colors(100))
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
@@ -107,10 +107,10 @@ plot(p_warton_cell,col=jet.colors(100))
 We expect that the overall predicted insensity should equal the number of observed presences in the dataset. Will a little data summary we can see that our predictions are close to the original numner of presence points
 
 ``` r
-raster::cellStats(p_warton_cell,sum)
+raster::cellStats(p_cell,sum)
 ```
 
-    ## [1] 94.30268
+    ## [1] 94.30024
 
 ``` r
 nrow(sp_sites)
