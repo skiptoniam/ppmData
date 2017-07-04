@@ -44,7 +44,7 @@ generate_background_points <- function(number_of_background_points = 2000, # num
   if(method == 'multispecies'){
     if(is.null(multispecies_presences))
     stop("Using 'multispecies_presences' or method='multispecies' requires a matrix of sites x presences. \n
-         Note zeros in this matrix are not true absenses, but just there to indicate a non-presence record for that species.")
+         Note NA in this matrix indicate a non-presence record for that species.")
     if(!is.null(multispecies_presences))
       message("'known_sites' must be the coordinates all the unique know species' presences")
     if(nrow(known_sites)!=nrow(multispecies_presences))
