@@ -1,4 +1,4 @@
-get_weights <- function(known_sites,background_sites,study_area,coords=c("x","y")){
+get_weights <- function(known_sites,background_sites,study_area,coords){
 
   # if single species known sites will be just coords
   # if multispeices matrix will be x, y, sp1, sp2 matrix (min four columns)

@@ -46,7 +46,7 @@ generate_background_points <- function(number_of_background_points = 2000, # num
     stop("Using 'multispecies_presences' or method='multispecies' requires a matrix of sites x presences. \n
          Note NA in this matrix indicate a non-presence record for that species.")
     if(!is.null(multispecies_presences))
-      message("'known_sites' must be the coordinates all the unique know species' presences")
+      message("'known_sites' must be all the unique coordinates for known species' presences")
     if(nrow(known_sites)!=nrow(multispecies_presences))
       stop("nrows of 'known_sites' must equal nrows of 'multispecies_presences'")
   }
@@ -66,10 +66,10 @@ generate_background_points <- function(number_of_background_points = 2000, # num
                 multispecies = quasirandom_method(number_of_background_points,study_area))
 
   site_weights <- switch(method,
-    grid = get_weights(known_sites,background_sites,study_area),
-    quasirandom = get_weights(known_sites,background_sites,study_area),
-    quasirandom_covariates = get_weights(known_sites,background_sites,study_area),
-    multispecies = get_weights(multispecies_presences,background_sites,study_area))
+    grid = get_weights(known_sites,background_sites,study_area,coords),
+    quasirandom = get_weights(known_sites,background_sites,study_area,coords),
+    quasirandom_covariates = get_weights(known_sites,background_sites,study_area,coords),
+    multispecies = get_weights(multispecies_presences,background_sites,study_area,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(model_covariates)){
@@ -108,8 +108,7 @@ generate_background_points <- function(number_of_background_points = 2000, # num
    }
   }
 
-  if(method=='multispecies') dat <- lapply(dat,rm_na_pts)
-  dat <- rm_na_pts(dat)
+  if(method!='multispecies') dat <- rm_na_pts(dat)
   return(dat)
 }
 
@@ -518,20 +517,20 @@ rm_na_pts <- function (pts) {
 
 }
 
-estimate_area <- function(study_area,coords){
+estimate_area <- function(study_area,site_coords){
   if(raster::isLonLat(study_area)){
     #calculate area based on area function
     #convert kms to ms
     area_rast <- raster::area(study_area)*1000
     area_study <- raster::mask(area_rast,study_area)
-    total_area <- sum(area_study,na.rm=TRUE)
-    wts <- total_area/raster::extract(area_study,coords,na.rm=TRUE)
+    total_area <- cellStats(area_study,sum,na.rm=TRUE)
+    wts <- total_area/raster::extract(area_study,site_coords,na.rm=TRUE)
     } else {
     # calculate area based on equal area cell resolution
     # mode equal area should be in meters
     cell_area <- raster::res(study_area)[1]*raster::res(study_area)[2]
     n_cell <- length(study_area[!is.na(study_area[])])
-    wts <- rep((n_cell*cell_area)/nrow(coords),nrow(coords))
+    wts <- rep((n_cell*cell_area)/nrow(site_coords),nrow(site_coords))
     }
    return(wts)
 }
