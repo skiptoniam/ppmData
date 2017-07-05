@@ -41,7 +41,7 @@ get_weights <- function(known_sites,background_sites,study_area,coords){
 
   } else {
     xy <- rbind(known_sites,background_sites)
-    areas <- estimate_area(study_area = study_area, coords = xy)
+    areas <- estimate_area(study_area = study_area, site_coords = xy)
     cell_id <- raster::cellFromXY(study_area, xy)
     count_pts <- table(cell_id)
     weights <- areas/as.numeric(count_pts[match(cell_id,

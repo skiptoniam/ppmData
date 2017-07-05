@@ -32,7 +32,7 @@ points(species[species$Occurrence == 1,],col='red',pch=16,cex=.5)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
-For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton *et al.,* 2010.
+For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton & Shepard 2010.
 
 ``` r
 library(qrbp)
@@ -70,7 +70,7 @@ points(bkpts_grid[bkpts_grid$presence == 1,c("x","y")],col='red',pch=16,cex=.6)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-Now let's try and generate a ppm using a Poisson gam. We are going to need more integration points (background points) in order to develop a robust Poisson Point Process model. If you look at the great Fithian & Hastie (2014) or Warton & Shepard (2010) papers they show that if you start to approach an infinite number of integration points you should converge on the correct estimate of the intensity of occurrence (not quite correct) within the study region. Infinity is a big number - so how about we aim for about 20,000 background points. If are getting close the summed relative likelihood of occurrence should approximately equal the number of presence points, in this case study 94 occurrence points.
+Now let's try and generate a ppm using a Poisson gam. We are going to need more integration points (background points) in order to develop a robust Poisson Point Process model. If you look at the great Fithian & Hastie (2015) or Warton & Shepard (2010) papers they show that if you start to approach an infinite number of integration points you should converge on the correct estimate of the intensity of occurrence (not quite correct) within the study region. Infinity is a big number - so how about we aim for about 20,000 background points. If are getting close the summed relative likelihood of occurrence should approximately equal the number of presence points, in this case study 94 occurrence points.
 
 ``` r
 library(mgcv)
@@ -100,6 +100,7 @@ Now let's plot these models.
 ``` r
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
 plot(p_cell,col=jet.colors(100))
+points(sp_sites,cex=.5,pch=16)
 ```
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
@@ -110,7 +111,7 @@ We expect that the overall predicted insensity should equal the number of observ
 raster::cellStats(p_cell,sum)
 ```
 
-    ## [1] 94.30024
+    ## [1] 94.30407
 
 ``` r
 nrow(sp_sites)
@@ -124,12 +125,8 @@ There will be more to come with regard to multi-species point process modelling.
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
 
-Fithian, William, and Trevor Hastie. "Finite-sample equivalence in statistical models for presence-only data." The annals of applied statistics 7.4 (2013): 1917.
-
 Fithian, William, et al. "Bias correction in species distribution models: pooling survey and collection data for multiple species." Methods in Ecology and Evolution 6.4 (2015): 424-438.
 
 Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
-
-Phillips, S. J. and Elith, J. (2013). On estimating probability of presence from use-availability or presence-background data. Ecology 94 1409-1419.
 
 Warton, D. I., and L. C. Shepherd. "Poisson point process models solve the pseudo-absence problem for presence-only data in ecology." The Annals of Applied Statistics 4.3 (2010): 1383-1402.
