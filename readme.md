@@ -105,27 +105,9 @@ points(sp_sites,cex=.5,pch=16)
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
-We expect that the overall predicted insensity should equal the number of observed presences in the dataset. Will a little data summary we can see that our predictions are close to the original numner of presence points
-
-``` r
-raster::cellStats(p_cell,sum)
-```
-
-    ## [1] 94.30407
-
-``` r
-nrow(sp_sites)
-```
-
-    ## [1] 94
-
-There will be more to come with regard to multi-species point process modelling. Until then.
-
 ### References
 
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
-
-Fithian, William, et al. "Bias correction in species distribution models: pooling survey and collection data for multiple species." Methods in Ecology and Evolution 6.4 (2015): 424-438.
 
 Grafström, Anton, and Yves Tillé. "Doubly balanced spatial sampling with spreading and restitution of auxiliary totals." Environmetrics 24.2 (2013): 120-131.
 
