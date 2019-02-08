@@ -22,7 +22,7 @@
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
-generate_background_points <- function(number_of_background_points = 2000, # number of back ground points to create.
+generate_background_points <- function(number_of_background_points = 10000,
                                        known_sites = NULL,  #a set of coordinates,
                                        study_area = NULL,  #raster
                                        model_covariates = NULL, # a set of covariates.
@@ -33,7 +33,7 @@ generate_background_points <- function(number_of_background_points = 2000, # num
                                        coords = c("x","y")){
 
   #this function was built to match the dimensions of coordinates and other dimensions
-  known_sites <- coords_match_dim(known_sites,dim(known_sites)[2])
+  known_sites <- qrbp:::coords_match_dim(known_sites,dim(known_sites)[2])
   # eps <- sqrt(.Machine$double.eps)
 
   if(is.null(known_sites))stop('come on mate, you need some occurrence points.')
@@ -59,17 +59,17 @@ generate_background_points <- function(number_of_background_points = 2000, # num
 
   # create background points based on method.
   background_sites <- switch(method,
-                grid = grid_method(resolution, study_area),
-                quasirandom = quasirandom_method(number_of_background_points,study_area),
-                quasirandom_covariates = quasirandom_covariates_method(number_of_background_points,
+                grid = qrbp:::grid_method(resolution, study_area),
+                quasirandom = qrbp:::quasirandom_method(number_of_background_points,study_area),
+                quasirandom_covariates = qrbp:::quasirandom_covariates_method(number_of_background_points,
                                                                        model_covariates),
-                multispecies = quasirandom_method(number_of_background_points,study_area))
+                multispecies = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates))
 
   site_weights <- switch(method,
-    grid = get_weights(known_sites,background_sites,study_area,coords),
-    quasirandom = get_weights(known_sites,background_sites,study_area,coords),
-    quasirandom_covariates = get_weights(known_sites,background_sites,study_area,coords),
-    multispecies = get_weights(multispecies_presences,background_sites,study_area,coords))
+    grid = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
+    quasirandom = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
+    quasirandom_covariates = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
+    multispecies = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(model_covariates)){
@@ -119,7 +119,7 @@ grid_method <- function(resolution=1,study_area){
 
   if(inherits(study_area, c('RasterLayer','RasterStack','RasterBrick'))){
 
-    #set up the dissaggreation or factor
+    #set up the dissaggreation or aggregate
     fct <- (res(study_area)/resolution)[1]
 
     #if fct is >= 1 dissaggregate, else aggregate
@@ -128,33 +128,29 @@ grid_method <- function(resolution=1,study_area){
 
     #create a dataframe of coordinates w/ area
     grid <- as.data.frame(rasterToPoints(dd)[,-3])
-    #grid$weights <- estimate_area(dd,grid)
-    colnames(grid) <- c('x','y')#,'weights')
+    colnames(grid) <- c('x','y')
   }
-
   return(grid)
-
 }
 
-multispecies_quasirandom_method <- function(number_of_background_points, study_area, presence_sites_coords){
+multispecies_quasirandom_method <- function(number_of_background_points, resolution = 1, study_area, presence_sites_coords){
 
   if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'quasirandom' method currently only works a raster input as a 'study_area'")
 
-  #generate a set of potential sites for quasirandom generation
-  potential_sites <- raster::rasterToPoints(study_area)[,-3]
+  fct <- (res(study_area)/resolution)[1]
+  if(fct>=1) dd <- disaggregate(study_area, fct, na.rm=TRUE)
+  else dd <- aggregate(study_area, 1/fct, na.rm=TRUE)
 
-  #make the underlying cell size smaller if number of background points is
-  # higher than the potiental number of cells.
+  #generate a set of potential sites for quasirandom generation
+  potential_sites <- raster::rasterToPoints(dd)[,-3]
+
   if(number_of_background_points>nrow(potential_sites)){
-    fct <- 2
-    while(number_of_background_points>nrow(potential_sites)){
-      study_area <- disaggregate(study_area, fct, na.rm=TRUE)
-      potential_sites <- raster::rasterToPoints(study_area)[,-3]
-    }
+    stop('message the number of background points is greater than avaliable cells based on the current resolution of the grids\n
+         Either use less background points or select a finer resolution.')
   }
 
-  study_area_ext <- extent(study_area)[1:4]
+  study_area_ext <- extent(dd)[1:4]
 
   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
   dimension <- dim(potential_sites)[2]

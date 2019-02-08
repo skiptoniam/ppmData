@@ -4,7 +4,12 @@ get_weights <- function(known_sites,background_sites,study_area,coords){
   # if multispeices matrix will be x, y, sp1, sp2 matrix (min four columns)
   # weights are the realtive area that point represents within the domain.
 
+
   if(ncol(known_sites)>2) {
+
+    known_sites <- as.matrix(known_sites)
+    if(!check_pres_bk_names(known_sites[,1:2],background_sites))colnames(background_sites) <- colnames(known_sites[,1:2])
+
 
     # how many species are there?
     n_sp <- ncol(known_sites) # this is actually this number - 2
@@ -13,7 +18,7 @@ get_weights <- function(known_sites,background_sites,study_area,coords){
     # what
     sp_xy <- lapply(sp_presence_coords,function(x)rbind(x,background_sites))
     # sp specific areas
-    sp_areas <- lapply(sp_xy,function(x)estimate_area(study_area,x))
+    sp_areas <- lapply(sp_xy,function(x)qrbp:::estimate_area(study_area,x))
     # sp cell ids.
     sp_cell_ids <- lapply(sp_xy,function(x)raster::cellFromXY(study_area,x))
     # sp specific counts of points
@@ -49,4 +54,13 @@ get_weights <- function(known_sites,background_sites,study_area,coords){
     weights <- data.frame(x=xy[,1],y=xy[,2],weights=weights)
   }
   return(weights)
+}
+
+
+check_pres_bk_names <- function(pres_sites,back_sites){
+
+  return(all(colnames(pres_sites)==colnames(back_sites)))
+
+
+
 }
