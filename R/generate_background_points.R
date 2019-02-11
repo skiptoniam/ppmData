@@ -15,7 +15,8 @@
 #' 'grid' generates a regular grid at a set resolution with weights per-point. See Warton 2010 for details.
 #' 'quasirandom' generates quasirandom background points based on the coordinates. See Foster 2015 for details.
 #' 'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyper-dimensions. See Foster 2015 for details.
-#' 'multispecies' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+#' 'multispecies_quasirandom' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+#' multispecies_quasirandom' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights, but uses the quadrature grid approach, rather than the quasirandom points approach.
 #' @param interpolation_method either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coords is the name of site coordinates. The default is c('x','y').
 #'
@@ -28,7 +29,8 @@ generate_background_points <- function(number_of_background_points = 10000,
                                        model_covariates = NULL, # a set of covariates.
                                        resolution = 1, #resolution to setup quadriature points in lat/lon
                                        multispecies_presences = NULL, #a community matrix of speciesXsites.
-                                       method = c('grid','quasirandom','quasirandom_covariates','multispecies'),
+                                       method = c('grid','quasirandom','quasirandom_covariates',
+                                                  'multispecies_quasirandom','multispecies_grid'),
                                        interpolation_method='bilinear',
                                        coords = c("x","y")){
 
@@ -59,11 +61,13 @@ generate_background_points <- function(number_of_background_points = 10000,
 
   # create background points based on method.
   background_sites <- switch(method,
-                grid = qrbp:::grid_method(resolution, study_area),
-                quasirandom = qrbp:::quasirandom_method(number_of_background_points,study_area),
-                quasirandom_covariates = qrbp:::quasirandom_covariates_method(number_of_background_points,
+                grid = grid_method(resolution, study_area),
+                quasirandom = quasirandom_method(number_of_background_points,study_area),
+                quasirandom_covariates = quasirandom_covariates_method(number_of_background_points,
                                                                        model_covariates),
-                multispecies = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates))
+                multispecies_quasirandom = quasirandom_covariates_method(number_of_background_points,
+                                                                         model_covariates),
+                multispecies_grid = grid_method(resolution, study_area))
 
   site_weights <- switch(method,
     grid = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
