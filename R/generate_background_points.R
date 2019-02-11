@@ -80,18 +80,23 @@ generate_background_points <- function(number_of_background_points = 10000,
        if(method=='multispecies') {
          # print(head(site_weights$multispecies_presence[,coords]))
          covars <- extract(model_covariates,site_weights$multispecies_presence[,coords],method=interpolation_method,na.rm=TRUE)
-         covar_data <- cbind(site_weights$multispecies_presence[,coords],covars)
+         NAsites <- which(!complete.cases(covars))
+         print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+         covar_data <- covars[-NAsites,,drop=FALSE]
          dat <- list()
-         dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covar_data)
-         dat$species_weights <- site_weights$multispecies_weights[,-1]
+         dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covar_data)
+         dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
        } else {
          # print(head(site_weights[,coords]))
          covars <- extract(model_covariates,site_weights[,coords],method=interpolation_method,na.rm=TRUE)
-         covar_data <- cbind(site_weights[,coords],covars)
+         NAsites <- which(!complete.cases(covars))
+         print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+         covar_data <- covars[-NAsites,,drop=FALSE]
+         # covar_data <- cbind(site_weights[,coords],covars)
         #reate an entire dataset
-         dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites))),
+         dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites)))[-NAsites],
                          covar_data,
-                         weights=site_weights$weights)#replace this with a function 'get_weights'
+                         weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
       }
   } else {
     if(method=='multispecies'){
@@ -108,7 +113,7 @@ generate_background_points <- function(number_of_background_points = 10000,
    }
   }
 
-  if(method!='multispecies') dat <- rm_na_pts(dat)
+  # if(method!='multispecies') dat <- rm_na_pts(dat)
   return(dat)
 }
 
