@@ -85,7 +85,7 @@ generate_background_points <- function(number_of_background_points = 10000,
            print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
             covars <- covars[-NAsites,,drop=FALSE]
             dat <- list()
-            dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,site_weights[-NAsites,coords],covars)
+            dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,site_weights[-NAsites,coords],covars[-NAsites,])
             dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
          } else {
            dat <- list()
@@ -100,12 +100,12 @@ generate_background_points <- function(number_of_background_points = 10000,
            print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
            covars <- covars[-NAsites,,drop=FALSE]
            dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites)))[-NAsites],
-                             site_weights[-NAsites,coords],
-                             covars,
+                             # site_weights[-NAsites,coords],
+                             covars[-NAsites,],
                              weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
          } else {
            dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites))),
-                             site_weights,
+                             # site_weights,
                              covars,
                              weights=site_weights$weights)
         }
