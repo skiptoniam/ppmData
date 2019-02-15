@@ -44,7 +44,7 @@ bkpts_quasi <- generate_background_points(number_of_background_points = 1000,
                                     known_sites = sp_sites,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    method = 'quasirandom')
+                                    method = 'single_species_quasi')
 ```
 
 For a laugh, let's generate some quasirandom background points and plot them against the presence points
@@ -53,7 +53,7 @@ bkpts_grid <- generate_background_points(known_sites = sp_sites,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
                                     resolution = 16000, # this needs to be relative to raster resolution - this is about half the input resolution of the raster.
-                                    method = 'grid')
+                                    method = 'single_species_grid')
 ```
 
 Now let's plot our background points. We can see on the left plot that the points look randomly distributed, these are the quasi-random background points. While the right plot is a regular grid.
@@ -72,11 +72,11 @@ Now let's try and generate a ppm using a Poisson gam. We are going to need more 
 
 ```{r,warning=FALSE,error=FALSE,message=FALSE}
 library(mgcv)
-bkpts_quasi <- generate_background_points(number_of_background_points = 20000,
+bkpts_quasi <- generate_background_points(number_of_background_points = 5000,
                                     known_sites = POdata@coords,
                                     study_area = preds[[1]],
                                     model_covariates = preds,
-                                    method = 'quasirandom')
+                                    method = 'single_species_quasi')
 fm <- gam(presence/weights ~ s(elevation) +
               s(precipitation) +
               s(temperature) +
@@ -90,7 +90,8 @@ p <- predict(object=preds,
              type = 'response',
              const=data.frame(weights = 1))
 
-p_cell <- p*(res(preds)[1]*res(preds)[2])/4 # resolution of raster changes with bkpts_quasi - need to remember that. 
+p_cell <- p*(res(preds)[1]*res(preds)[2])/1000 # resolution of raster changes with bkpts_quasi - need to remember that. 
+cellStats(p_cell,sum)
 
 ```
 

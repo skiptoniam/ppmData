@@ -4,10 +4,11 @@
 \alias{generate_background_points}
 \title{create background points for study area or point data}
 \usage{
-generate_background_points(number_of_background_points = 2000,
+generate_background_points(number_of_background_points = 10000,
   known_sites = NULL, study_area = NULL, model_covariates = NULL,
-  resolution = 1, multispecies_presences = NULL, method = c("grid",
-  "quasirandom", "quasirandom_covariates", "multispecies"),
+  resolution = 1, multispecies_presences = NULL,
+  method = c("single_species_grid", "single_species_quasi",
+  "multispecies_grid", "multispecies_quasi"),
   interpolation_method = "bilinear", coords = c("x", "y"))
 }
 \arguments{
@@ -27,14 +28,14 @@ modelling the point process (best use a Raster* stack or Raster* brick)}
 
 \item{multispecies_presences}{a community matrix of species x sites - which has the columns "x","y","sp1,...,"spN". Presences as denoted with a 1, while non-presences are denoted with an NA, this is to distingish between non-species specific observations and generated background points.}
 
-\item{method}{the type of method that should be used to generate background points.
-'grid' generates a regular grid at a set resolution with weights per-point. See Warton 2010 for details.
-'quasirandom' generates quasirandom background points based on the coordinates. See Foster 2015 for details.
-'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyper-dimensions. See Foster 2015 for details.
-'multispecies' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.}
+\item{method}{the type of method that should be used to generate background points. The options are:
+'single_species_grid' generates a regular grid and weights for a single species. See Warton 2010 for details.
+'single_species_quasi' generates quasirandom background points based on input data for a single species. See Foster 2015 for details.
+'multispecies_grid' this method produces species-specific bacground points and weights multispecies presence-only using a quadrature grid #' method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+'multispecies_quasi' this method produces species-specific bacground points and weights multispecies presence-only using a quasirandom design method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+'multispecies_quasi'}
 
 \item{interpolation_method}{either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 
 \item{coords}{is the name of site coordinates. The default is c('x','y').}
 }
-

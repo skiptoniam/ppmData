@@ -35,7 +35,7 @@ generate_background_points <- function(number_of_background_points = 10000,
                                        coords = c("x","y")){
 
   #this function was built to match the dimensions of coordinates and other dimensions
-  known_sites <- qrbp:::coords_match_dim(known_sites,dim(known_sites)[2])
+  known_sites <- coords_match_dim(known_sites,dim(known_sites)[2])
   # eps <- sqrt(.Machine$double.eps)
 
   if(is.null(known_sites))stop('come on mate, you need some occurrence points.')
@@ -61,16 +61,16 @@ generate_background_points <- function(number_of_background_points = 10000,
 
   # create background points based on method.
   background_sites <- switch(method,
-                single_species_grid = qrbp:::grid_method(resolution, study_area),
-                single_species_quasi = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates),
-                multispecies_grid = qrbp:::grid_method(resolution, model_covariates),
-                multispecies_quasi = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates))
+                single_species_grid = grid_method(resolution, study_area),
+                single_species_quasi = quasirandom_covariates_method(number_of_background_points,  study_area, model_covariates),
+                multispecies_grid = grid_method(resolution,  study_area),
+                multispecies_quasi = quasirandom_covariates_method(number_of_background_points, study_area, model_covariates))
 
   site_weights <- switch(method,
-                         single_species_grid = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
-                         single_species_quasi = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
-                         multispecies_grid = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords),
-                         multispecies_quasi = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords))
+                         single_species_grid = get_weights(known_sites,background_sites[,1:2],study_area,coords),
+                         single_species_quasi = get_weights(known_sites,background_sites[,1:2],study_area,coords),
+                         multispecies_grid = get_weights(multispecies_presences,background_sites[,1:2],study_area,coords),
+                         multispecies_quasi = get_weights(multispecies_presences,background_sites[,1:2],study_area,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(model_covariates)){
@@ -78,29 +78,40 @@ generate_background_points <- function(number_of_background_points = 10000,
        stop("model_covariates must be a raster, rasterstack or rasterbrick of model_covariates desired for modelling")
 
        # extract covariate data for background points
-       if(method=='multispecies') {
-         # print(head(site_weights$multispecies_presence[,coords]))
+       if(method=='multispecies_grid'|method=='multispecies_quasi') {
          covars <- extract(model_covariates,site_weights$multispecies_presence[,coords],method=interpolation_method,na.rm=TRUE)
          NAsites <- which(!complete.cases(covars))
-         print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-         covar_data <- covars[-NAsites,,drop=FALSE]
-         dat <- list()
-         dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covar_data)
-         dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
+         if(length(NAsites)>0){
+           print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+            covars <- covars[-NAsites,,drop=FALSE]
+            dat <- list()
+            dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,site_weights[-NAsites,coords],covars)
+            dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
+         } else {
+           dat <- list()
+           dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,site_weights,covars)
+           dat$species_weights <- site_weights$multispecies_weights[,-1]
+         }
        } else {
          # print(head(site_weights[,coords]))
          covars <- extract(model_covariates,site_weights[,coords],method=interpolation_method,na.rm=TRUE)
          NAsites <- which(!complete.cases(covars))
-         print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-         covar_data <- covars[-NAsites,,drop=FALSE]
-         # covar_data <- cbind(site_weights[,coords],covars)
-        #reate an entire dataset
-         dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites)))[-NAsites],
-                         covar_data,
-                         weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
+         if(length(NAsites)>0){
+           print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+           covars <- covars[-NAsites,,drop=FALSE]
+           dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites)))[-NAsites],
+                             site_weights[-NAsites,coords],
+                             covars,
+                             weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
+         } else {
+           dat <- data.frame(presence=c(rep(1,nrow(known_sites)),rep(0,nrow(background_sites))),
+                             site_weights,
+                             covars,
+                             weights=site_weights$weights)
+        }
       }
-  } else {
-    if(method=='multispecies'){
+    } else {
+    if(method=='multispecies_grid'|method=='multispecies_quasi'){
        dat <- list()
        dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],
                                        x=c(known_sites$x,background_sites$x),
@@ -114,11 +125,11 @@ generate_background_points <- function(number_of_background_points = 10000,
    }
   }
 
-  if(method!='multispecies') dat <- rm_na_pts(dat)
+  if(method!='multispecies_grid'|method!='multispecies_quasi') dat <- rm_na_pts(dat)
   return(dat)
 }
 
-grid_method <- function(resolution=1,study_area){
+grid_method <- function(resolution=1, study_area){
 
   if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'grid' method currently only works a raster input as a 'study_area'")
@@ -141,15 +152,24 @@ grid_method <- function(resolution=1,study_area){
 
 
 # still working on this method.
-quasirandom_covariates_method <- function(number_of_background_points, covariates){
+quasirandom_covariates_method <- function(number_of_background_points, study_area, covariates=NULL){
 
   if(!inherits(covariates, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'quasirandom_covariates' method currently only works a raster input as a 'covariates'")
 
   #generate a set of potential sites for quasirandom generation
-  rast_coords <- raster::xyFromCell(covariates,1:ncell(covariates))
-  rast_data <- raster::values(covariates)
-  na_sites <- which(is.na(rast_data))
+  if(!is.null(covariates)){
+    rast_coords <- raster::xyFromCell(covariates,1:ncell(covariates))
+    rast_data <- raster::values(covariates)
+    na_sites <- which(is.na(rast_data[,1]))
+    covariates_ext <- extent(covariates)[1:4]
+  } else {
+    rast_coords <- raster::xyFromCell(study_area,1:ncell(study_area))
+    rast_data <- raster::values(study_area)
+    na_sites <- which(is.na(rast_data))
+    covariates_ext <- extent(study_area)[1:4]
+    }
+
   potential_sites <- cbind(rast_coords,rast_data)
   potential_sites[na_sites,-1:-2] <- 0
 
@@ -158,7 +178,7 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
     stop('more background points than cells avaliable')
   }
 
-  covariates_ext <- extent(covariates)[1:4]
+  # covariates_ext <- extent(covariates)[1:4]
 
   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
   dimension <- dim(potential_sites)[2]
@@ -208,10 +228,7 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
   colnames(samp) <- c(colnames(potential_sites), "inclusion.probabilities",
                       "ID")
 
-  #new way to estimate weights
-  # samp$weights <- estimate_area(covariates[[1]],samp[,c('x','y')])
-
-  return(samp[,c('x','y')])#,'weights')])
+  return(samp)
 }
 
 coords_match_dim <- function (known.sites,dimension){
@@ -333,4 +350,71 @@ estimate_area_region <- function(study_area){
     area_of_region <- (ncell(study_area[!is.na(study_area)])  * xres(study_area) * yres(study_area))/1000
   }
   return(area_of_region)
+}
+
+get_weights <- function(known_sites,background_sites,study_area,coords){
+
+  # if single species known sites will be just coords
+  # if multispeices matrix will be x, y, sp1, sp2 matrix (min four columns)
+  # weights are the realtive area that point represents within the domain.
+
+
+  if(ncol(known_sites)>2) {
+
+    known_sites <- as.matrix(known_sites)
+    if(!check_pres_bk_names(known_sites[,1:2],background_sites))colnames(background_sites) <- colnames(known_sites[,1:2])
+
+
+    # how many species are there?
+    n_sp <- ncol(known_sites) # this is actually this number - 2
+    # get the species specific presences
+    sp_presence_coords <- lapply(3:n_sp,function(x)known_sites[!is.na(known_sites[,x]),coords])
+    # what
+    sp_xy <- lapply(sp_presence_coords,function(x)rbind(x,background_sites))
+    # sp specific areas
+    sp_areas <- lapply(sp_xy,function(x)qrbp:::estimate_area(study_area,x))
+    # sp cell ids.
+    sp_cell_ids <- lapply(sp_xy,function(x)raster::cellFromXY(study_area,x))
+    # sp specific counts of points
+    sp_count_pts <- lapply(sp_cell_ids,table)
+    # sp specific weights
+    sp_weights <- lapply(1:c(n_sp-2),function(x)sp_areas[[x]]/as.numeric(sp_count_pts[[x]][match(sp_cell_ids[[x]],
+                                                                                                 names(sp_count_pts[[x]]))]))
+
+    ## now I need to put this all back in to a matix that matches the xy.
+    sp_weights_mat <- matrix(NA,nrow(known_sites)+nrow(background_sites),n_sp-1)
+    sp_pres_mat <- matrix(NA,nrow(known_sites)+nrow(background_sites),n_sp)
+    all_sites_ids <- raster::cellFromXY(study_area,rbind(known_sites[,coords],background_sites[,coords]))
+    sp_weights_mat[,1]<- all_sites_ids
+
+    for (ii in 1:c(n_sp-2)){
+      sp_pres_mat[,c(ii+2)] <- c(known_sites[,c(ii+2)],rep(0,nrow(background_sites)))
+      sp_weights_mat[which(!is.na(sp_pres_mat[,ii+2])),c(ii+1)]<-sp_weights[[ii]]
+    }
+    sp_pres_mat[,c(1,2)] <- as.matrix(rbind(known_sites[,coords],background_sites[,coords]))
+    colnames(sp_pres_mat) <- colnames(known_sites)
+    colnames(sp_weights_mat) <- c("cell_id",colnames(known_sites)[-1:-2])
+    weights <- list()
+    weights$multispecies_weights <- sp_weights_mat
+    weights$multispecies_presence <- sp_pres_mat
+
+  } else {
+    xy <- rbind(known_sites,background_sites)
+    areas <- estimate_area(study_area = study_area, site_coords = xy)
+    cell_id <- raster::cellFromXY(study_area, xy)
+    count_pts <- table(cell_id)
+    weights <- areas/as.numeric(count_pts[match(cell_id,
+                                                names(count_pts))])
+    weights <- data.frame(x=xy[,1],y=xy[,2],weights=weights)
+  }
+  return(weights)
+}
+
+
+check_pres_bk_names <- function(pres_sites,back_sites){
+
+  return(all(colnames(pres_sites)==colnames(back_sites)))
+
+
+
 }
