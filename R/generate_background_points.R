@@ -11,12 +11,12 @@
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
 #' @param resolution resolution setup grid for integration points (default is 1 deg).
 #' @param multispecies_presences a community matrix of species x sites - which has the columns "x","y","sp1,...,"spN". Presences as denoted with a 1, while non-presences are denoted with an NA, this is to distingish between non-species specific observations and generated background points.
-#' @param method the type of method that should be used to generate background points.
-#' 'grid' generates a regular grid at a set resolution with weights per-point. See Warton 2010 for details.
-#' 'quasirandom' generates quasirandom background points based on the coordinates. See Foster 2015 for details.
-#' 'quasirandom_covariates' generates quasirandom background points across the multiple dimensions of covariate hyper-dimensions. See Foster 2015 for details.
-#' 'multispecies_quasirandom' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
-#' multispecies_quasirandom' this method produces species specific weights for a multispecies presence-only problem. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights, but uses the quadrature grid approach, rather than the quasirandom points approach.
+#' @param method the type of method that should be used to generate background points. The options are:
+#' 'single_species_grid' generates a regular grid and weights for a single species. See Warton 2010 for details.
+#' 'single_species_quasi' generates quasirandom background points based on input data for a single species. See Foster 2015 for details.
+#' 'multispecies_grid' this method produces species-specific bacground points and weights multispecies presence-only using a quadrature grid #' method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+#' 'multispecies_quasi' this method produces species-specific bacground points and weights multispecies presence-only using a quasirandom design method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
+#' 'multispecies_quasi'
 #' @param interpolation_method either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coords is the name of site coordinates. The default is c('x','y').
 #'
@@ -29,8 +29,8 @@ generate_background_points <- function(number_of_background_points = 10000,
                                        model_covariates = NULL, # a set of covariates.
                                        resolution = 1, #resolution to setup quadriature points in lat/lon
                                        multispecies_presences = NULL, #a community matrix of speciesXsites.
-                                       method = c('grid','quasirandom','quasirandom_covariates',
-                                                  'multispecies_quasirandom','multispecies_grid'),
+                                       method = c('single_species_grid','single_species_quasi',
+                                                  'multispecies_grid','multispecies_quasi'),
                                        interpolation_method='bilinear',
                                        coords = c("x","y")){
 
@@ -61,19 +61,16 @@ generate_background_points <- function(number_of_background_points = 10000,
 
   # create background points based on method.
   background_sites <- switch(method,
-                grid = grid_method(resolution, study_area),
-                quasirandom = quasirandom_method(number_of_background_points,study_area),
-                quasirandom_covariates = quasirandom_covariates_method(number_of_background_points,
-                                                                       model_covariates),
-                multispecies_quasirandom = quasirandom_covariates_method(number_of_background_points,
-                                                                         model_covariates),
-                multispecies_grid = grid_method(resolution, study_area))
+                single_species_grid = qrbp:::grid_method(resolution, study_area),
+                single_species_quasi = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates),
+                multispecies_grid = qrbp:::grid_method(resolution, model_covariates),
+                multispecies_quasi = qrbp:::quasirandom_covariates_method(number_of_background_points, model_covariates))
 
   site_weights <- switch(method,
-    grid = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
-    quasirandom = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
-    quasirandom_covariates = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
-    multispecies = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords))
+                         single_species_grid = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
+                         single_species_quasi = qrbp:::get_weights(known_sites,background_sites,study_area,coords),
+                         multispecies_grid = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords),
+                         multispecies_quasi = qrbp:::get_weights(multispecies_presences,background_sites,study_area,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(model_covariates)){
@@ -117,7 +114,7 @@ generate_background_points <- function(number_of_background_points = 10000,
    }
   }
 
-  # if(method!='multispecies') dat <- rm_na_pts(dat)
+  if(method!='multispecies') dat <- rm_na_pts(dat)
   return(dat)
 }
 
@@ -142,133 +139,6 @@ grid_method <- function(resolution=1,study_area){
   return(grid)
 }
 
-multispecies_quasirandom_method <- function(number_of_background_points, resolution = 1, study_area, presence_sites_coords){
-
-  if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'quasirandom' method currently only works a raster input as a 'study_area'")
-
-  fct <- (res(study_area)/resolution)[1]
-  if(fct>=1) dd <- disaggregate(study_area, fct, na.rm=TRUE)
-  else dd <- aggregate(study_area, 1/fct, na.rm=TRUE)
-
-  #generate a set of potential sites for quasirandom generation
-  potential_sites <- raster::rasterToPoints(dd)[,-3]
-
-  if(number_of_background_points>nrow(potential_sites)){
-    stop('message the number of background points is greater than avaliable cells based on the current resolution of the grids\n
-         Either use less background points or select a finer resolution.')
-  }
-
-  study_area_ext <- extent(dd)[1:4]
-
-  #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
-  dimension <- dim(potential_sites)[2]
-
-  #intialise random sequence of random numbers
-  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
-                                1, init = TRUE)
-
-  #generate a large number of random numbers - minimun is 10000.
-  mult <- 20
-  njump <- number_of_background_points * mult
-  samp <- randtoolbox::halton(max(njump, 10000), dim = dimension +
-                                1, init = FALSE)
-
-  #now extract range from raster extent - could include multiple dimensions - eg - depth.
-  myRange <- t(matrix(study_area_ext,2,2,byrow = TRUE))
-
-  #expand the the random points to be on the same range as extent
-  for (ii in 1:2) samp[, ii] <- myRange[1, ii] + (myRange[2,ii] - myRange[1, ii]) * samp[, ii]
-
-  #generate sample ids
-  sampIDs <- rep(NA, nrow(samp))
-  sampIDs <- class::knn1(potential_sites,samp[, -(dimension + 1), drop = FALSE], 1:nrow(potential_sites))
-
-  #remove duplicated sampIDs
-  sampIDs <- sampIDs[!duplicated(sampIDs)]
-
-  #select the number of desired background points
-  if(length(sampIDs)<number_of_background_points)stop('try a few more background points.')
-  sampIDs <- sampIDs[1:number_of_background_points]
-
-  #get coordinates from potential sites
-  samp <- as.data.frame(potential_sites[sampIDs, , drop = FALSE])
-  colnames(samp) <- colnames(potential_sites)
-
-  #new way to estimate weights
-  #samp$weights <- estimate_area(study_area,samp[,1:2])
-
-  #estimate weights for presence only sites.
-  pres_samps <- as.data.frame(presences_sites_coords)
-  # pres_samps$weights <- estimate_area(study_area,pres_samps)
-
-  return(list(pres_samps,samp))
-
-}
-
-quasirandom_method <- function(number_of_background_points, study_area){
-
-  if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'quasirandom' method currently only works a raster input as a 'study_area'")
-
-  #generate a set of potential sites for quasirandom generation
-  potential_sites <- raster::rasterToPoints(study_area)[,-3]
-
-  #if number_of_background_points>nrow(potential_sites) recursively create a finer grid.
-  if(number_of_background_points>nrow(potential_sites)){
-    fct <- 2
-    while(number_of_background_points>nrow(potential_sites)){
-    study_area <- disaggregate(study_area, fct, na.rm=TRUE)
-    potential_sites <- raster::rasterToPoints(study_area)[,-3]
-    }
-  }
-
-
-  study_area_ext <- extent(study_area)[1:4]
-
-  #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
-  dimension <- dim(potential_sites)[2]
-
-  #intialise random sequence of random numbers
-  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
-                                1, init = TRUE)
-
-  #generate a large number of random numbers - minimun is 10000.
-  mult <- 20
-  njump <- number_of_background_points * mult
-  samp <- randtoolbox::halton(max(njump, 10000), dim = dimension +
-                                1, init = FALSE)
-
-  #now extract range from raster extent - could include multiple dimensions - eg - depth.
-  myRange <- t(matrix(study_area_ext,2,2,byrow = TRUE))
-
-  #expand the the random points to be on the same range as extent
-  for (ii in 1:2) samp[, ii] <- myRange[1, ii] + (myRange[2,ii] - myRange[1, ii]) * samp[, ii]
-
-  #generate sample ids
-  sampIDs <- rep(NA, nrow(samp))
-  sampIDs <- class::knn1(potential_sites,samp[, -(dimension + 1), drop = FALSE], 1:nrow(potential_sites))
-
-  #remove duplicated sampIDs
-  sampIDs <- sampIDs[!duplicated(sampIDs)]
-
-  #select the number of desired background points
-  if(length(sampIDs)<number_of_background_points)stop('try a few more background points.')
-  sampIDs <- sampIDs[1:number_of_background_points]
-
-  #get coordinates from potential sites
-  samp <- as.data.frame(potential_sites[sampIDs, , drop = FALSE])
-  colnames(samp) <- colnames(potential_sites)
-
-  #new way to estimate weights
-  #estimate_area(study_area,presences_sites_coords)
-
-
-
-  # samp$weights <- estimate_area(study_area,samp)
-
-  return(as.data.frame(samp))
-}
 
 # still working on this method.
 quasirandom_covariates_method <- function(number_of_background_points, covariates){
@@ -277,16 +147,15 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
     stop("'quasirandom_covariates' method currently only works a raster input as a 'covariates'")
 
   #generate a set of potential sites for quasirandom generation
-  potential_sites <- raster::rasterToPoints(covariates)
-  potential_sites <- na.omit(potential_sites)
+  rast_coords <- raster::xyFromCell(covariates,1:ncell(covariates))
+  rast_data <- raster::values(covariates)
+  na_sites <- which(is.na(rast_data))
+  potential_sites <- cbind(rast_coords,rast_data)
+  potential_sites[na_sites,-1:-2] <- 0
 
   #if number_of_background_points>nrow(potential_sites) recursively create a finer grid.
   if(number_of_background_points>nrow(potential_sites)){
-    fct <- 2
-    while(number_of_background_points>nrow(potential_sites)){
-      covariates <- disaggregate(covariates, fct, na.rm=TRUE)
-      potential_sites <- raster::rasterToPoints(covariates)[,-3]
-    }
+    stop('more background points than cells avaliable')
   }
 
   covariates_ext <- extent(covariates)[1:4]
@@ -295,9 +164,8 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
   dimension <- dim(potential_sites)[2]
 
   N <- nrow(potential_sites)
-
-    inclusion_probs <- rep(1/N, N)
-
+  inclusion_probs <- rep(1/N, N)
+  inclusion_probs[na_sites] <- 0
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   mult <- 10
   samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
@@ -305,7 +173,7 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
   njump <- number_of_background_points * mult
   samp <- randtoolbox::halton(max(njump, 5000), dim = dimension +
                                 1, init = FALSE)
-  myRange <- apply(potential_sites, -1, range)
+  myRange <- apply(potential_sites[-na_sites,], -1, range)
   for (ii in 1:dimension) samp[, ii] <- myRange[1, ii] + (myRange[2,
                                                                   ii] - myRange[1, ii]) * samp[, ii]
   if (dimension == 2) {
@@ -322,10 +190,9 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
     else message(kount + njump, "(", length(sampIDs.2),
                  ") ", sep = "")
     sampIDs[kount + 1:min(njump, nrow(samp) - kount)] <- class::knn1(potential_sites,
-                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimension +
-                                                                                                                        1), drop = FALSE], 1:nrow(potential_sites))
-    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) -
-                                             kount)), dimension + 1] < inclusion_probs1[sampIDs[1:(kount +
+                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimension + 1), drop = FALSE],
+                                                                     1:nrow(potential_sites))
+    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) - kount)), dimension + 1] < inclusion_probs1[sampIDs[1:(kount +
                                                                                                      min(njump, nrow(samp) - kount))]])
     if (length(sampIDs.2) >= number_of_background_points) {
       sampIDs <- sampIDs[sampIDs.2][1:number_of_background_points]
@@ -333,7 +200,7 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
     }
     kount <- kount + njump
   }
-  message("Finished\n")
+  # message("Finished\n")
   if (kount > nrow(samp))
     stop("Failed to find a design. It is likely that the inclusion probabilities are very low and uneven. Please try again OR make inclusion probabilities more even")
   samp <- as.data.frame(cbind(potential_sites[sampIDs, , drop = FALSE],
@@ -346,94 +213,6 @@ quasirandom_covariates_method <- function(number_of_background_points, covariate
 
   return(samp[,c('x','y')])#,'weights')])
 }
-
-# #need to think about how we are going to incorporate bias into single species?...
-# bias_method <- function(number_of_background_points,study_area,bias_layer=NULL){
-#
-#   if(!inherits(study_area, c('RasterLayer','RasterStack','RasterBrick')))
-#     stop("'quasirandom_study_area' method currently only works a raster input as a 'study_area'")
-#
-#   if(!is.null(bias_layer)){
-#     if(!inherits(bias_layer, c('RasterLayer','RasterStack','RasterBrick')))
-#       stop("'quasirandom_study_area' method currently only works if 'bias_layer' is a raster")
-#   }
-#
-#   #generate a set of potential sites for quasirandom generation
-#   potential_sites <- raster::rasterToPoints(study_area)
-#   potential_sites <- na.omit(potential_sites)
-#
-#   #if number_of_background_points>nrow(potential_sites) recursively create a finer grid.
-#   if(number_of_background_points>nrow(potential_sites)){
-#     fct <- 2
-#     while(number_of_background_points>nrow(potential_sites)){
-#       study_area <- disaggregate(study_area, fct, na.rm=TRUE)
-#       potential_sites <- raster::rasterToPoints(study_area)[,-3]
-#     }
-#   }
-#
-#   study_area_ext <- extent(study_area)[1:4]
-#
-#   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
-#   dimension <- dim(potential_sites)[2]
-#
-#   # add includsion probs in the future, we can use this as a bias layer.
-#
-#   if (is.null(bias_layer)) {
-#      N <- nrow(potential_sites)
-#      inclusion_probs <- rep(1/N, N)
-#   } else {
-#      inclusion_probs <- bias_layer[!is.na(bias_layer)]
-#   }
-#   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-#   mult <- 10
-#   samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
-#                                 1, init = TRUE)
-#   njump <- number_of_background_points * mult
-#   samp <- randtoolbox::halton(max(njump, 5000), dim = dimension +
-#                                 1, init = FALSE)
-#   myRange <- apply(potential_sites, -1, range)
-#   for (ii in 1:dimension) samp[, ii] <- myRange[1, ii] + (myRange[2,
-#                                                                   ii] - myRange[1, ii]) * samp[, ii]
-#   if (dimension == 2) {
-#     tmp <- mgcv::in.out(study_area, samp[, 1:dimension])
-#     samp <- samp[tmp, ]
-#   }
-#   sampIDs <- rep(NA, nrow(samp))
-#   kount <- 0
-#   flag <- TRUE
-#   while (flag & (kount < nrow(samp))) {
-#     if (kount == 0)
-#       message("Number of samples considered (number of samples found): ",
-#               njump, "(0) ", sep = "")
-#     else message(kount + njump, "(", length(sampIDs.2),
-#                  ") ", sep = "")
-#     sampIDs[kount + 1:min(njump, nrow(samp) - kount)] <- class::knn1(potential_sites,
-#                                                                      samp[kount + 1:min(njump, nrow(samp) - kount), -(dimension +
-#                                                                                                                         1), drop = FALSE], 1:nrow(potential_sites))
-#     sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) -
-#                                              kount)), dimension + 1] < inclusion_probs1[sampIDs[1:(kount +
-#                                                                                                      min(njump, nrow(samp) - kount))]])
-#     if (length(sampIDs.2) >= number_of_background_points) {
-#       sampIDs <- sampIDs[sampIDs.2][1:number_of_background_points]
-#       flag <- FALSE
-#     }
-#     kount <- kount + njump
-#   }
-#   message("Finished\n")
-#   if (kount > nrow(samp))
-#     stop("Failed to find a design. It is likely that the inclusion probabilities are very low and uneven. Please try again OR make inclusion probabilities more even")
-#   samp <- as.data.frame(cbind(potential_sites[sampIDs, , drop = FALSE],
-#                               inclusion_probs[sampIDs], sampIDs))
-#   colnames(samp) <- c(colnames(potential_sites), "inclusion.probabilities",
-#                       "ID")
-#
-#   #new way to estimate weights
-#   area_of_region <- estimate_area_region(study_area)
-#   #samp$weights <- rep(area_of_region/nrow(samp),nrow(samp))
-#
-#   return(samp[,c('x','y')])#,'weights')])
-#
-# }
 
 coords_match_dim <- function (known.sites,dimension){
 
@@ -526,7 +305,7 @@ estimate_area <- function(study_area,site_coords){
   if(raster::isLonLat(study_area)){
     #calculate area based on area function
     #convert kms to ms
-    area_rast <- raster::area(study_area)*1000
+    area_rast <- raster::area(study_area)
     area_study <- raster::mask(area_rast,study_area)
     total_area <- cellStats(area_study,sum,na.rm=TRUE)
     wts <- total_area/raster::extract(area_study,site_coords,na.rm=TRUE)
@@ -535,22 +314,23 @@ estimate_area <- function(study_area,site_coords){
     # mode equal area should be in meters
     cell_area <- raster::res(study_area)[1]*raster::res(study_area)[2]
     n_cell <- length(study_area[!is.na(study_area[])])
-    wts <- rep((n_cell*cell_area)/nrow(site_coords),nrow(site_coords))
+    wts <- rep((n_cell*cell_area)/nrow(site_coords),nrow(site_coords))/1000
     }
    return(wts)
 }
 
+#estimate the total area of all cells in extent in km^2
 estimate_area_region <- function(study_area){
   if(raster::isLonLat(study_area)){
     #calculate area based on area function
     #convert kms to ms
-    area_rast <- area(study_area)*1000
+    area_rast <- area(study_area)
     area_study <- mask(area_rast,study_area)
-    area_of_region <- cellStats(area_study,sum, na.rm=TRUE)*1000
+    area_of_region <- cellStats(area_study,sum, na.rm=TRUE)
   } else {
     # calculate area based on equal area cell resolution
     # mode equal area should be in meters
-    area_of_region <- ncell(study_area[!is.na(study_area)])  * xres(study_area) * yres(study_area)
+    area_of_region <- (ncell(study_area[!is.na(study_area)])  * xres(study_area) * yres(study_area))/1000
   }
   return(area_of_region)
 }
