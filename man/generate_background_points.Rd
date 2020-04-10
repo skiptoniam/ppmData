@@ -4,38 +4,40 @@
 \alias{generate_background_points}
 \title{create background points for study area or point data}
 \usage{
-generate_background_points(number_of_background_points = 10000,
-  known_sites = NULL, study_area = NULL, model_covariates = NULL,
-  resolution = 1, multispecies_presences = NULL,
-  method = c("single_species_grid", "single_species_quasi",
-  "multispecies_grid", "multispecies_quasi"),
-  interpolation_method = "bilinear", coords = c("x", "y"))
+generate_background_points(
+  npoints = 10000,
+  presences = NULL,
+  window = NULL,
+  covariates = NULL,
+  resolution = 1,
+  method = c("grid", "quasirandom", "random"),
+  interpolation = "bilinear",
+  coords = c("X", "Y")
+)
 }
 \arguments{
-\item{number_of_background_points}{number of back ground points to create - only applicable to quasirandom.}
+\item{npoints}{number of back ground points to create - only applicable to quasirandom.}
 
-\item{known_sites}{a matrix, dataframe or SpatialPoints* object giving the
-coordinates of the points to use in sampling (of size Nxdimension).
-Note: SpatialPoints* will only be suitiable for \code{dimension=2}.}
+\item{presences}{a matrix, dataframe or SpatialPoints* object giving the
+coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.}
 
-\item{study_area}{a Raster* object giving the area over which to generate background points.
-If ignored, a rectangle defining the extent of \code{known_sites} will be used.}
+\item{window}{a Raster* object giving the area over which to generate background points. NA cells afe ignored.
+If ignored, a rectangle defining the extent of \code{presences} will be used.}
 
-\item{model_covariates}{an optional Raster* object containing covariates for
+\item{covariates}{an optional Raster* object containing covariates for
 modelling the point process (best use a Raster* stack or Raster* brick)}
 
 \item{resolution}{resolution setup grid for integration points (default is 1 deg).}
 
-\item{multispecies_presences}{a community matrix of species x sites - which has the columns "x","y","sp1,...,"spN". Presences as denoted with a 1, while non-presences are denoted with an NA, this is to distingish between non-species specific observations and generated background points.}
-
 \item{method}{the type of method that should be used to generate background points. The options are:
-'single_species_grid' generates a regular grid and weights for a single species. See Warton 2010 for details.
-'single_species_quasi' generates quasirandom background points based on input data for a single species. See Foster 2015 for details.
-'multispecies_grid' this method produces species-specific bacground points and weights multispecies presence-only using a quadrature grid #' method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
-'multispecies_quasi' this method produces species-specific bacground points and weights multispecies presence-only using a quasirandom design method. It should return a list, that contains a model matrix of (n_unique_presence_only_sites + n_background_points) x (n_sps + const=1 #' + n_covariates), along with a  (n_unique_presence_only_sites + n_background_points) x (n_sps) matrix of weights.
-'multispecies_quasi'}
+'grid' generates a regular grid of background points. See Berman & Turner 1993 or Warton & Shepard 2010 for details.
+'quasirandom' generates quasirandom background points. See Foster 2015 for details.
+'random' generates a random set of background points - See Philips 2006 (ala MaxEnt) for details.}
 
-\item{interpolation_method}{either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
+\item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 
-\item{coords}{is the name of site coordinates. The default is c('x','y').}
+\item{coords}{is the name of site coordinates. The default is c('X','Y').}
+}
+\description{
+create background points for study area or point data
 }
