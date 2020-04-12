@@ -1,37 +1,36 @@
-#' @name generate_background_points
-#' @title create background points for study area or point data
+#' @name ppmdata
+#' @title create a Point Process dataset for spatial presence only modelling.
 #' @export
-#' @param npoints number of back ground points to create - only applicable to quasirandom.
+#' @param npoints number of background points to create.
 #' @param presences a matrix, dataframe or SpatialPoints* object giving the
-#'   coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
-#' @param window a Raster* object giving the area over which to generate background points. NA cells afe ignored.
-#'  If ignored, a rectangle defining the extent of \code{presences} will be used.
+#'   coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
+#' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data
+#' . If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates an optional Raster* object containing covariates for
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
-#' @param resolution resolution setup grid for integration points (default is 1 deg).
+#' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 #' @param method the type of method that should be used to generate background points. The options are:
 #' 'grid' generates a regular grid of background points. See Berman & Turner 1993 or Warton & Shepard 2010 for details.
-#' 'quasirandom' generates quasirandom background points. See Foster 2015 for details.
+#' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
 #' 'random' generates a random set of background points - See Philips 2006 (ala MaxEnt) for details.
-#' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for selecting covariate data. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
+#' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coords is the name of site coordinates. The default is c('X','Y').
-#'
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
-generate_background_points <- function(npoints = 10000,
-                                       presences = NULL,  #a set of coordinates,
-                                       window = NULL,  #raster
-                                       covariates = NULL, # a set of covariates.
-                                       resolution = 1, #resolution to setup quadriature points in lat/lon
-                                       method = c('grid','quasirandom','random'),
-                                       interpolation='bilinear',
-                                       coords = c('X','Y')){
+ppmdata <- function(npoints = 10000,
+                    presences = NULL,  #a set of coordinates,
+                    window = NULL,  #raster
+                    covariates = NULL, # a set of covariates.
+                    resolution = 1, #resolution to setup quadriature points in lat/lon
+                    method = c('grid','quasirandom','random'),
+                    interpolation='bilinear',
+                    coords = c('X','Y')){
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    background_sites <- switch(method,
-                               grid = grid_method(resolution, window, covariates), #if covariates !is.null - return covariates too.
+                               grid = grid_method(resolution, window, covariates),
                                quasirandom = quasirandom_method(npoints,  window, covariates),
                                random = random_method(npoints, window, covariates))
 
@@ -65,15 +64,23 @@ generate_background_points <- function(npoints = 10000,
 
   # create background points based on method.
   background_sites <- switch(method,
-                grid = grid_method(resolution, window),
+                grid = grid_method(resolution, window, covariates),
                 quasirandom = quasirandom_method(npoints,  window, covariates),
-                random = random_method(resolution,  window))
+                random = random_method(npoints,  window, covariates))
 
-  site_weights <- switch(method,
-                         single_species_grid = get_weights(presences,background_sites[,1:2],window,coords),
-                         single_species_quasi = get_weights(presences,background_sites[,1:2],window,coords),
-                         multispecies_grid = get_weights(multispecies_presences,background_sites[,1:2],window,coords),
-                         multispecies_quasi = get_weights(multispecies_presences,background_sites[,1:2],window,coords))
+  nspp <- length(unique(presences[,"SpeciesID"]))
+  if(nspp>1){
+    sppweights <- lapply(1:nspp,function(x)get_weights(presences[presences$SppID==x],
+                                                       background_sites[,1:2],window,coords))
+  } else {
+    sppweights <- get_weights(presences,background_sites[,1:2],window,coords)
+  }
+
+  # site_weights <- switch(method,
+  #                        single_species_grid = get_weights(presences,background_sites[,1:2],window,coords),
+  #                        single_species_quasi = get_weights(presences,background_sites[,1:2],window,coords),
+  #                        multispecies_grid = get_weights(multispecies_presences,background_sites[,1:2],window,coords),
+  #                        multispecies_quasi = get_weights(multispecies_presences,background_sites[,1:2],window,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(covariates)){
@@ -171,15 +178,15 @@ quasirandom_method <- function(npoints, window, covariates=NULL){
   }
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
-    rast_coords <- raster::xyFromCell(covariates,1:ncell(covariates))
+    rast_coords <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
     rast_data <- raster::values(covariates)
     na_sites <- which(is.na(rast_data[,1]))
-    covariates_ext <- extent(covariates)[1:4]
+    covariates_ext <- raster::extent(covariates)[1:4]
   } else {
-    rast_coords <- raster::xyFromCell(window,1:ncell(window))
+    rast_coords <- raster::xyFromCell(window,1:raster::ncell(window))
     rast_data <- raster::values(window)
     na_sites <- which(is.na(rast_data))
-    covariates_ext <- extent(window)[1:4]
+    covariates_ext <- raster::extent(window)[1:4]
     }
 
   potential_sites <- cbind(rast_coords,rast_data)
@@ -191,22 +198,21 @@ quasirandom_method <- function(npoints, window, covariates=NULL){
   }
 
   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
-  dimension <- 2#dim(potential_sites)[2]
+  dimensions <- 2#dim(potential_sites)[2]
   N <- nrow(potential_sites)
   inclusion_probs <- rep(1/N, N)
   inclusion_probs[na_sites] <- 0
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   mult <- 10
-  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimension +
+  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimensions +
                                 1, init = TRUE)
   njump <- npoints * mult
-  samp <- randtoolbox::halton(max(njump, 5000), dim = dimension +
+  samp <- randtoolbox::halton(max(njump, 5000), dim = dimensions +
                                 1, init = FALSE)
   myRange <- apply(potential_sites[-na_sites,], -1, range)
-  for (ii in 1:dimension) samp[, ii] <- myRange[1, ii] + (myRange[2,
-                                                                  ii] - myRange[1, ii]) * samp[, ii]
-  if (dimension == 2) {
-    tmp <- mgcv::in.out(window, samp[, 1:dimension])
+  for (ii in 1:dimensions) samp[, ii] <- myRange[1, ii] + (myRange[2,ii] - myRange[1, ii]) * samp[, ii]
+  if (dimensions == 2) {
+    tmp <- mgcv::in.out(coordinates(window), samp[, 1:dimensions])
     samp <- samp[tmp, ]
   }
   sampIDs <- rep(NA, nrow(samp))
@@ -219,9 +225,9 @@ quasirandom_method <- function(npoints, window, covariates=NULL){
     else message(kount + njump, "(", length(sampIDs.2),
                  ") ", sep = "")
     sampIDs[kount + 1:min(njump, nrow(samp) - kount)] <- class::knn1(potential_sites,
-                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimension + 1), drop = FALSE],
+                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimensions + 1), drop = FALSE],
                                                                      1:nrow(potential_sites))
-    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) - kount)), dimension + 1] < inclusion_probs1[sampIDs[1:(kount +
+    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) - kount)), dimensions + 1] < inclusion_probs1[sampIDs[1:(kount +
                                                                                                      min(njump, nrow(samp) - kount))]])
     if (length(sampIDs.2) >= npoints) {
       sampIDs <- sampIDs[sampIDs.2][1:npoints]
@@ -449,3 +455,10 @@ check_pres_bk_names <- function(pres_sites,back_sites){
   return(all(colnames(pres_sites)==colnames(back_sites)))
 
 }
+
+# try and set up a function to auto guess reolution if npoints provided.
+# guessResolution <- function(npoints,window){
+#   reso <- raster::res(window)
+#   ncello <- raster::ncell(window)
+#
+# }
