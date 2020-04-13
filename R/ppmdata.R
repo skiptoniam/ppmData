@@ -22,10 +22,16 @@ ppmdata <- function(npoints = 10000,
                     presences = NULL,  #a set of coordinates,
                     window = NULL,  #raster
                     covariates = NULL, # a set of covariates.
-                    resolution = 1, #resolution to setup quadriature points in lat/lon
+                    resolution = NULL, #resolution to setup quadriature points in lat/lon
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
                     coords = c('X','Y')){
+
+  # check if there are duplicates in the presence data.
+  presences <- checkDuplicates(presences)
+
+  ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
+  if(is.null(resolution)) resolution <- guessResolution(npoints,window)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -75,12 +81,6 @@ ppmdata <- function(npoints = 10000,
   } else {
     sppweights <- get_weights(presences,background_sites[,1:2],window,coords)
   }
-
-  # site_weights <- switch(method,
-  #                        single_species_grid = get_weights(presences,background_sites[,1:2],window,coords),
-  #                        single_species_quasi = get_weights(presences,background_sites[,1:2],window,coords),
-  #                        multispecies_grid = get_weights(multispecies_presences,background_sites[,1:2],window,coords),
-  #                        multispecies_quasi = get_weights(multispecies_presences,background_sites[,1:2],window,coords))
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
    if (!is.null(covariates)){
@@ -393,72 +393,43 @@ estimate_area_region <- function(window){
   return(area_of_region)
 }
 
-get_weights <- function(presences,background_sites,window,coords){
-
-  # if single species known sites will be just coords
-  # if multispeices matrix will be x, y, sp1, sp2 matrix (min four columns)
-  # weights are the realtive area that point represents within the domain.
-  if(ncol(presences)>2) {
-
-    presences <- as.matrix(presences)
-    if(!check_pres_bk_names(presences[,1:2],background_sites))colnames(background_sites) <- colnames(presences[,1:2])
 
 
-    # how many species are there?
-    n_sp <- ncol(presences) # this is actually this number - 2
-    # get the species specific presences
-    sp_presence_coords <- lapply(3:n_sp,function(x)presences[!is.na(presences[,x]),coords])
-    # what
-    sp_xy <- lapply(sp_presence_coords,function(x)rbind(x,background_sites))
-    # sp specific areas
-    sp_areas <- lapply(sp_xy,function(x)qrbp:::estimate_area(window,x))
-    # sp cell ids.
-    sp_cell_ids <- lapply(sp_xy,function(x)raster::cellFromXY(window,x))
-    # sp specific counts of points
-    sp_count_pts <- lapply(sp_cell_ids,table)
-    # sp specific weights
-    sp_weights <- lapply(1:c(n_sp-2),function(x)sp_areas[[x]]/as.numeric(sp_count_pts[[x]][match(sp_cell_ids[[x]],
-                                                                                                 names(sp_count_pts[[x]]))]))
+checkPresQuadNames <- function(presences,background){
 
-    ## now I need to put this all back in to a matix that matches the xy.
-    sp_weights_mat <- matrix(NA,nrow(presences)+nrow(background_sites),n_sp-1)
-    sp_pres_mat <- matrix(NA,nrow(presences)+nrow(background_sites),n_sp)
-    all_sites_ids <- raster::cellFromXY(window,rbind(presences[,coords],background_sites[,coords]))
-    sp_weights_mat[,1]<- all_sites_ids
-
-    for (ii in 1:c(n_sp-2)){
-      sp_pres_mat[,c(ii+2)] <- c(presences[,c(ii+2)],rep(0,nrow(background_sites)))
-      sp_weights_mat[which(!is.na(sp_pres_mat[,ii+2])),c(ii+1)]<-sp_weights[[ii]]
-    }
-    sp_pres_mat[,c(1,2)] <- as.matrix(rbind(presences[,coords],background_sites[,coords]))
-    colnames(sp_pres_mat) <- colnames(presences)
-    colnames(sp_weights_mat) <- c("cell_id",colnames(presences)[-1:-2])
-    weights <- list()
-    weights$multispecies_weights <- sp_weights_mat
-    weights$multispecies_presence <- sp_pres_mat
-
-  } else {
-    xy <- rbind(presences,background_sites)
-    areas <- estimate_area(window = window, site_coords = xy)
-    cell_id <- raster::cellFromXY(window, xy)
-    count_pts <- table(cell_id)
-    weights <- areas/as.numeric(count_pts[match(cell_id,
-                                                names(count_pts))])
-    weights <- data.frame(x=xy[,1],y=xy[,2],weights=weights)
-  }
-  return(weights)
-}
-
-
-check_pres_bk_names <- function(pres_sites,back_sites){
-
-  return(all(colnames(pres_sites)==colnames(back_sites)))
+  return(all(colnames(presences)==colnames(background)))
 
 }
 
 # try and set up a function to auto guess reolution if npoints provided.
-# guessResolution <- function(npoints,window){
-#   reso <- raster::res(window)
-#   ncello <- raster::ncell(window)
-#
-# }
+checkResolution <- function(resolution,window){
+  reso <- raster::res(window)
+  ncello <-  sum(!is.na(window)[])
+  newncell <- round((ncello*reso[1])/resolution)
+  if(newncell>500000)stop(message("Hold up, the currentl resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+  message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
+
+  floor(round((ncello*reso[1]))/10000)
+
+}
+
+# adjust the resolution to match desired number of background points
+guessResolution <- function(npoints,window){
+  reso <- raster::res(window)
+  ncello <-  sum(!is.na(window)[])
+  newres <- floor(round((ncello*reso[1]))/npoints)
+  newres
+}
+
+## check to see if there are duplicated points per species.
+## duplicated points are allowed across multiple species ala marked points.
+checkDuplicates <- function(presences){
+  dups <- duplicated(presences)
+  if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SppID, they have been removed.")
+  dat <- presences[!dups,]
+  } else {
+  dat <- presences
+  }
+  dat
+}
+
