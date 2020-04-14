@@ -1,5 +1,6 @@
 #' @name ppmdata
-#' @title create a Point Process dataset for spatial presence only modelling.
+#' @title Create a Point Process dataset for spatial presence only modelling.
+#' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
 #' @param npoints number of background points to create.
 #' @param presences a matrix, dataframe or SpatialPoints* object giving the
@@ -10,7 +11,7 @@
 #'   modelling the point process (best use a Raster* stack or Raster* brick)
 #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 #' @param method the type of method that should be used to generate background points. The options are:
-#' 'grid' generates a regular grid of background points. See Berman & Turner 1993 or Warton & Shepard 2010 for details.
+#' 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
 #' 'random' generates a random set of background points - See Philips 2006 (ala MaxEnt) for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
@@ -18,7 +19,7 @@
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
-ppmdata <- function(npoints = 10000,
+ppmData <- function(npoints = 10000,
                     presences = NULL,  #a set of coordinates,
                     window = NULL,  #raster
                     covariates = NULL, # a set of covariates.
@@ -36,11 +37,12 @@ ppmdata <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    background_sites <- switch(method,
-                               grid = grid_method(resolution, window, covariates),
-                               quasirandom = quasirandom_method(npoints,  window, covariates),
-                               random = random_method(npoints, window, covariates))
+                               grid = gridMethod(resolution, window, covariates),
+                               quasirandom = quasirandomMethod(npoints,  window, covariates),
+                               random = randomMethod(npoints, window, covariates))
 
-   dat <- data.frame(background_sites)#replace this with a function 'get_weights'
+   # dat <- data.frame(background_sites)#replace this with a function 'get_weights'
+   dat <- getWeights()
 
   } else {
 
@@ -70,9 +72,9 @@ ppmdata <- function(npoints = 10000,
 
   # create background points based on method.
   background_sites <- switch(method,
-                grid = grid_method(resolution, window, covariates),
-                quasirandom = quasirandom_method(npoints,  window, covariates),
-                random = random_method(npoints,  window, covariates))
+                grid = gridMethod(resolution, window, covariates),
+                quasirandom = quasirandomMethod(npoints,  window, covariates),
+                random = randomMethod(npoints,  window, covariates))
 
   nspp <- length(unique(presences[,"SpeciesID"]))
   if(nspp>1){
@@ -140,7 +142,7 @@ ppmdata <- function(npoints = 10000,
   return(dat)
 }
 
-grid_method <- function(resolution=1, window, covariates){
+gridMethod <- function(resolution=1, window, covariates){
 
   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'grid' method currently only works a raster input as a 'window'")
@@ -169,7 +171,7 @@ grid_method <- function(resolution=1, window, covariates){
 
 
 # still working on this method.
-quasirandom_method <- function(npoints, window, covariates=NULL){
+quasirandomMethod <- function(npoints, window, covariates=NULL){
 
 
   if(!is.null(covariates)){
@@ -244,7 +246,7 @@ quasirandom_method <- function(npoints, window, covariates=NULL){
   return(samp)
 }
 
-random_method <- function(npoints, window, covariates = NULL){
+randomMethod <- function(npoints, window, covariates = NULL){
 
   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'grid' method currently only works a raster input as a 'window'")
