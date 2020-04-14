@@ -415,6 +415,7 @@ checkResolution <- function(resolution,window){
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
+  message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
   newres <- floor(round((ncello*reso[1]))/npoints)
