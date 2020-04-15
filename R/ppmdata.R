@@ -3,8 +3,7 @@
 #' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
 #' @param npoints number of background points to create.
-#' @param presences a matrix, dataframe or SpatialPoints* object giving the
-#'   coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
+#' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
@@ -50,7 +49,7 @@ ppmData <- function(npoints = 10000,
   # This function was built to match the dimensions of coordinates and other dimensions
   # Should be three check away...
   eps <- sqrt(.Machine$double.eps)
-  presences <- qrbp:::coords_match_dim(presences,3)
+  presences <- coordMatchDim(presences,3)
 
   #if there is no window (raster provided) generate potential a square window with a little buffer based on presence points.
   if (is.null(window)) {
@@ -65,9 +64,11 @@ ppmData <- function(npoints = 10000,
                 random = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
+
   if(ismulti){
     message("Developing a quadrature scheme for multiple species (marked) dataset.")
-    sppweights <- lapply(1:nspp,function(x)getWeights(presences[presences$SppID==x],
+    nspp <- length(unique(presences[,"SpeciesID"]))
+    sppweights <- lapply(seq_len(nspp),function(x)getWeights(presences[presences$SpeciesID==x,],
                                                        background_sites[,1:2],window,coords))
   } else {
     sppweights <- getWeights(presences,background_sites[,1:2],window,coords)
@@ -87,9 +88,6 @@ ppmData <- function(npoints = 10000,
                        x=site_weights$x,y=site_weights$y,
                        weights=site_weights$weights)#replace this with a function 'get_weights'
    }
-  # }
-
-  # if(method!='multispecies_grid'|method!='multispecies_quasi') dat <- rm_na_pts(dat)
   }
   return(dat)
 }
@@ -226,7 +224,7 @@ randomMethod <- function(npoints, window, covariates = NULL){
 
 
 
-coords_match_dim <- function (known.sites,dimension){
+coordMatchDim <- function (known.sites,dimension){
 
   # check object classes
   expectClasses(known.sites,
@@ -255,7 +253,7 @@ coords_match_dim <- function (known.sites,dimension){
   # set column names
   if (ncol(known.sites)>2) {
     if(!is.null(colnames(known.sites))) colnames(df) <- c("X","Y",colnames(known.sites)[-1:-2])
-    colnames(df) <- c('X','Y','SppID')
+    colnames(df) <- c('X','Y','SpeciesID')
   } else {
     colnames(df) <- c('X','Y')
   }
@@ -313,39 +311,6 @@ rm_na_pts <- function (pts) {
 
 }
 
-estimateSiteArea <- function(window,site_coords){
-  if(raster::isLonLat(window)){
-    #calculate area based on area function
-    #convert kms to ms
-    area_rast <- raster::area(window)
-    area_study <- raster::mask(area_rast,window)
-    total_area <- cellStats(area_study,sum,na.rm=TRUE)
-    wts <- total_area/raster::extract(area_study,site_coords,na.rm=TRUE)
-    } else {
-    # calculate area based on equal area cell resolution
-    # mode equal area should be in meters
-    cell_area <- raster::res(window)[1]*raster::res(window)[2]
-    n_cell <- length(window[!is.na(window[])])
-    wts <- rep((n_cell*cell_area)/nrow(site_coords),nrow(site_coords))/1000
-    }
-   return(wts)
-}
-
-#estimate the total area of all cells in extent in km^2
-estimateWindowArea <- function(window){
-  if(raster::isLonLat(window)){
-    #calculate area based on area function
-    #convert kms to ms
-    area_rast <- area(window)
-    area_study <- mask(area_rast,window)
-    area_of_region <- cellStats(area_study,sum, na.rm=TRUE)
-  } else {
-    # calculate area based on equal area cell resolution
-    # mode equal area should be in meters
-    area_of_region <- (ncell(window[!is.na(window)])  * xres(window) * yres(window))/1000
-  }
-  return(area_of_region)
-}
 
 getCovariates <- function(){}
 
@@ -417,7 +382,7 @@ checkCovariates <- function(covariates){
 ## duplicated points are allowed across multiple species ala marked points.
 checkDuplicates <- function(presences){
   dups <- duplicated(presences)
-  if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SppID, they have been removed.")
+  if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
   dat <- presences[!dups,]
   } else {
   dat <- presences
@@ -427,7 +392,7 @@ checkDuplicates <- function(presences){
 
 ## check to see if the presences dataset is multispecies.
 checkMultispecies <- function(presences){
-  if(length(unique(presences[,"SppID"]))>1) mutlt <- TRUE
+  if(length(unique(presences[,"SpeciesID"]))>1) mutlt <- TRUE
   else multi <- FALSE
   multi
 }
