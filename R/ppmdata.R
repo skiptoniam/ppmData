@@ -1,4 +1,4 @@
-#' @name ppmdata
+#' @name ppmData
 #' @title Create a Point Process dataset for spatial presence only modelling.
 #' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
@@ -46,9 +46,9 @@ ppmData <- function(npoints = 10000,
 
   } else {
 
-  #this function was built to match the dimensions of coordinates and other dimensions
-  # should be three check away...
-  # eps <- sqrt(.Machine$double.eps)
+  # This function was built to match the dimensions of coordinates and other dimensions
+  # Should be three check away...
+  eps <- sqrt(.Machine$double.eps)
   presences <- qrbp:::coords_match_dim(presences,3)
 
   #multispecies points will attempt to use other information from other species to inform sampling bias.
@@ -403,17 +403,7 @@ checkPresQuadNames <- function(presences,background){
 
 }
 
-# try and set up a function to auto guess reolution if npoints provided.
-checkResolution <- function(resolution,window){
-  reso <- raster::res(window)
-  ncello <-  sum(!is.na(window)[])
-  newncell <- round((ncello*reso[1])/resolution)
-  if(newncell>500000)stop(message("Hold up, the currentl resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
-  message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 
-  floor(round((ncello*reso[1]))/10000)
-
-}
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
@@ -422,6 +412,15 @@ guessResolution <- function(npoints,window){
   ncello <-  sum(!is.na(window)[])
   newres <- floor(round((ncello*reso[1]))/npoints)
   newres
+}
+
+## auto guess reolution if npoints provided.
+checkResolution <- function(resolution,window){
+  reso <- raster::res(window)
+  ncello <-  sum(!is.na(window)[])
+  newncell <- round((ncello*reso[1])/resolution)
+  if(newncell>500000)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+  else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 }
 
 ## check to see if there are duplicated points per species.
@@ -436,3 +435,9 @@ checkDuplicates <- function(presences){
   dat
 }
 
+## check to see if the presences dataset is multispecies.
+checkMultispecies <- function(presences){
+  if(length(unique(presences[,"SppID"]))>1) mutlt <- TRUE
+  else multi <- FALSE
+  multi
+}
