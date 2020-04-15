@@ -14,7 +14,7 @@
 #' 'random' generates a random set of background points. See Philips 2006 (ala MaxEnt) for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
-#' @param coords is the name of site coordinates. The default is c('X','Y').
+#' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
 #' @param control is a list of options for generating quadrature scheme. Currently `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
@@ -26,11 +26,11 @@ ppmData <- function(npoints = 10000,
                     resolution = NULL, #resolution to setup quadriature points in lat/lon
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
-                    coords = c('X','Y'),
+                    coord = c('X','Y'),
                     control=list(maxpoints=250000)){
 
   # check if there are duplicates in the presence data.
-  presences <- checkDuplicates(presences)
+  presences <- checkDuplicates(presences,coord)
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   if(is.null(resolution)) resolution <- guessResolution(npoints,window)
@@ -42,7 +42,7 @@ ppmData <- function(npoints = 10000,
                               quasirandom = quasirandomMethod(npoints,  window, covariates),
                               random = randomMethod(npoints, window, covariates))
 
-   dat <- getWeights(presences,background_sites[,1:2],window,coords)
+   dat <- getWeights(presences,background_sites[,1:2],window,coord)
 
   } else {
 
@@ -68,10 +68,10 @@ ppmData <- function(npoints = 10000,
   if(ismulti){
     message("Developing a quadrature scheme for multiple species (marked) dataset.")
     nspp <- length(unique(presences[,"SpeciesID"]))
-    sppweights <- lapply(seq_len(nspp),function(x)getWeights(presences[presences$SpeciesID==x,],
-                                                       background_sites[,1:2],window,coords))
+    sppweights <- parallel::mclapply(seq_len(nspp),function(x)ppmWeights(presences[presences$SpeciesID==x,],
+                                                       background_sites[,1:2],coord))
   } else {
-    sppweights <- getWeights(presences,background_sites[,1:2],window,coords)
+    sppweights <- getWeights(presences,background_sites[,1:2],window,coord)
   }
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
@@ -130,18 +130,18 @@ quasirandomMethod <- function(npoints, window, covariates=NULL){
   }
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
-    rast_coords <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
+    rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
     rast_data <- raster::values(covariates)
     na_sites <- which(is.na(rast_data[,1]))
     covariates_ext <- raster::extent(covariates)[1:4]
   } else {
-    rast_coords <- raster::xyFromCell(window,1:raster::ncell(window))
+    rast_coord <- raster::xyFromCell(window,1:raster::ncell(window))
     rast_data <- raster::values(window)
     na_sites <- which(is.na(rast_data))
     covariates_ext <- raster::extent(window)[1:4]
     }
 
-  potential_sites <- cbind(rast_coords,rast_data)
+  potential_sites <- cbind(rast_coord,rast_data)
   potential_sites[na_sites,-1:-2] <- 0
 
   #if npoints>nrow(potential_sites) recursively create a finer grid.
@@ -320,7 +320,7 @@ if (!is.null(covariates)){
 
   # extract covariate data for background points
   if(method=='multispecies_grid'|method=='multispecies_quasi') {
-    covars <- extract(covariates,site_weights$multispecies_presence[,coords],method=interpolation,na.rm=TRUE)
+    covars <- extract(covariates,site_weights$multispecies_presence[,SpeciesID],method=interpolation,na.rm=TRUE)
     NAsites <- which(!complete.cases(covars))
     if(length(NAsites)>0){
       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
@@ -334,14 +334,14 @@ if (!is.null(covariates)){
       dat$species_weights <- site_weights$multispecies_weights[,-1]
     }
   } else {
-    # print(head(site_weights[,coords]))
-    covars <- extract(covariates,site_weights[,coords],method=interpolation,na.rm=TRUE)
+    # print(head(site_weights[,SpeciesID]))
+    covars <- extract(covariates,site_weights[,SpeciesID],method=interpolation,na.rm=TRUE)
     NAsites <- which(!complete.cases(covars))
     if(length(NAsites)>0){
       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
       covars <- covars[-NAsites,,drop=FALSE]
       dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites)))[-NAsites],
-                        # site_weights[-NAsites,coords],
+                        # site_weights[-NAsites,SpeciesID],
                         covars,
                         weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
     } else {
@@ -380,13 +380,15 @@ checkCovariates <- function(covariates){
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
-checkDuplicates <- function(presences){
+checkDuplicates <- function(presences,coord){
   dups <- duplicated(presences)
   if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
   dat <- presences[!dups,]
   } else {
   dat <- presences
   }
+  dat <- as.data.frame(presences)
+  colnames(dat) <- c(coord,"SpeciesID")
   dat
 }
 
