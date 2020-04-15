@@ -5,16 +5,16 @@
 #' @param npoints number of background points to create.
 #' @param presences a matrix, dataframe or SpatialPoints* object giving the
 #'   coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
-#' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data
-#' . If ignored, a rectangle defining the extent of \code{presences} will be used.
-#' @param covariates an optional Raster* object containing covariates for
-#'   modelling the point process (best use a Raster* stack or Raster* brick)
+#' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
+#' If ignored, a rectangle defining the extent of \code{presences} will be used.
+#' @param covariates an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
 #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 #' @param method the type of method that should be used to generate background points. The options are:
 #' 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-#' 'random' generates a random set of background points - See Philips 2006 (ala MaxEnt) for details.
-#' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions. 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
+#' 'random' generates a random set of background points. See Philips 2006 (ala MaxEnt) for details.
+#' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
+#' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coords is the name of site coordinates. The default is c('X','Y').
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
@@ -26,7 +26,8 @@ ppmData <- function(npoints = 10000,
                     resolution = NULL, #resolution to setup quadriature points in lat/lon
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
-                    coords = c('X','Y')){
+                    coords = c('X','Y'),
+                    control=list(maxpoints=250000)){
 
   # check if there are duplicates in the presence data.
   presences <- checkDuplicates(presences)
@@ -37,12 +38,11 @@ ppmData <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    background_sites <- switch(method,
-                               grid = gridMethod(resolution, window, covariates),
-                               quasirandom = quasirandomMethod(npoints,  window, covariates),
-                               random = randomMethod(npoints, window, covariates))
+                              grid = gridMethod(resolution, window, covariates),
+                              quasirandom = quasirandomMethod(npoints,  window, covariates),
+                              random = randomMethod(npoints, window, covariates))
 
-   # dat <- data.frame(background_sites)#replace this with a function 'get_weights'
-   dat <- getWeights()
+   dat <- getWeights(presences,background_sites[,1:2],window,coords)
 
   } else {
 
@@ -51,23 +51,10 @@ ppmData <- function(npoints = 10000,
   eps <- sqrt(.Machine$double.eps)
   presences <- qrbp:::coords_match_dim(presences,3)
 
-  #multispecies points will attempt to use other information from other species to inform sampling bias.
-  #this could be a set of multi-species observations or a layer of observation bias/points.
-  #hopefully in the future I can setup a fitian style offset based on collection method. e.g PO, PA, Abundance, ect.
-  if(method == 'multispecies'){
-    if(is.null(multispecies_presences))
-    stop("Using 'multispecies_presences' or method='multispecies' requires a matrix of sites x presences. \n
-         Note NA in this matrix indicate a non-presence record for that species.")
-    if(!is.null(multispecies_presences))
-      message("'presences' must be all the unique coordinates for known species' presences")
-    if(nrow(presences)!=nrow(multispecies_presences))
-      stop("nrows of 'presences' must equal nrows of 'multispecies_presences'")
-  }
-
-  #if there is no window generate potential sites for halton function and a study area.
+  #if there is no window (raster provided) generate potential a square window with a little buffer based on presence points.
   if (is.null(window)) {
       message("no study area provided, a raster based on the extent of 'presences'\n with a default resolution of 1 deg will be returned.")
-      window <- default_window(presences)
+      window <- defaultWindow(presences)
   }
 
   # create background points based on method.
@@ -76,12 +63,13 @@ ppmData <- function(npoints = 10000,
                 quasirandom = quasirandomMethod(npoints,  window, covariates),
                 random = randomMethod(npoints,  window, covariates))
 
-  nspp <- length(unique(presences[,"SpeciesID"]))
-  if(nspp>1){
-    sppweights <- lapply(1:nspp,function(x)get_weights(presences[presences$SppID==x],
+  ismulti <- checkMultispecies(presences)
+  if(ismulti){
+    message("Developing a quadrature scheme for multiple species (marked) dataset.")
+    sppweights <- lapply(1:nspp,function(x)getWeights(presences[presences$SppID==x],
                                                        background_sites[,1:2],window,coords))
   } else {
-    sppweights <- get_weights(presences,background_sites[,1:2],window,coords)
+    sppweights <- getWeights(presences,background_sites[,1:2],window,coords)
   }
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
@@ -310,7 +298,7 @@ coords_match_dim <- function (known.sites,dimension){
   return (df)
 }
 
-default_window <- function (presences) {
+defaultWindow <- function (presences) {
   # get limits
   xlim <- range(presences$x)
   ylim <- range(presences$y)
@@ -361,7 +349,7 @@ rm_na_pts <- function (pts) {
 
 }
 
-estimate_area <- function(window,site_coords){
+estimateSiteArea <- function(window,site_coords){
   if(raster::isLonLat(window)){
     #calculate area based on area function
     #convert kms to ms
@@ -380,7 +368,7 @@ estimate_area <- function(window,site_coords){
 }
 
 #estimate the total area of all cells in extent in km^2
-estimate_area_region <- function(window){
+estimateWindowArea <- function(window){
   if(raster::isLonLat(window)){
     #calculate area based on area function
     #convert kms to ms
@@ -396,14 +384,11 @@ estimate_area_region <- function(window){
 }
 
 
-
-checkPresQuadNames <- function(presences,background){
-
-  return(all(colnames(presences)==colnames(background)))
-
-}
-
-
+# checkPresQuadNames <- function(presences,background){
+#
+#   return(all(colnames(presences)==colnames(background)))
+#
+# }
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
@@ -414,12 +399,12 @@ guessResolution <- function(npoints,window){
   newres
 }
 
-## auto guess reolution if npoints provided.
+## check resolution and throw error if lots of quad points to be generated.
 checkResolution <- function(resolution,window){
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
   newncell <- round((ncello*reso[1])/resolution)
-  if(newncell>500000)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+  if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
   else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 }
 
