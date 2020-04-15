@@ -16,6 +16,7 @@
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coords is the name of site coordinates. The default is c('X','Y').
+#' @param control is a list of options for generating quadrature scheme. Currently `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
@@ -73,44 +74,7 @@ ppmData <- function(npoints = 10000,
   }
 
   #id have provided covaraites use this to extract out environmental data from rasterstack
-   if (!is.null(covariates)){
-     if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-       stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
-
-       # extract covariate data for background points
-       if(method=='multispecies_grid'|method=='multispecies_quasi') {
-         covars <- extract(covariates,site_weights$multispecies_presence[,coords],method=interpolation,na.rm=TRUE)
-         NAsites <- which(!complete.cases(covars))
-         if(length(NAsites)>0){
-           print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-            covars <- covars[-NAsites,,drop=FALSE]
-            dat <- list()
-            dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covars)
-            dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
-         } else {
-           dat <- list()
-           dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covars)
-           dat$species_weights <- site_weights$multispecies_weights[,-1]
-         }
-       } else {
-         # print(head(site_weights[,coords]))
-         covars <- extract(covariates,site_weights[,coords],method=interpolation,na.rm=TRUE)
-         NAsites <- which(!complete.cases(covars))
-         if(length(NAsites)>0){
-           print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-           covars <- covars[-NAsites,,drop=FALSE]
-           dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites)))[-NAsites],
-                             # site_weights[-NAsites,coords],
-                             covars,
-                             weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
-         } else {
-           dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites))),
-                             # site_weights,
-                             covars,
-                             weights=site_weights$weights)
-        }
-      }
-    } else {
+# else {
     if(method=='multispecies_grid'|method=='multispecies_quasi'){
        dat <- list()
        dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],
@@ -123,9 +87,9 @@ ppmData <- function(npoints = 10000,
                        x=site_weights$x,y=site_weights$y,
                        weights=site_weights$weights)#replace this with a function 'get_weights'
    }
-  }
+  # }
 
-  if(method!='multispecies_grid'|method!='multispecies_quasi') dat <- rm_na_pts(dat)
+  # if(method!='multispecies_grid'|method!='multispecies_quasi') dat <- rm_na_pts(dat)
   }
   return(dat)
 }
@@ -383,12 +347,46 @@ estimateWindowArea <- function(window){
   return(area_of_region)
 }
 
+getCovariates <- function(){}
 
-# checkPresQuadNames <- function(presences,background){
-#
-#   return(all(colnames(presences)==colnames(background)))
-#
-# }
+if (!is.null(covariates)){
+  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
+    stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
+
+  # extract covariate data for background points
+  if(method=='multispecies_grid'|method=='multispecies_quasi') {
+    covars <- extract(covariates,site_weights$multispecies_presence[,coords],method=interpolation,na.rm=TRUE)
+    NAsites <- which(!complete.cases(covars))
+    if(length(NAsites)>0){
+      print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+      covars <- covars[-NAsites,,drop=FALSE]
+      dat <- list()
+      dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covars)
+      dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
+    } else {
+      dat <- list()
+      dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covars)
+      dat$species_weights <- site_weights$multispecies_weights[,-1]
+    }
+  } else {
+    # print(head(site_weights[,coords]))
+    covars <- extract(covariates,site_weights[,coords],method=interpolation,na.rm=TRUE)
+    NAsites <- which(!complete.cases(covars))
+    if(length(NAsites)>0){
+      print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+      covars <- covars[-NAsites,,drop=FALSE]
+      dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites)))[-NAsites],
+                        # site_weights[-NAsites,coords],
+                        covars,
+                        weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
+    } else {
+      dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites))),
+                        # site_weights,
+                        covars,
+                        weights=site_weights$weights)
+    }
+  }
+}
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
@@ -399,14 +397,21 @@ guessResolution <- function(npoints,window){
   newres
 }
 
-## check resolution and throw error if lots of quad points to be generated.
-checkResolution <- function(resolution,window){
-  reso <- raster::res(window)
-  ncello <-  sum(!is.na(window)[])
-  newncell <- round((ncello*reso[1])/resolution)
-  if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
-  else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
+
+## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
+## check the covariates that go into building the quadrature scheme.
+checkCovariates <- function(covariates){
+
+  if(!is.null(covariates)){
+    if(!inherits(covariates, c('RasterLayer','RasterStack','RasterBrick')))
+      stop("Covariates must be a raster, rasterstack or rasterbrick of covariates which match the spatial window.")
+    covars <- TRUE
+  } else {
+    covars <- FALSE
+  }
+  covars
 }
+
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
@@ -425,4 +430,13 @@ checkMultispecies <- function(presences){
   if(length(unique(presences[,"SppID"]))>1) mutlt <- TRUE
   else multi <- FALSE
   multi
+}
+
+## check resolution and throw error if lots of quad points to be generated.
+checkResolution <- function(resolution,window){
+  reso <- raster::res(window)
+  ncello <-  sum(!is.na(window)[])
+  newncell <- round((ncello*reso[1])/resolution)
+  if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+  else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 }
