@@ -15,7 +15,10 @@
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
-#' @param control is a list of options for generating quadrature scheme. Currently `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
+#' @param control is a list of options for generating quadrature scheme. Currently:
+#' `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
+#' `extractNArm` = TRUE and uses na.rm=TRUE for extracting raster covariate data.
+#' `extractBuffer` = NULL and is the amount of buffer to provide each point on extract (radius from point).
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
@@ -27,7 +30,7 @@ ppmData <- function(npoints = 10000,
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
-                    control=list(maxpoints=250000)){
+                    control=list(maxpoints=250000,extractNArm=TRUE,extractBuffer=NULL)){
 
   # check if there are duplicates in the presence data.
   presences <- checkDuplicates(presences,coord)
@@ -37,12 +40,12 @@ ppmData <- function(npoints = 10000,
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
-   background_sites <- switch(method,
+   backgroundsites <- switch(method,
                               grid = gridMethod(resolution, window, covariates),
                               quasirandom = quasirandomMethod(npoints,  window, covariates),
                               random = randomMethod(npoints, window, covariates))
 
-   dat <- getWeights(presences,background_sites[,1:2],window,coord)
+   wt <- ppmWeights(presences,backgroundsites[,1:2],window,coord)
 
   } else {
 
@@ -58,37 +61,24 @@ ppmData <- function(npoints = 10000,
   }
 
   # create background points based on method.
-  background_sites <- switch(method,
+  backgroundsites <- switch(method,
                 grid = gridMethod(resolution, window, covariates),
                 quasirandom = quasirandomMethod(npoints,  window, covariates),
                 random = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
 
-  if(ismulti){
-    message("Developing a quadrature scheme for multiple species (marked) dataset.")
-    nspp <- length(unique(presences[,"SpeciesID"]))
-    sppweights <- parallel::mclapply(seq_len(nspp),function(x)ppmWeights(presences[presences$SpeciesID==x,],
-                                                       background_sites[,1:2],coord))
-  } else {
-    sppweights <- getWeights(presences,background_sites[,1:2],window,coord)
+    if(ismulti){
+      message("Developing a quadrature scheme for multiple species (marked) dataset.")
+      nspp <- length(unique(presences[,"SpeciesID"]))
+      sppweights <- parallel::mclapply(seq_len(nspp),function(x)ppmWeights(presences[presences$SpeciesID==x,],
+                                                         backgroundsites[,1:2],coord))
+    } else {
+      sppweights <- getWeights(presences,backgroundsites[,1:2],window,coord)
+    }
+
   }
 
-  #id have provided covaraites use this to extract out environmental data from rasterstack
-# else {
-    if(method=='multispecies_grid'|method=='multispecies_quasi'){
-       dat <- list()
-       dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],
-                                       x=c(presences$x,background_sites$x),
-                                       y=c(presences$y,background_sites$y))
-       dat$species_weights <- site_weights$multispecies_weights[,-1]
-     } else {
-     # create an entire dataset
-     dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites))),
-                       x=site_weights$x,y=site_weights$y,
-                       weights=site_weights$weights)#replace this with a function 'get_weights'
-   }
-  }
   return(dat)
 }
 
@@ -152,7 +142,9 @@ quasirandomMethod <- function(npoints, window, covariates=NULL){
   #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
   dimensions <- 2#dim(potential_sites)[2]
   N <- nrow(potential_sites)
-  inclusion_probs <- rep(1/N, N)
+  inclusion_
+
+  probs <- rep(1/N, N)
   inclusion_probs[na_sites] <- 0
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   mult <- 10
@@ -281,7 +273,7 @@ defaultWindow <- function (presences) {
 }
 
 # remove NA values from a pts object
-rm_na_pts <- function (pts) {
+rmNApts <- function (pts) {
 
   # remove any points that are NA and issue a warning
   if (any(is.na(pts))) {
@@ -306,52 +298,70 @@ rm_na_pts <- function (pts) {
     }
 
   }
-
   return (pts)
-
 }
 
-
-getCovariates <- function(){}
-
-if (!is.null(covariates)){
-  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
-
-  # extract covariate data for background points
-  if(method=='multispecies_grid'|method=='multispecies_quasi') {
-    covars <- extract(covariates,site_weights$multispecies_presence[,SpeciesID],method=interpolation,na.rm=TRUE)
-    NAsites <- which(!complete.cases(covars))
-    if(length(NAsites)>0){
-      print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-      covars <- covars[-NAsites,,drop=FALSE]
-      dat <- list()
-      dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covars)
-      dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
-    } else {
-      dat <- list()
-      dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covars)
-      dat$species_weights <- site_weights$multispecies_weights[,-1]
-    }
-  } else {
-    # print(head(site_weights[,SpeciesID]))
-    covars <- extract(covariates,site_weights[,SpeciesID],method=interpolation,na.rm=TRUE)
-    NAsites <- which(!complete.cases(covars))
-    if(length(NAsites)>0){
-      print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-      covars <- covars[-NAsites,,drop=FALSE]
-      dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites)))[-NAsites],
-                        # site_weights[-NAsites,SpeciesID],
-                        covars,
-                        weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
-    } else {
-      dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(background_sites))),
-                        # site_weights,
-                        covars,
-                        weights=site_weights$weights)
-    }
+## function to extract covariates for presence and background points.
+getCovariates <- function(presences, backgroundsites, covariates, interpolation, coord, control){
+  pbxy <- rbind(presences[,coord],backgroundsites[,coord])
+  covars <- raster::extract(covariates, pbxy, method=interpolation,
+                            na.rm=control$extractNArm, buffer=control$extractBuffer)
+  NAsites <- which(!complete.cases(covars))
+  if(length(NAsites)>0){
+    print(paste0('A total of ',length(NAsites),' sites where removed from the background data,
+                 because they contained NAs, check raster and species sites data intersection.'))
+    covars <- covars[-NAsites,,drop=FALSE]
   }
+  return(covars)
 }
+
+
+# dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites)))[-NAsites],
+# covars,
+# weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
+# } else {
+# dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+# covars,
+# weights=site_weights$weights)
+
+# if (!is.null(covariates)){
+#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
+#     stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
+#
+#   # extract covariate data for background points
+#   if(method=='multispecies_grid'|method=='multispecies_quasi') {
+#     covars <- extract(covariates,site_weights$multispecies_presence[,SpeciesID],method=interpolation,na.rm=TRUE)
+#     NAsites <- which(!complete.cases(covars))
+#     if(length(NAsites)>0){
+#       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+#       covars <- covars[-NAsites,,drop=FALSE]
+#       dat <- list()
+#       dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covars)
+#       dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
+#     } else {
+#       dat <- list()
+#       dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covars)
+#       dat$species_weights <- site_weights$multispecies_weights[,-1]
+#     }
+#   } else {
+#     # print(head(site_weights[,SpeciesID]))
+#     covars <- extract(covariates,site_weights[,SpeciesID],method=interpolation,na.rm=TRUE)
+#     NAsites <- which(!complete.cases(covars))
+#     if(length(NAsites)>0){
+#       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
+#       covars <- covars[-NAsites,,drop=FALSE]
+#       dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites)))[-NAsites],
+#                         # site_weights[-NAsites,SpeciesID],
+#                         covars,
+#                         weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
+#     } else {
+#       dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+#                         # site_weights,
+#                         covars,
+#                         weights=site_weights$weights)
+#     }
+#   }
+# }
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
@@ -361,7 +371,6 @@ guessResolution <- function(npoints,window){
   newres <- floor(round((ncello*reso[1]))/npoints)
   newres
 }
-
 
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
 ## check the covariates that go into building the quadrature scheme.
@@ -376,7 +385,6 @@ checkCovariates <- function(covariates){
   }
   covars
 }
-
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
