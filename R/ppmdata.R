@@ -19,18 +19,21 @@
 #' `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
 #' `extractNArm` = TRUE and uses na.rm=TRUE for extracting raster covariate data.
 #' `extractBuffer` = NULL and is the amount of buffer to provide each point on extract (radius from point).
+#' `nSampsToConsider` = 5000 and is the default number of samples for halton random number generator.
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
 ppmData <- function(npoints = 10000,
-                    presences = NULL,  #a set of coordinates,
-                    window = NULL,  #raster
-                    covariates = NULL, # a set of covariates.
-                    resolution = NULL, #resolution to setup quadriature points in lat/lon
+                    presences = NULL,
+                    window = NULL,
+                    covariates = NULL,
+                    resolution = NULL,
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
-                    control=list(maxpoints=250000,extractNArm=TRUE,extractBuffer=NULL)){
+                    control=list(maxpoints=250000,extractNArm=TRUE,
+                                 extractBuffer=NULL,nSampsToConsider=5000,
+                                 multispeciesFormat="wide")){
 
   # check if there are duplicates in the presence data.
   presences <- checkDuplicates(presences,coord)
@@ -38,12 +41,14 @@ ppmData <- function(npoints = 10000,
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   if(is.null(resolution)) resolution <- guessResolution(npoints,window)
 
+  checkResolution(resolution,window)
+
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    backgroundsites <- switch(method,
-                              grid = gridMethod(resolution, window, covariates),
-                              quasirandom = quasirandomMethod(npoints,  window, covariates),
-                              random = randomMethod(npoints, window, covariates))
+                             grid = gridMethod(resolution, window),
+                             quasirandom = quasirandomMethod(npoints,  window, covariates),
+                             random = randomMethod(npoints, window, covariates))
 
    wt <- ppmWeights(presences,backgroundsites[,1:2],window,coord)
 
@@ -62,13 +67,12 @@ ppmData <- function(npoints = 10000,
 
   # create background points based on method.
   backgroundsites <- switch(method,
-                grid = gridMethod(resolution, window, covariates),
+                grid = gridMethod(resolution, window),
                 quasirandom = quasirandomMethod(npoints,  window, covariates),
                 random = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
-
-    if(ismulti){
+  if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       nspp <- length(unique(presences[,"SpeciesID"]))
       sppweights <- parallel::mclapply(seq_len(nspp),function(x)ppmWeights(presences[presences$SpeciesID==x,],
@@ -79,10 +83,35 @@ ppmData <- function(npoints = 10000,
 
   }
 
+  sitecovariates <- getCovariates(presences,backgroundsites,covariates,
+                                  interpolation=interpolation,coord=coord,control=control)
+
+  dat <- assembleQuadData(presence, backgroundsites, sitecovariates, weights,
+                          parameters, control=control)
   return(dat)
 }
 
-gridMethod <- function(resolution=1, window, covariates){
+assembleQuadData <- function(presence, backgroundsites, sitecovariates,
+                             weights, parameters, control){
+
+  ismulti <- checkMultispecies(presences)
+  format <- control$multispeciesFormat
+
+  if(ismulti){
+    final_dat <- switch(format,
+                        long=longdat(dat),
+                        wide=widedat(dat),
+                        list=listdat(dat))
+
+  } else {
+    final_dat <- longdat()
+  }
+
+  return(list(modelmatrix=final_dat,parameters=parameters))
+
+}
+
+gridMethod <- function(resolution=1, window){
 
   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'grid' method currently only works a raster input as a 'window'")
@@ -101,11 +130,6 @@ gridMethod <- function(resolution=1, window, covariates){
     colnames(grid) <- c('X','Y')
   }
 
-  if(!is.null(covariates)){
-    covars <- extract(covariates,grid)
-    grid <- cbind(grid,covars)
-  }
-
   return(grid)
 }
 
@@ -113,11 +137,6 @@ gridMethod <- function(resolution=1, window, covariates){
 # still working on this method.
 quasirandomMethod <- function(npoints, window, covariates=NULL){
 
-
-  if(!is.null(covariates)){
-    if(!inherits(covariates, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'quasirandom_covariates' method currently only works a raster input as a 'covariates'")
-  }
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
     rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
@@ -143,6 +162,20 @@ quasirandomMethod <- function(npoints, window, covariates=NULL){
   dimensions <- 2#dim(potential_sites)[2]
   N <- nrow(potential_sites)
   inclusion_
+
+
+  samp <- randtoolbox::halton(control$nSampsToConsider * 2, dim = dimension +
+                                1, init = TRUE)
+  if (randStartType == 1)
+    skips <- rep(sample(1:nSampsToConsider, size = 1, replace = TRUE),
+                 dimension + 1)
+  if (randStartType == 2)
+    skips <- sample(1:nSampsToConsider, size = dimension +
+                      1, replace = TRUE)
+  samp <- do.call("cbind", lapply(1:(designParams$dimension +
+                                       1), function(x) samp[skips[x] + 0:(nSampsToConsider -
+                                                                            1), x]))
+
 
   probs <- rep(1/N, N)
   inclusion_probs[na_sites] <- 0
@@ -214,8 +247,6 @@ randomMethod <- function(npoints, window, covariates = NULL){
   return(randpoints)
 }
 
-
-
 coordMatchDim <- function (known.sites,dimension){
 
   # check object classes
@@ -272,39 +303,10 @@ defaultWindow <- function (presences) {
   return (sa)
 }
 
-# remove NA values from a pts object
-rmNApts <- function (pts) {
-
-  # remove any points that are NA and issue a warning
-  if (any(is.na(pts))) {
-
-    # copy the original data
-    pts_old <- pts
-    # remove NAs
-    pts <- na.omit(pts)
-
-    # report which ones were removed
-    rm <- as.vector(attributes(pts)$na.action)
-    which_rm <- pts_old$points[rm]
-
-    if (any(which_rm == 0)) {
-      warning(sprintf('Removed %i integration points for which covariate values could not be assigned.
-                      This may affect the results of the model, please check alignment between covariates and area.',sum(which_rm == 0)))
-    }
-
-    if (any(which_rm == 1)) {
-      warning(sprintf('Removed %i observed points for which covariate values could not be assigned.
-                      This may affect the results of the model, please check alignment between covariates and coords.',sum(which_rm == 0)))
-    }
-
-  }
-  return (pts)
-}
-
 ## function to extract covariates for presence and background points.
-getCovariates <- function(presences, backgroundsites, covariates, interpolation, coord, control){
-  pbxy <- rbind(presences[,coord],backgroundsites[,coord])
-  covars <- raster::extract(covariates, pbxy, method=interpolation,
+getCovariates <- function(pbxy, covariates, interpolation, coord, control){
+  # pbxy <- rbind(presences[,coord],backgroundsites[,coord])
+  covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
                             na.rm=control$extractNArm, buffer=control$extractBuffer)
   NAsites <- which(!complete.cases(covars))
   if(length(NAsites)>0){
@@ -314,54 +316,6 @@ getCovariates <- function(presences, backgroundsites, covariates, interpolation,
   }
   return(covars)
 }
-
-
-# dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites)))[-NAsites],
-# covars,
-# weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
-# } else {
-# dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
-# covars,
-# weights=site_weights$weights)
-
-# if (!is.null(covariates)){
-#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-#     stop("covariates must be a raster, rasterstack or rasterbrick of covariates desired for modelling")
-#
-#   # extract covariate data for background points
-#   if(method=='multispecies_grid'|method=='multispecies_quasi') {
-#     covars <- extract(covariates,site_weights$multispecies_presence[,SpeciesID],method=interpolation,na.rm=TRUE)
-#     NAsites <- which(!complete.cases(covars))
-#     if(length(NAsites)>0){
-#       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-#       covars <- covars[-NAsites,,drop=FALSE]
-#       dat <- list()
-#       dat$model_matrix <- data.frame(site_weights$multispecies_presence[-NAsites,-1:-2],const=1,covars)
-#       dat$species_weights <- site_weights$multispecies_weights[-NAsites,-1]
-#     } else {
-#       dat <- list()
-#       dat$model_matrix <- data.frame(site_weights$multispecies_presence[,-1:-2],const=1,covars)
-#       dat$species_weights <- site_weights$multispecies_weights[,-1]
-#     }
-#   } else {
-#     # print(head(site_weights[,SpeciesID]))
-#     covars <- extract(covariates,site_weights[,SpeciesID],method=interpolation,na.rm=TRUE)
-#     NAsites <- which(!complete.cases(covars))
-#     if(length(NAsites)>0){
-#       print(paste0('A total of ',length(NAsites),' sites where removed from the background data, because they contained NAs, check environmental data and species sites data overlap.'))
-#       covars <- covars[-NAsites,,drop=FALSE]
-#       dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites)))[-NAsites],
-#                         # site_weights[-NAsites,SpeciesID],
-#                         covars,
-#                         weights=site_weights$weights[-NAsites])#replace this with a function 'get_weights'
-#     } else {
-#       dat <- data.frame(presence=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
-#                         # site_weights,
-#                         covars,
-#                         weights=site_weights$weights)
-#     }
-#   }
-# }
 
 # adjust the resolution to match desired number of background points
 guessResolution <- function(npoints,window){
@@ -415,3 +369,5 @@ checkResolution <- function(resolution,window){
   if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
   else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 }
+
+
