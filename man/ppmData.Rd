@@ -13,7 +13,8 @@ ppmData(
   method = c("grid", "quasirandom", "random"),
   interpolation = "bilinear",
   coord = c("X", "Y"),
-  control = list(maxpoints = 250000, extractNArm = TRUE, extractBuffer = NULL)
+  control = list(maxpoints = 250000, extractNArm = TRUE, extractBuffer = NULL,
+    quasiSamps = 5000, quasiDims = 2, multispeciesFormat = "wide")
 )
 }
 \arguments{
@@ -37,9 +38,11 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 
 \item{control}{is a list of options for generating quadrature scheme. Currently:
-`maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
-`extractNArm` = TRUE and uses na.rm=TRUE for extracting raster covariate data.
-`extractBuffer` = NULL and is the amount of buffer to provide each point on extract (radius from point).}
+'maxpoints' = 250000 and sets a limit to number of integration points generated as background data.
+'extractNArm' = TRUE and uses na.rm=TRUE for extracting raster covariate data.
+'extractBuffer' = NULL and is the amount of buffer to provide each point on extract (radius from point).
+'quasiSamps' = 5000 and is the default number of samples for halton random number generator.
+'quasiDimss' = 2 and is the dimension to generate the random samples over > 3 you are looking at hyperdimensions.}
 
 \item{SpeciesID}{is the name of site coordinates. The default is c('X','Y').}
 }

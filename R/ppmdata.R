@@ -16,10 +16,11 @@
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
 #' @param control is a list of options for generating quadrature scheme. Currently:
-#' `maxpoints` = 250000 and sets a limit to number of integration points generated as background data.
-#' `extractNArm` = TRUE and uses na.rm=TRUE for extracting raster covariate data.
-#' `extractBuffer` = NULL and is the amount of buffer to provide each point on extract (radius from point).
-#' `nSampsToConsider` = 5000 and is the default number of samples for halton random number generator.
+#' 'maxpoints' = 250000 and sets a limit to number of integration points generated as background data.
+#' 'extractNArm' = TRUE and uses na.rm=TRUE for extracting raster covariate data.
+#' 'extractBuffer' = NULL and is the amount of buffer to provide each point on extract (radius from point).
+#' 'quasiSamps' = 5000 and is the default number of samples for halton random number generator.
+#' 'quasiDimss' = 2 and is the dimension to generate the random samples over > 3 you are looking at hyperdimensions.
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
@@ -31,17 +32,21 @@ ppmData <- function(npoints = 10000,
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
-                    control=list(maxpoints=250000,extractNArm=TRUE,
-                                 extractBuffer=NULL,nSampsToConsider=5000,
+                    control=list(maxpoints=250000,
+                                 extractNArm=TRUE,
+                                 extractBuffer=NULL,
+                                 quasiSamps=5000,
+                                 quasiDims=2,
                                  multispeciesFormat="wide")){
-
-  # check if there are duplicates in the presence data.
-  presences <- checkDuplicates(presences,coord)
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   if(is.null(resolution)) resolution <- guessResolution(npoints,window)
+  if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*2)
 
-  checkResolution(resolution,window)
+  ## Do some checks.
+  presences <- checkDuplicates(presences,coord)
+  checkResolution(resolution,window,control)
+  window <- checkWindow(presences,window)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -50,20 +55,11 @@ ppmData <- function(npoints = 10000,
                              quasirandom = quasirandomMethod(npoints,  window, covariates),
                              random = randomMethod(npoints, window, covariates))
 
-   wt <- ppmWeights(presences,backgroundsites[,1:2],window,coord)
+   wts <- getWeights(presences,backgroundsites[,1:2],coord)
 
   } else {
 
-  # This function was built to match the dimensions of coordinates and other dimensions
-  # Should be three check away...
-  eps <- sqrt(.Machine$double.eps)
   presences <- coordMatchDim(presences,3)
-
-  #if there is no window (raster provided) generate potential a square window with a little buffer based on presence points.
-  if (is.null(window)) {
-      message("no study area provided, a raster based on the extent of 'presences'\n with a default resolution of 1 deg will be returned.")
-      window <- defaultWindow(presences)
-  }
 
   # create background points based on method.
   backgroundsites <- switch(method,
@@ -74,25 +70,23 @@ ppmData <- function(npoints = 10000,
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      nspp <- length(unique(presences[,"SpeciesID"]))
-      sppweights <- parallel::mclapply(seq_len(nspp),function(x)ppmWeights(presences[presences$SpeciesID==x,],
-                                                         backgroundsites[,1:2],coord))
+      wts <- getMultispeciesWeights(presences, backgroundsites, coord)
     } else {
-      sppweights <- getWeights(presences,backgroundsites[,1:2],window,coord)
+      wts <- getWeights(presences,backgroundsites,coord)
     }
 
+  pbxy <- rbind(presences[,coord],backgroundsites[,coord])
+  sitecovariates <- getCovariates(pbxy,covariates,interpolation=interpolation,
+                                  coord=coord,control=control)
   }
 
-  sitecovariates <- getCovariates(presences,backgroundsites,covariates,
-                                  interpolation=interpolation,coord=coord,control=control)
-
-  dat <- assembleQuadData(presence, backgroundsites, sitecovariates, weights,
+  dat <- assembleQuadData(presence, backgroundsites, sitecovariates, wts,
                           parameters, control=control)
   return(dat)
 }
 
 assembleQuadData <- function(presence, backgroundsites, sitecovariates,
-                             weights, parameters, control){
+                             wts, parameters, control){
 
   ismulti <- checkMultispecies(presences)
   format <- control$multispeciesFormat
@@ -135,18 +129,18 @@ gridMethod <- function(resolution=1, window){
 
 
 # still working on this method.
-quasirandomMethod <- function(npoints, window, covariates=NULL){
+quasirandomMethod <- function(npoints, window, covariates=NULL, control){
 
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
     rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
     rast_data <- raster::values(covariates)
-    na_sites <- which(is.na(rast_data[,1]))
+    na_sites <- which(!complete.cases(rast_data))
     covariates_ext <- raster::extent(covariates)[1:4]
   } else {
     rast_coord <- raster::xyFromCell(window,1:raster::ncell(window))
     rast_data <- raster::values(window)
-    na_sites <- which(is.na(rast_data))
+    na_sites <- which(!complete.cases(rast_data))
     covariates_ext <- raster::extent(window)[1:4]
     }
 
@@ -158,66 +152,42 @@ quasirandomMethod <- function(npoints, window, covariates=NULL){
     stop('more background points than cells avaliable')
   }
 
-  #setup the dimensions need to halton random numbers - let's keep it at 2 for now, could expand to alternative dimension in the future
-  dimensions <- 2#dim(potential_sites)[2]
+  dimensions <- control$quasiDim
+  nSampsToConsider <- control$quasiSamps
+
+  samp <- randtoolbox::halton( nSampsToConsider * 2, dim = dimension + 1, init = TRUE)
+  skips <- sample(seq_len(nSampsToConsider), size = dimension + 1, replace = TRUE)
+  samp <- do.call("cbind", lapply(1:(dimensions + 1),
+                                  function(x) samp[skips[x] + 0:(nSampsToConsider - 1), x]))
+
+  myRange <- apply(potential_sites[-na_sites,], -1, range)[,1:dimensions]
+  for (ii in seq_len(dimension)) samp[, ii] <- myRange[1, ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
+
+  ## study area
+  study.area <- as.matrix(expand.grid(as.data.frame(apply(potential_sites,-1, range)[,1:dimensions])))
+  if (dimension == 2){
+    study.area <- study.area[c(1, 3, 4, 2), ]
+    tmp <- mgcv::in.out(study.area, samp[,1:dimensions])
+    samp <- samp[tmp, ]
+  }
+
   N <- nrow(potential_sites)
-  inclusion_
-
-
-  samp <- randtoolbox::halton(control$nSampsToConsider * 2, dim = dimension +
-                                1, init = TRUE)
-  if (randStartType == 1)
-    skips <- rep(sample(1:nSampsToConsider, size = 1, replace = TRUE),
-                 dimension + 1)
-  if (randStartType == 2)
-    skips <- sample(1:nSampsToConsider, size = dimension +
-                      1, replace = TRUE)
-  samp <- do.call("cbind", lapply(1:(designParams$dimension +
-                                       1), function(x) samp[skips[x] + 0:(nSampsToConsider -
-                                                                            1), x]))
-
-
   probs <- rep(1/N, N)
   inclusion_probs[na_sites] <- 0
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  mult <- 10
-  samp <- randtoolbox::halton(sample(1:10000, 1), dim = dimensions +
-                                1, init = TRUE)
-  njump <- npoints * mult
-  samp <- randtoolbox::halton(max(njump, 5000), dim = dimensions +
-                                1, init = FALSE)
-  myRange <- apply(potential_sites[-na_sites,], -1, range)
-  for (ii in 1:dimensions) samp[, ii] <- myRange[1, ii] + (myRange[2,ii] - myRange[1, ii]) * samp[, ii]
-  if (dimensions == 2) {
-    tmp <- mgcv::in.out(coordinates(window), samp[, 1:dimensions])
-    samp <- samp[tmp, ]
-  }
-  sampIDs <- rep(NA, nrow(samp))
-  kount <- 0
-  flag <- TRUE
-  while (flag & (kount < nrow(samp))) {
-    if (kount == 0)
-      message("Number of samples considered (number of samples found): ",
-              njump, "(0) ", sep = "")
-    else message(kount + njump, "(", length(sampIDs.2),
-                 ") ", sep = "")
-    sampIDs[kount + 1:min(njump, nrow(samp) - kount)] <- class::knn1(potential_sites,
-                                                                     samp[kount + 1:min(njump, nrow(samp) - kount), -(dimensions + 1), drop = FALSE],
-                                                                     1:nrow(potential_sites))
-    sampIDs.2 <- which(samp[1:(kount + min(njump, nrow(samp) - kount)), dimensions + 1] < inclusion_probs1[sampIDs[1:(kount +
-                                                                                                     min(njump, nrow(samp) - kount))]])
-    if (length(sampIDs.2) >= npoints) {
-      sampIDs <- sampIDs[sampIDs.2][1:npoints]
-      flag <- FALSE
-    }
-    kount <- kount + njump
-  }
-  # message("Finished\n")
-  if (kount > nrow(samp))
-    stop("Failed to find a design. It is likely that the inclusion probabilities are very low and uneven. Please try again OR make inclusion probabilities more even")
-  samp <- as.data.frame(cbind(potential_sites[sampIDs, , drop = FALSE],
+
+  sampIDs <- class::knn1(potential_sites[,1:dimensions],
+                         samp[, 1:dimensions, drop = FALSE],
+                         1:nrow(potential_sites))
+  sampIDs.2 <- which(samp[, dimensions + 1] < inclusion_probs1[sampIDs])
+
+  if (length(sampIDs.2) >= npoints)
+    sampIDs <- sampIDs[sampIDs.2][1:npoints]
+  else stop("Failed to find a design. It is possible that the inclusion probabilities are very low and uneven OR that the sampling area is very irregular (e.g. long and skinny) OR something else. Please try again (less likely to work) OR make inclusion probabilities more even (more likely but possibly undesireable) OR increase the number of sites considered (likely but computationally expensive).")
+  samp <- as.data.frame(cbind(potential_sites[sampIDs, 1:dimensions, drop = FALSE],
                               inclusion_probs[sampIDs], sampIDs))
-  colnames(samp) <- c(colnames(potential_sites), "inclusion.probabilities","ID")
+  colnames(samp) <- c(colnames(potential_sites)[1:dimensions],
+                      "inclusion.probabilities", "ID")
   return(samp)
 }
 
@@ -283,29 +253,8 @@ coordMatchDim <- function (known.sites,dimension){
   return (df)
 }
 
-defaultWindow <- function (presences) {
-  # get limits
-  xlim <- range(presences$x)
-  ylim <- range(presences$y)
-
-  # add on 5%
-  xlim <- xlim + c(-1, 1) * diff(xlim) * 0.1
-  ylim <- ylim + c(-1, 1) * diff(ylim) * 0.1
-
-  xlim[1] <- floor(xlim[1])
-  xlim[2] <- ceiling(xlim[2])
-  ylim[1] <- floor(ylim[1])
-  ylim[2] <- ceiling(ylim[2])
-
-  e <- extent(c(xlim,ylim))
-  sa <- raster(e,res=1, crs="+proj=longlat +datum=WGS84")
-  sa[]<- 1:ncell(sa)
-  return (sa)
-}
-
 ## function to extract covariates for presence and background points.
 getCovariates <- function(pbxy, covariates, interpolation, coord, control){
-  # pbxy <- rbind(presences[,coord],backgroundsites[,coord])
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
                             na.rm=control$extractNArm, buffer=control$extractBuffer)
   NAsites <- which(!complete.cases(covars))
@@ -343,6 +292,7 @@ checkCovariates <- function(covariates){
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
 checkDuplicates <- function(presences,coord){
+  if(is.null(presences))return(NULL)
   dups <- duplicated(presences)
   if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
   dat <- presences[!dups,]
@@ -356,13 +306,13 @@ checkDuplicates <- function(presences,coord){
 
 ## check to see if the presences dataset is multispecies.
 checkMultispecies <- function(presences){
-  if(length(unique(presences[,"SpeciesID"]))>1) mutlt <- TRUE
+  if(length(unique(presences[,"SpeciesID"]))>1) multi <- TRUE
   else multi <- FALSE
   multi
 }
 
 ## check resolution and throw error if lots of quad points to be generated.
-checkResolution <- function(resolution,window){
+checkResolution <- function(resolution,window,control){
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
   newncell <- round((ncello*reso[1])/resolution)
@@ -371,3 +321,35 @@ checkResolution <- function(resolution,window){
 }
 
 
+checkWindow <- function(presences,window,coord){
+
+  if(is.null(presences)){
+    presences <- data.frame(X=runif(100,0,100),Y=runif(100,0,100))
+  }
+
+  if (is.null(window)) {
+    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'\n with a default resolution of 1 deg will be returned.")
+    window <- defaultWindow(presences,coord)
+  }
+  window
+}
+
+defaultWindow <- function (presences,coord) {
+  # get limits
+  xlim <- range(presences[,coord[1]])
+  ylim <- range(presences[,coord[1]])
+
+  # add on 5%
+  xlim <- xlim + c(-1, 1) * diff(xlim) * 0.1
+  ylim <- ylim + c(-1, 1) * diff(ylim) * 0.1
+
+  xlim[1] <- floor(xlim[1])
+  xlim[2] <- ceiling(xlim[2])
+  ylim[1] <- floor(ylim[1])
+  ylim[2] <- ceiling(ylim[2])
+
+  e <- extent(c(xlim,ylim))
+  sa <- raster(e,res=1, crs="+proj=longlat +datum=WGS84")
+  sa[]<- 1:ncell(sa)
+  return (sa)
+}

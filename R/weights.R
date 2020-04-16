@@ -1,22 +1,42 @@
 # this is code out of ppm lasso package.
-ppmWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
-  sp.col = c(which(names(sp.xy) == coord[1]), which(names(sp.xy) == coord[2]))
-  quad.col = c(which(names(quad.xy) == coord[1]), which(names(quad.xy) == coord[2]))
-  X.inc = sort(unique(quad.xy[, quad.col[1]]))[2] - sort(unique(quad.xy[, quad.col[1]]))[1]
-  Y.inc = sort(unique(quad.xy[, quad.col[2]]))[2] - sort(unique(quad.xy[, quad.col[2]]))[1]
-  quad.0X = min(quad.xy[, quad.col[1]]) - floor(min(quad.xy[, quad.col[1]])/X.inc) * X.inc
-  quad.0Y = min(quad.xy[, quad.col[2]]) - floor(min(quad.xy[, quad.col[2]])/Y.inc) * Y.inc
-  X = c(sp.xy[, quad.col[1]], quad.xy[, quad.col[1]])
-  Y = c(sp.xy[, quad.col[2]], quad.xy[, quad.col[2]])
-  round.X = round((X - quad.0X)/X.inc) * X.inc
-  round.Y = round((Y - quad.0Y)/Y.inc) * Y.inc
+getWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
+  sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
+  back.col = c(which(names(backgroundsites) == coord[1]), which(names(backgroundsites) == coord[2]))
+  X.inc = sort(unique(backgroundsites[, back.col[1]]))[2] - sort(unique(backgroundsites[, back.col[1]]))[1]
+  Y.inc = sort(unique(backgroundsites[, back.col[2]]))[2] - sort(unique(backgroundsites[, back.col[2]]))[1]
+  back.0X = min(backgroundsites[, back.col[1]]) - floor(min(backgroundsites[, back.col[1]])/X.inc) * X.inc
+  back.0Y = min(backgroundsites[, back.col[2]]) - floor(min(backgroundsites[, back.col[2]])/Y.inc) * Y.inc
+  X = c(presences[, back.col[1]], backgroundsites[, back.col[1]])
+  Y = c(presences[, back.col[2]], backgroundsites[, back.col[2]])
+  round.X = round((X - back.0X)/X.inc) * X.inc
+  round.Y = round((Y - back.0Y)/Y.inc) * Y.inc
   round.id = paste(round.X, round.Y)
   round.table = table(round.id)
   wts = X.inc * Y.inc/as.numeric(round.table[match(round.id, names(round.table))])
   wts
 }
 
-# ## old function.
+
+getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y")){
+
+  nspp <- length(unique(presences[,"SpeciesID"]))
+  sppBckWtsList <- lapply(seq_len(nspp), function(ii)getWeights(presences[presences$SpeciesID==ii,],
+                                                         backgroundsites,coord))
+  sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(presences[presences$SpeciesID==ii,]))
+  sppCountsVec <- do.call(c,sppCounts)
+  sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)sppBckWtsList[[ii]][seq_len(sppCountsVec[ii])])
+  sppWtsVec <- do.call(c,sppWtsList)
+  bckWts <- sppBckWtsList[[1]][-1:-sppCountsVec[1]]
+
+  dat <- data.frame(wts=c(sppWtsVec,bckWts),
+             pres=c(rep(1,length(sppWtsVec)),rep(0,length(bckWts))),
+             SpeciesID = c(rep(unique(presences$SpeciesID),sppCountsVec),rep('quad',length(bckWts))))
+
+ return(dat)
+
+}
+
+## old function.
 # getWeights <- function(presences, backgroundsites, window, coord=c("X","Y")){
 #
 #   xy <- rbind(presences[,coord],backgroundsites[,coord])
