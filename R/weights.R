@@ -1,5 +1,6 @@
 # this is code out of ppm lasso package.
 getWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
+
   sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
   back.col = c(which(names(backgroundsites) == coord[1]), which(names(backgroundsites) == coord[2]))
   X.inc = sort(unique(backgroundsites[, back.col[1]]))[2] - sort(unique(backgroundsites[, back.col[1]]))[1]

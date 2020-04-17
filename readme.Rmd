@@ -6,13 +6,15 @@ output:
 
 ## qrbp is an r package for generating quasi random background points for Poisson point process models.
 
-The package aims to generate quasi-random background point for use in Poisson point process models. Quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomisations or grid designs). A quasi-random background point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial auto-correlation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
+The package aims to setup a model matrix for point process modelling of single or mulitple (marked) point processes. The package is based on the quadrature scheme proposed by Berman & Turner 1993, and Warton & Shepard 2010. The idea bebind this package is simple, provided a set of presences for a species (or multiple species) and a spatial region, we can generate generate a model matrix which can be included in a Poisson point process model.  
+
+Quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomisations or grid designs). A quasi-random background point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial auto-correlation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
 
 ```{r install, eval=FALSE}
 devtools::install_github('skiptoniam/qrbp')
 ```
 
-There is one main function in the `qrbp` package, which is used to generate background points to be used in Poisson point process modelling. The function `generate_background_points`, takes know species presences, a Raster* as a study area, covariates - which are a Raster stack on the of the same resolution and extent as the study area, and a bunch of other minor calls to produce a dataset that will enable Poisson point process modelling.
+There is one main function in the `qrbp` package, which is used to generate background points to be used in Poisson point process modelling. The function `ppmData`, takes known species presences, a Raster* as area based window to generate a model matrix for fitting ppms.
 
 Import some species data and covariates for modelling
 ```{r,message=FALSE}

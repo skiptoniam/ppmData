@@ -57,6 +57,7 @@ ppmData <- function(npoints = 10000,
 
    wts <- getWeights(presences,backgroundsites[,1:2],coord)
 
+
   } else {
 
   presences <- coordMatchDim(presences,3)
@@ -80,28 +81,136 @@ ppmData <- function(npoints = 10000,
                                   coord=coord,control=control)
   }
 
+  parameters <- list(npoints=npoints,resolution=resolution,method=method,
+                     interpolation=interpolation,control=control)
   dat <- assembleQuadData(presence, backgroundsites, sitecovariates, wts,
-                          parameters, control=control)
+                          coord, parameters, control=control)
   return(dat)
 }
 
+#'@title Controls for ppmData generation.
+#'@name ppmData.control
+#'@param quiet Should any reporting be performed? Default is FALSE, for reporting.
+#'@param cores The number of cores to use in fitting of species_mix models. These will be largely used to model the species-specific parameteres.
+#'@param \dots Other control calls.
+#'@export
+ppmData.control <- function(quiet = FALSE,
+                                  cores = 1,
+                                  maxpoints=250000,
+                                  extractNArm=TRUE,
+                                  extractBuffer=NULL,
+                                  quasiSamps=5000,
+                                  quasiDims=2,
+                                  singlespeciesFormat='long',
+                                  multispeciesFormat="wide",
+                                  ...){
+  #general controls
+  rval <- list(maxpoints=maxpoints,
+               extractNArm=extractNArm,
+               extractBuffer=extractBuffer,
+               quasiSamps=quasiSamps,
+               quasiDims=quasiDims,
+               singlespecieFormat=singlespeciesFormat,
+               multispeciesFormat=multispeciesFormat)
+  rval <- c(rval, list(...))
+  rval
+}
+
+
+
 assembleQuadData <- function(presence, backgroundsites, sitecovariates,
-                             wts, parameters, control){
+                             wts, coord, parameters, control){
 
-  ismulti <- checkMultispecies(presences)
-  format <- control$multispeciesFormat
+  ismulti <- qrbp:::checkMultispecies(presences)
 
-  if(ismulti){
-    final_dat <- switch(format,
-                        long=longdat(dat),
-                        wide=widedat(dat),
-                        list=listdat(dat))
+  if(!ismulti) format <- control$singlespeciesFormat
+  else format <- control$multispeciesFormat
 
-  } else {
-    final_dat <- longdat()
+  final_dat <- switch(format,
+                      long=longdat(presence, backgroundsites,
+                                   sitecovariates,
+                                   wts, coord),
+                      wide=widedat(presence, backgroundsites,
+                                   sitecovariates,
+                                   wts, coord),
+                      list=listdat(presence, backgroundsites,
+                                   sitecovariates,
+                                   wts, coord))
+
+  return(list(modelmatrix=final_dat,parameters))
+
+}
+
+
+longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord){
+
+  if(!is.null(presences)){ #presences true
+    if(!is.null(sitecovariates)){ #covariates true
+    dat1 <- rbind(presences[,c(coord,"SpeciesID")],backgroundsites[,c(coord,"SpeciesID")])
+    dat2 <- cbind(dat1,sitecovariates,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
+    } else { #covariates false
+    dat1 <- rbind(presences[,c(coord,"SpeciesID")],backgroundsites[,c(coord,"SpeciesID")])
+    dat2 <- cbind(dat1,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
+    }
+  } else { # presences false
+    if(!is.null(sitecovariates)){ # covariates true
+      dat2 <- cbind(backgroundsites[,c(coord,"SpeciesID")],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+    } else { # covariates false
+      dat2 <- cbind(backgroundsites[,c(coord,"SpeciesID")],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+    }
   }
 
-  return(list(modelmatrix=final_dat,parameters=parameters))
+  return(dat2)
+
+}
+
+listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
+
+  if(!is.null(presences)){ #presences true
+    if(!is.null(sitecovariates)){ #covariates true
+      dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
+                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   covariates=sitecovariates,
+                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+                   wts=wts)
+    } else { #covariates false
+      dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
+                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   covariates=NULL,
+                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+                   wts=wts)
+    }
+  } else { # presences false
+    if(!is.null(sitecovariates)){
+      dat2 <- list(presences=NULL,
+                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   covariates=sitecovariates,
+                   pres=c(rep(0,nrow(backgroundsites))),
+                   wts=wts)
+      } else { # covariates false
+      dat2 <- list(presences=NULL,
+                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   covariates=NULL,
+                   pres=c(rep(0,nrow(backgroundsites))),
+                   wts=wts)
+    }
+  }
+  return(dat2)
+}
+
+
+widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
+
+  # Assemble a data.frame with all the bits we want.
+  sites <- presences
+  sites <- data.frame(oo=1:nrow(presences),sites) #keep track of original order
+  sites <- sites[order(sites[,coord[1]],sites[,coord[2]]),]
+  sites$SiteID <- cumsum(!duplicated(sites[coord]))
+  sites <- sites[order(sites[,'oo']),]
+  pamat <- widemat(sites,"SiteID","SpeciesID")
+
+  backgroundsitesZeros <- matrix(0,nrow(backgroundsites),ncol(pamat))
+
 
 }
 
@@ -254,7 +363,8 @@ coordMatchDim <- function (known.sites,dimension){
 }
 
 ## function to extract covariates for presence and background points.
-getCovariates <- function(pbxy, covariates, interpolation, coord, control){
+getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
+  if(is.null(covariates))return(NULL)
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
                             na.rm=control$extractNArm, buffer=control$extractBuffer)
   NAsites <- which(!complete.cases(covars))
@@ -352,4 +462,34 @@ defaultWindow <- function (presences,coord) {
   sa <- raster(e,res=1, crs="+proj=longlat +datum=WGS84")
   sa[]<- 1:ncell(sa)
   return (sa)
+}
+
+
+widemat <- function (x, site.id = "site.id", sp.id = "sp.id",
+                     abund = FALSE, abund.col = "No.of.specimens",
+                     siteXsp=TRUE){
+  a <- site.id
+  nr <- length(levels(as.factor(x[, a])))
+  rn <- levels(as.factor(x[, a]))
+  z <- sp.id
+  cn <- levels(as.factor(x[, z]))
+  nc <- length(cn)
+  nm <- matrix(0, nr, nc, dimnames = list(rn, cn))
+  for (i in 1:length(x[, 1])) {
+    m <- as.character(x[i, a])
+    n <- as.character(x[i, z])
+    if (is.na(m) == TRUE | is.null(m) == TRUE | is.na(n) ==
+        TRUE | is.null(n) == TRUE)
+      (next)(i)
+    if (m == "" | m == " " | n == "" | n == " ")
+      (next)(i)
+    if (abund == TRUE)
+      nm[m, n] <- nm[m, n] + x[i, abund.col]
+    else nm[m, n] <- 1
+  }
+  fm <- nm[rowSums(nm) > 0, ]
+  if(siteXsp){ return(as.matrix(fm))
+  } else {
+    return(as.matrix(t(fm)))
+  }
 }

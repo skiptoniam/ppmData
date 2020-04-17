@@ -14,10 +14,10 @@ testthat::test_that('Test background generation for null species - i.e. no speci
   preds <- stack(lst)
   projection(preds) <- "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +units=m +no_defs"
 
-  # presences <- cbind(coordinates(species[species$Occurrence == 1,]),SpeciesID=1)
-  # presences2 <- cbind(coordinates(species[species$Occurrence == 1,]),SpeciesID=2)
-  # colnames(presences)[1:2] <- c("X","Y")
-  # presences <- rbind(presences,presences2)
+  presences <- cbind(coordinates(species[species$Occurrence == 1,]),SpeciesID=1)
+  presences2 <- cbind(coordinates(species[species$Occurrence == 1,]),SpeciesID=2)
+  colnames(presences)[1:2] <- c("X","Y")
+  presences <- rbind(presences,presences2)
   presences <- NULL
   window <- preds[[1]]
   covariates <- NULL#preds
