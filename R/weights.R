@@ -17,22 +17,32 @@ getWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
   wts
 }
 
+getSinglespeciesWeights <- function(presences,backgroundsites,coord){
+
+  backgroundsites$SpeciesID <- "quad"
+  wts <- qrbp:::getWeights(presences,backgroundsites,coord)
+  dat <- cbind(rbind(presences,backgroundsites),
+               pres=c(rep(1,sppCounts[[ii]]),
+                     rep(0,nrow(backgroundsites))),
+               wts=wts)
+  return(dat)
+}
 
 getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y")){
 
+  presences$oo <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
-  sppBckWtsList <- lapply(seq_len(nspp), function(ii)getWeights(presences[presences$SpeciesID==ii,],
-                                                         backgroundsites,coord))
-  sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(presences[presences$SpeciesID==ii,]))
-  sppCountsVec <- do.call(c,sppCounts)
-  sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)sppBckWtsList[[ii]][seq_len(sppCountsVec[ii])])
-  sppWtsVec <- do.call(c,sppWtsList)
-  bckWts <- sppBckWtsList[[1]][-1:-sppCountsVec[1]]
-
-  dat <- data.frame(wts=c(sppWtsVec,bckWts),
-             pres=c(rep(1,length(sppWtsVec)),rep(0,length(bckWts))),
-             SpeciesID = c(rep(unique(presences$SpeciesID),sppCountsVec),rep('quad',length(bckWts))))
-
+  backgroundsites$SpeciesID <- "quad"
+  backgroundsites$oo <- seq_len(nrow(backgroundsites))+max(presences$oo)
+  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==ii,])
+  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)qrbp:::getWeights(sppdata[[ii]],backgroundsites,coord))
+  sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
+  sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundsites))
+  sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
+  sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
+                                                                    pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundsites))),
+                                                                    wts=sppBckWtsList[[ii]]))
+ dat <- do.call(rbind,sppWtsList)
  return(dat)
 
 }

@@ -1,5 +1,5 @@
 #' @name ppmData
-#' @title Create a Point Process dataset for spatial presence only modelling.
+#' @title Create a Point Process dataset for spatial presence-only modelling.
 #' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
 #' @param npoints number of background points to create.
@@ -55,8 +55,10 @@ ppmData <- function(npoints = 10000,
                              quasirandom = quasirandomMethod(npoints,  window, covariates),
                              random = randomMethod(npoints, window, covariates))
 
-   wts <- getWeights(presences,backgroundsites[,1:2],coord)
-
+   # wts <- getWeights(presences,backgroundsites[,1:2],coord)
+   sitecovariates <- getCovariates(backgroundsites$grid[,coord],covariates,
+                                   interpolation=interpolation,
+                                   coord=coord,control=control)
 
   } else {
 
@@ -71,19 +73,20 @@ ppmData <- function(npoints = 10000,
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundsites, coord)
+      wts <- getMultispeciesWeights(presences, backgroundsites$grid, coord)
     } else {
-      wts <- getWeights(presences,backgroundsites,coord)
+      wts <- getSinglespeciesWeights(presences, backgroundsites$grid, coord)
     }
 
-  pbxy <- rbind(presences[,coord],backgroundsites[,coord])
-  sitecovariates <- getCovariates(pbxy,covariates,interpolation=interpolation,
+  # pbxy <- wts[,coord],backgroundsites[,coord])
+  sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation,
                                   coord=coord,control=control)
   }
 
-  parameters <- list(npoints=npoints,resolution=resolution,method=method,
+  parameters <- list(npoints=npoints,resolution=resolution,
+                     newresolution=backgroundsites$newres,method=method,
                      interpolation=interpolation,control=control)
-  dat <- assembleQuadData(presence, backgroundsites, sitecovariates, wts,
+  dat <- assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                           coord, parameters, control=control)
   return(dat)
 }
@@ -118,7 +121,7 @@ ppmData.control <- function(quiet = FALSE,
 
 
 
-assembleQuadData <- function(presence, backgroundsites, sitecovariates,
+assembleQuadData <- function(presences, backgroundsites, sitecovariates,
                              wts, coord, parameters, control){
 
   ismulti <- qrbp:::checkMultispecies(presences)
@@ -127,13 +130,13 @@ assembleQuadData <- function(presence, backgroundsites, sitecovariates,
   else format <- control$multispeciesFormat
 
   final_dat <- switch(format,
-                      long=longdat(presence, backgroundsites,
+                      long=longdat(presences, backgroundsites,
                                    sitecovariates,
                                    wts, coord),
-                      wide=widedat(presence, backgroundsites,
+                      wide=widedat(presences, backgroundsites,
                                    sitecovariates,
                                    wts, coord),
-                      list=listdat(presence, backgroundsites,
+                      list=listdat(presences, backgroundsites,
                                    sitecovariates,
                                    wts, coord))
 
@@ -146,17 +149,17 @@ longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord)
 
   if(!is.null(presences)){ #presences true
     if(!is.null(sitecovariates)){ #covariates true
-    dat1 <- rbind(presences[,c(coord,"SpeciesID")],backgroundsites[,c(coord,"SpeciesID")])
+    dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
     dat2 <- cbind(dat1,sitecovariates,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
     } else { #covariates false
-    dat1 <- rbind(presences[,c(coord,"SpeciesID")],backgroundsites[,c(coord,"SpeciesID")])
+    dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
     dat2 <- cbind(dat1,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
     }
   } else { # presences false
     if(!is.null(sitecovariates)){ # covariates true
-      dat2 <- cbind(backgroundsites[,c(coord,"SpeciesID")],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+      dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
     } else { # covariates false
-      dat2 <- cbind(backgroundsites[,c(coord,"SpeciesID")],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+      dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
     }
   }
 
@@ -233,7 +236,9 @@ gridMethod <- function(resolution=1, window){
     colnames(grid) <- c('X','Y')
   }
 
-  return(grid)
+  newres <- res(dd)
+
+  return(list(grid=grid,newres=newres))
 }
 
 
@@ -297,7 +302,7 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control){
                               inclusion_probs[sampIDs], sampIDs))
   colnames(samp) <- c(colnames(potential_sites)[1:dimensions],
                       "inclusion.probabilities", "ID")
-  return(samp)
+  return(list(grid=samp,newres=res(window)))
 }
 
 randomMethod <- function(npoints, window, covariates = NULL){
@@ -323,7 +328,7 @@ randomMethod <- function(npoints, window, covariates = NULL){
     randpoints <- cbind(randpoints,covars)
   }
 
-  return(randpoints)
+  return(list(grid=randpoints,newres=res(window)))
 }
 
 coordMatchDim <- function (known.sites,dimension){
@@ -367,12 +372,12 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   if(is.null(covariates))return(NULL)
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
                             na.rm=control$extractNArm, buffer=control$extractBuffer)
-  NAsites <- which(!complete.cases(covars))
-  if(length(NAsites)>0){
-    print(paste0('A total of ',length(NAsites),' sites where removed from the background data,
-                 because they contained NAs, check raster and species sites data intersection.'))
-    covars <- covars[-NAsites,,drop=FALSE]
-  }
+  # NAsites <- which(!complete.cases(covars))
+  # if(length(NAsites)>0){
+  #   print(paste0('A total of ',length(NAsites),' sites where removed from the background data,
+  #                because they contained NAs, check raster and species sites data intersection.'))
+  #   covars <- covars[-NAsites,,drop=FALSE]
+  # }
   return(covars)
 }
 

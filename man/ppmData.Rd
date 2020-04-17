@@ -2,7 +2,7 @@
 % Please edit documentation in R/ppmdata.R
 \name{ppmData}
 \alias{ppmData}
-\title{Create a Point Process dataset for spatial presence only modelling.}
+\title{Create a Point Process dataset for spatial presence-only modelling.}
 \usage{
 ppmData(
   npoints = 10000,
