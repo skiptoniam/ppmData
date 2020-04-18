@@ -216,12 +216,18 @@ listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  sites <- presences
-  sites <- data.frame(oo=1:nrow(presences),sites) #keep track of original order
-  sites <- sites[order(sites[,coord[1]],sites[,coord[2]]),]
-  sites$SiteID <- cumsum(!duplicated(sites[coord]))
-  sites <- sites[order(sites[,'oo']),]
-  pamat <- qrbp:::widemat(sites,"SiteID","SpeciesID")
+  # sites <- presences
+  # sites <- data.frame(oo=1:nrow(presences),sites) #keep track of original order
+  # sites <- sites[order(sites[,coord[1]],sites[,coord[2]]),]
+  # sites$SiteID <- cumsum(!duplicated(sites[coord]))
+  # sites <- sites[order(sites[,'oo']),]
+  pamat <- qrbp:::widemat(wts,"OrigOrder","SpeciesID")
+  presences_pamat <- pamat[pamat[,"quad"]==0,-which(colnames(pamat)=='quad')]
+  presences_pamat[presences_pamat==0]<-NA
+  quad_pamat <- pamat[pamat[,"quad"]==1,-which(colnames(pamat)=='quad')]
+  response_ppmmat <- rbind(presences_pamat,quad_pamat)
+
+
 
   backgroundsitesZeros <- matrix(0,nrow(backgroundsites),ncol(pamat))
 
