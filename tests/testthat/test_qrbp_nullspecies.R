@@ -36,22 +36,22 @@ testthat::test_that('Test background generation for null species - i.e. no speci
                    interpolation = interpolation)
 
   method <- "quasirandom"
-  bkquasi <- generate_background_points(npoints = npoints,
-                                      resolution = resolution,
-                                      presences = presences,
-                                      window = window,
-                                      covariates = covariates,
-                                      method=method,
-                                      interpolation = interpolation)
+  bkquasi <- ppmData(npoints = npoints,
+                     resolution = resolution,
+                     presences = presences,
+                     window = window,
+                     covariates = covariates,
+                     method = method,
+                     interpolation = interpolation)
 
   method <- "random"
-  bkrandom <- generate_background_points(npoints = npoints,
-                                        resolution = resolution,
-                                        presences = presences,
-                                        window = window,
-                                        covariates = covariates,
-                                        method=method,
-                                        interpolation = interpolation)
+  bkrandom <- ppmData(npoints = npoints,
+                      resolution = resolution,
+                      presences = presences,
+                      window = window,
+                      covariates = covariates,
+                      method = method,
+                      interpolation = interpolation)
 
   testthat::expect_message()
   testthat::expect_message()

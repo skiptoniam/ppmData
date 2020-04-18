@@ -53,12 +53,32 @@ testthat::test_that('Test background generation for null species - i.e. no speci
                    interpolation = interpolation,
                    control=ppmData.control(multispeciesFormat='long'))
 
+  ## quasi random
+
+  method <- "quasirandom"
+  # control <- ppmData.control(quasiDims = 2)
+  backgroundsites <- switch(method,
+                            grid = qrbp:::gridMethod(resolution, window),
+                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates, control, coord),
+                            random = qrbp:::randomMethod(npoints,  window, covariates))
+
+  wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid)
+
+  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds, interpolation, coord, control)
+
+  parameters <- list(npoints=npoints,resolution=resolution,
+                     newresolution=backgroundsites$newres,method=method,
+                     interpolation=interpolation,control=control)
+  dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
+                                 coord, parameters, control=control)
+
+
   bkquasi <- ppmData(npoints = npoints,
                    resolution = resolution,
                    presences = presences,
                    window = window,
                    covariates = covariates,
-                   method = "quasirandom",
+                   method = method,
                    interpolation = interpolation,
                    control=ppmData.control(multispeciesFormat='long'))
 

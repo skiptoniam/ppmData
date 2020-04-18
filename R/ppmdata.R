@@ -53,7 +53,7 @@ ppmData <- function(npoints = 10000,
    backgroundsites <- switch(method,
                              grid = gridMethod(resolution, window),
                              quasirandom = quasirandomMethod(npoints,  window,
-                                                             covariates, control),
+                                                             covariates, control, coord),
                              random = randomMethod(npoints, window, covariates))
 
    # wts <- getWeights(presences,backgroundsites[,1:2],coord)
@@ -69,7 +69,7 @@ ppmData <- function(npoints = 10000,
   backgroundsites <- switch(method,
                 grid = gridMethod(resolution, window),
                 quasirandom = quasirandomMethod(npoints,  window,
-                                                covariates, control),
+                                                covariates, control, coord),
                 random = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
@@ -221,7 +221,7 @@ widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
   sites <- sites[order(sites[,coord[1]],sites[,coord[2]]),]
   sites$SiteID <- cumsum(!duplicated(sites[coord]))
   sites <- sites[order(sites[,'oo']),]
-  pamat <- widemat(sites,"SiteID","SpeciesID")
+  pamat <- qrbp:::widemat(sites,"SiteID","SpeciesID")
 
   backgroundsitesZeros <- matrix(0,nrow(backgroundsites),ncol(pamat))
 
@@ -254,7 +254,7 @@ gridMethod <- function(resolution=1, window){
 
 
 # still working on this method.
-quasirandomMethod <- function(npoints, window, covariates=NULL, control){
+quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
 
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
@@ -313,7 +313,9 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control){
                               inclusion_probs[sampIDs], sampIDs))
   colnames(samp) <- c(colnames(potential_sites)[1:dimensions],
                       "inclusion.probabilities", "ID")
-  return(list(grid=samp,newres=res(window)))
+  grid <- samp[,1:2]
+  colnames(grid) <- coord
+  return(list(grid=grid,samp=samp,newres=res(window)))
 }
 
 randomMethod <- function(npoints, window, covariates = NULL){
