@@ -52,7 +52,8 @@ ppmData <- function(npoints = 10000,
    message('Generating background points in the absence of species presences')
    backgroundsites <- switch(method,
                              grid = gridMethod(resolution, window),
-                             quasirandom = quasirandomMethod(npoints,  window, covariates),
+                             quasirandom = quasirandomMethod(npoints,  window,
+                                                             covariates, control),
                              random = randomMethod(npoints, window, covariates))
 
    # wts <- getWeights(presences,backgroundsites[,1:2],coord)
@@ -67,7 +68,8 @@ ppmData <- function(npoints = 10000,
   # create background points based on method.
   backgroundsites <- switch(method,
                 grid = gridMethod(resolution, window),
-                quasirandom = quasirandomMethod(npoints,  window, covariates),
+                quasirandom = quasirandomMethod(npoints,  window,
+                                                covariates, control),
                 random = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
@@ -147,22 +149,31 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
 
 longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord){
 
-  if(!is.null(presences)){ #presences true
-    if(!is.null(sitecovariates)){ #covariates true
-    dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
-    dat2 <- cbind(dat1,sitecovariates,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
-    } else { #covariates false
-    dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
-    dat2 <- cbind(dat1,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
+  ismulti <- qrbp:::checkMultispecies(presences)
+
+  if(ismulti){
+    if(!is.null(sitecovariates)){
+      dat2 <- cbind(wts,sitecovariates)
+    } else {
+      dat2 <- wts
     }
-  } else { # presences false
-    if(!is.null(sitecovariates)){ # covariates true
-      dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
-    } else { # covariates false
-      dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+  } else {
+    if(!is.null(presences)){ #presences true
+      if(!is.null(sitecovariates)){ #covariates true
+        dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
+        dat2 <- cbind(dat1,sitecovariates,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
+      } else { #covariates false
+        dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
+        dat2 <- cbind(dat1,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
+      }
+    } else { # presences false
+      if(!is.null(sitecovariates)){ # covariates true
+        dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+      } else { # covariates false
+        dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+      }
     }
   }
-
   return(dat2)
 
 }
@@ -228,8 +239,8 @@ gridMethod <- function(resolution=1, window){
     fct <- (res(window)/resolution)[1]
 
     #if fct is >= 1 dissaggregate, else aggregate
-    if(fct>=1) dd <- disaggregate(window, fct, na.rm=TRUE)
-    else dd <- aggregate(window, 1/fct, na.rm=TRUE)
+    if(fct>=1) dd <- disaggregate(window, fct, na.rm=FALSE)
+    else dd <- aggregate(window, 1/fct, na.rm=FALSE)
 
     #create a dataframe of coordinates w/ area
     grid <- as.data.frame(rasterToPoints(dd)[,-3])
