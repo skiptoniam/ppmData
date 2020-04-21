@@ -1,0 +1,19 @@
+---
+title: "ppm-data-generation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ppm-data-generation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(qrbp)
+```

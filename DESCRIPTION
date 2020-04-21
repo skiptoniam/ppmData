@@ -11,4 +11,9 @@ License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.0
 Import: raster, sp, MBHdesign, maptools, rgdal
-Suggests: testthat
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown,
+    covr
+VignetteBuilder: knitr
