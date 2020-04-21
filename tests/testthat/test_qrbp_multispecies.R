@@ -1,7 +1,7 @@
 context('Test ppmData for multiple species')
 library(qrbp)
 
-testthat::test_that('Test background generation for null species - i.e. no species presences', {
+testthat::test_that('Test background generation for multiple species - i.e. for joint/mixture models', {
 
   set.seed(42)
   library(sdm)
@@ -26,7 +26,7 @@ testthat::test_that('Test background generation for null species - i.e. no speci
   interpolation <- 'bilinear'
   npoints <- 1000
   resolution <- 16000
-  covariates <- NULL
+  covariates <- preds#NULL
   control <- ppmData.control(multispeciesFormat = 'long')
 
   backgroundsites <- switch(method,
@@ -36,7 +36,9 @@ testthat::test_that('Test background generation for null species - i.e. no speci
 
   wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid)
 
-  sitecovariates <-  qrbp:::getCovariates(wts,covariates = preds, interpolation, coord, control)
+  pbxy <- wts
+
+  sitecovariates <-  qrbp:::getCovariates(pbxy,covariates = preds, interpolation, coord, control)
 
   parameters <- list(npoints=npoints,resolution=resolution,
                      newresolution=backgroundsites$newres,method=method,
