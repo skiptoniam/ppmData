@@ -25,9 +25,9 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   method <- 'grid'
   interpolation <- 'bilinear'
   npoints <- 1000
-  resolution <- 16000
+  resolution <- ceiling(res(preds)[1]/4)
   covariates <- preds#NULL
-  control <- ppmData.control(multispeciesFormat = 'long')
+  control <- ppmData.control(multispeciesFormat = 'wide')
 
   backgroundsites <- switch(method,
                             grid = qrbp:::gridMethod(resolution, window),
@@ -53,7 +53,7 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
                    covariates = covariates,
                    method = method,
                    interpolation = interpolation,
-                   control=ppmData.control(multispeciesFormat='long'))
+                   control=ppmData.control(multispeciesFormat='wide'))
 
   ## quasi random
 

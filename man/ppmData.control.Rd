@@ -12,7 +12,6 @@ ppmData.control(
   extractBuffer = NULL,
   quasiSamps = 5000,
   quasiDims = 2,
-  singlespeciesFormat = "long",
   multispeciesFormat = "wide",
   ...
 )
@@ -21,6 +20,18 @@ ppmData.control(
 \item{quiet}{Should any reporting be performed? Default is FALSE, for reporting.}
 
 \item{cores}{The number of cores to use in fitting of species_mix models. These will be largely used to model the species-specific parameteres.}
+
+\item{maxpoints}{default is 250000 and sets a limit to number of integration points generated as background data.}
+
+\item{extractNArm}{default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.}
+
+\item{extractBuffer}{default is NULL and is the amount of buffer to provide each point on extract (radius from point).}
+
+\item{quasiSamps}{default is 5000 and is the default number of samples for halton random number generator.}
+
+\item{quasiDims}{default 2 and is the dimension estimated the quasirandom samples over. Two is the default and results in a spatial quasirandom sample.}
+
+\item{multispeciesFormat}{default "wide" and is the format required by ecomix. Alternatives are "long" which returns a long table format or "list" which returns a list per species for all species related covariates, weights and presences/background points.}
 
 \item{\dots}{Other control calls.}
 }

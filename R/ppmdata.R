@@ -15,12 +15,7 @@
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
-#' @param control is a list of options for generating quadrature scheme. Currently:
-#' 'maxpoints' = 250000 and sets a limit to number of integration points generated as background data.
-#' 'extractNArm' = TRUE and uses na.rm=TRUE for extracting raster covariate data.
-#' 'extractBuffer' = NULL and is the amount of buffer to provide each point on extract (radius from point).
-#' 'quasiSamps' = 5000 and is the default number of samples for halton random number generator.
-#' 'quasiDimss' = 2 and is the dimension to generate the random samples over > 3 you are looking at hyperdimensions.
+#' @param control \link[qrbp]{ppmData.control}.
 #' @importFrom mgcv in.out
 #' @importFrom raster extract
 
@@ -32,12 +27,7 @@ ppmData <- function(npoints = 10000,
                     method = c('grid','quasirandom','random'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
-                    control=list(maxpoints=250000,
-                                 extractNArm=TRUE,
-                                 extractBuffer=NULL,
-                                 quasiSamps=5000,
-                                 quasiDims=2,
-                                 multispeciesFormat="wide")){
+                    control=ppmData.control()){
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   if(is.null(resolution)) resolution <- guessResolution(npoints,window)
@@ -97,25 +87,29 @@ ppmData <- function(npoints = 10000,
 #'@name ppmData.control
 #'@param quiet Should any reporting be performed? Default is FALSE, for reporting.
 #'@param cores The number of cores to use in fitting of species_mix models. These will be largely used to model the species-specific parameteres.
+#'@param maxpoints default is 250000 and sets a limit to number of integration points generated as background data.
+#'@param extractNArm default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.
+#'@param extractBuffer default is NULL and is the amount of buffer to provide each point on extract (radius from point).
+#'@param quasiSamps default is 5000 and is the default number of samples for halton random number generator.
+#'@param quasiDims default 2 and is the dimension estimated the quasirandom samples over. Two is the default and results in a spatial quasirandom sample.
+#'@param multispeciesFormat default "wide" and is the format required by ecomix. Alternatives are "long" which returns a long table format or "list" which returns a list per species for all species related covariates, weights and presences/background points.
 #'@param \dots Other control calls.
 #'@export
 ppmData.control <- function(quiet = FALSE,
-                                  cores = 1,
-                                  maxpoints=250000,
-                                  extractNArm=TRUE,
-                                  extractBuffer=NULL,
-                                  quasiSamps=5000,
-                                  quasiDims=2,
-                                  singlespeciesFormat='long',
-                                  multispeciesFormat="wide",
-                                  ...){
+                            cores = 1,
+                            maxpoints=250000,
+                            extractNArm=TRUE,
+                            extractBuffer=NULL,
+                            quasiSamps=5000,
+                            quasiDims=2,
+                            multispeciesFormat="wide",
+                            ...){
   #general controls
   rval <- list(maxpoints=maxpoints,
                extractNArm=extractNArm,
                extractBuffer=extractBuffer,
                quasiSamps=quasiSamps,
                quasiDims=quasiDims,
-               singlespecieFormat=singlespeciesFormat,
                multispeciesFormat=multispeciesFormat)
   rval <- c(rval, list(...))
   rval
@@ -128,7 +122,7 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
 
   ismulti <- qrbp:::checkMultispecies(presences)
 
-  if(!ismulti) format <- control$singlespeciesFormat
+  if(!ismulti) format <- "long"
   else format <- control$multispeciesFormat
 
   final_dat <- switch(format,
@@ -142,7 +136,7 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
                                    sitecovariates,
                                    wts, coord))
 
-  return(list(modelmatrix=final_dat,parameters))
+  return(list(modelmatrix=final_dat,parameters=parameters))
 
 }
 
@@ -235,7 +229,7 @@ gridMethod <- function(resolution=1, window){
   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
 
     #set up the dissaggreation or aggregate
-    fct <- (res(window)/resolution)[1]
+    fct <- round((res(window)/resolution)[1])
 
     #if fct is >= 1 dissaggregate, else aggregate
     if(fct>=1) dd <- disaggregate(window, fct, na.rm=FALSE)
@@ -445,7 +439,9 @@ checkMultispecies <- function(presences){
 checkResolution <- function(resolution,window,control){
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
-  newncell <- round((ncello*reso[1])/resolution)
+  fct <- round(reso/resolution)
+  fctprod <- prod(fct)
+  newncell <- ncello/(1/fctprod)
   if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
   else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
 }
