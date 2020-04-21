@@ -216,22 +216,16 @@ listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  # sites <- presences
-  # sites <- data.frame(oo=1:nrow(presences),sites) #keep track of original order
-  # sites <- sites[order(sites[,coord[1]],sites[,coord[2]]),]
-  # sites$SiteID <- cumsum(!duplicated(sites[coord]))
-  # sites <- sites[order(sites[,'oo']),]
-  pamat <- qrbp:::widemat(wts,"OrigOrder","SpeciesID")
+  pamat <- qrbp:::widemat(wts,"SiteID","SpeciesID")
   presences_pamat <- pamat[pamat[,"quad"]==0,-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[pamat[,"quad"]==1,-which(colnames(pamat)=='quad')]
-  response_ppmmat <- rbind(presences_pamat,quad_pamat)
-
-
-
-  backgroundsitesZeros <- matrix(0,nrow(backgroundsites),ncol(pamat))
-
-
+  response_ppmmat <- as.data.frame(rbind(presences_pamat,quad_pamat))
+  response_ppmmat$SiteID <- as.numeric(rownames(response_ppmmat))
+  response_ppmmat$Const <- 1
+  df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$SiteID),],
+              by = "SiteID", sort=FALSE)
+  return(df)
 }
 
 gridMethod <- function(resolution=1, window){
@@ -386,6 +380,7 @@ coordMatchDim <- function (known.sites,dimension){
   return (df)
 }
 
+
 ## function to extract covariates for presence and background points.
 getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   if(is.null(covariates))return(NULL)
@@ -397,6 +392,8 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   #                because they contained NAs, check raster and species sites data intersection.'))
   #   covars <- covars[-NAsites,,drop=FALSE]
   # }
+  covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
+
   return(covars)
 }
 
