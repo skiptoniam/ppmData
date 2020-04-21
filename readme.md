@@ -4,8 +4,7 @@ status](https://travis-ci.com/skiptoniam/qrbp.svg?branch=master)](https://travis
 coverage](https://codecov.io/gh/skiptoniam/qrbp/branch/master/graph/badge.svg)](https://codecov.io/gh/skiptoniam/qrbp?branch=master)
 <!-- badges: end -->
 
-qrbp is an r package for generating quasi random background points for Poisson point process models.
-----------------------------------------------------------------------------------------------------
+## qrbp is an r package for generating quasi random background points for Poisson point process models.
 
 The package aims to setup a model matrix for point process modelling of
 single or mulitple (marked) point processes. The package is based on the
