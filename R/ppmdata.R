@@ -212,11 +212,10 @@ listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
   return(dat2)
 }
 
-
 widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- qrbp:::widemat(wts,"SiteID","SpeciesID")
+  pamat <- widemat(wts,"SiteID","SpeciesID")
   presences_pamat <- pamat[pamat[,"quad"]==0,-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[pamat[,"quad"]==1,-which(colnames(pamat)=='quad')]
