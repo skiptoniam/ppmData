@@ -28,7 +28,9 @@ getSinglespeciesWeights <- function(presences,backgroundsites,coord){
                pres=c(rep(1,nrow(presences)),
                      rep(0,nrow(backgroundsites))),
                wts=wts)
-  return(dat)
+
+  df <- getSiteID(dat,coord)
+  return(df)
 }
 
 getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y")){
@@ -46,9 +48,32 @@ getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y
                                                                     pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundsites))),
                                                                     wts=sppBckWtsList[[ii]]))
  dat <- do.call(rbind,sppWtsList)
- return(dat)
+ df <- getSiteID(dat,coord)
+ return(df)
 
 }
+
+getSiteID <- function(dat,coord){
+  stidfn <- function(df, cols) {
+    comb <- do.call(paste, c(as.list(df[cols]), sep = "."))
+    df$SiteID <- match(comb, unique(comb))
+    df
+  }
+  df <- stidfn(dat,c(coord,'pres'))
+  return(df)
+}
+
+
+# df1 <- f2(dat,c(coord,"pres"))
+
+# getSiteID <- function(dat){
+# require(data.table)
+# dt <- data.table(dat, key="X,Y,pres")
+# dt[, SiteID:=.GRP, by=key(dt)]
+# df <- as.data.frame(dt)
+# return(df)
+# }
+
 
 ## old function.
 # getWeights <- function(presences, backgroundsites, window, coord=c("X","Y")){
