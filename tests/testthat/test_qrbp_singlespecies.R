@@ -125,6 +125,4 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
   testthat::expect_type(bkqrand,"list")
   testthat::expect_that(bkqrand, testthat::is_a("ppmdata"))
 
-
-
 })
