@@ -215,7 +215,7 @@ gridMethod <- function(resolution=1, window){
   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
 
     #set up the dissaggreation or aggregate
-    fct <- round((res(window)/resolution)[1])
+    fct <- (res(window)/resolution)[1]
 
     #if fct is >= 1 dissaggregate, else aggregate
     if(fct>=1) dd <- disaggregate(window, fct, na.rm=FALSE)
