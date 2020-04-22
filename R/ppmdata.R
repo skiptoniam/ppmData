@@ -14,7 +14,7 @@
 #' 'random' generates a random set of background points. See Philips 2006 (ala MaxEnt) for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
-#' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
+#' @param coord is the name of site coordinates. The default is c('X','Y').
 #' @param control \link[qrbp]{ppmData.control}.
 
 ppmData <- function(npoints = 10000,
@@ -231,10 +231,6 @@ gridMethod <- function(resolution=1, window, control){
   return(list(grid=grid,newres=newres))
 }
 
-#'@name quasirandomMethod
-#'@importFrom mgcv in.out
-#'@importFrom randtoolbox halton
-#'@importFrom class knn1
 # still working on this method.
 quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
 
