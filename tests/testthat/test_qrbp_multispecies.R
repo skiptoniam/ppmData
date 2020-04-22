@@ -7,7 +7,7 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   library(sdm)
   library(raster)
 
-  file <- system.file("external/species.shp", package="sdm") #
+  file <- system.file("external/", package="qrbp") #
   species <- shapefile(file)
   path <- system.file("external", package="sdm") # path to the folder contains the data
   lst <- list.files(path=path,pattern='asc$',full.names = T)

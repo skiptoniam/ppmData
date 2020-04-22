@@ -4,8 +4,6 @@ library(qrbp)
 testthat::test_that('Test background generation for null species - i.e. no species presences', {
 
   set.seed(42)
-  library(sdm)
-  library(raster)
 
   file <- system.file("external/species.shp", package="sdm") #
   species <- shapefile(file)
