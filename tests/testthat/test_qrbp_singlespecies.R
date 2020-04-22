@@ -83,7 +83,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 
-  bkgrid<- ppmData(npoints = npoints,
+  bkrandom <- ppmData(npoints = npoints,
                    resolution = resolution,
                    presences = presences,
                    window = window,
@@ -91,14 +91,15 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
                    method = method,
                    interpolation = interpolation)
 
-  testthat::expect_type(bkgrid,"list")
-  testthat::expect_that(bkgrid, testthat::is_a("ppmdata"))
+  testthat::expect_type(bkrandom,"list")
+  testthat::expect_that(bkrandom, testthat::is_a("ppmdata"))
 
   ## quasirandom
-  method <- "random"
+  method <- "quasirandom"
   backgroundsites <- switch(method,
                             grid = qrbp:::gridMethod(resolution, window),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates),
+                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates,
+                                                                   control=control,coord=coord),
                             random = qrbp:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundsites,'list')
 
@@ -117,7 +118,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 
-  bkgrid<- ppmData(npoints = npoints,
+  bkqrand<- ppmData(npoints = npoints,
                    resolution = resolution,
                    presences = presences,
                    window = window,
@@ -125,8 +126,8 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
                    method = method,
                    interpolation = interpolation)
 
-  testthat::expect_type(bkgrid,"list")
-  testthat::expect_that(bkgrid, testthat::is_a("ppmdata"))
+  testthat::expect_type(bkqrand,"list")
+  testthat::expect_that(bkqrand, testthat::is_a("ppmdata"))
 
 
 
