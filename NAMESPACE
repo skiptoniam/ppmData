@@ -2,3 +2,6 @@
 
 export(ppmData)
 export(ppmData.control)
+importFrom(class,knn1)
+importFrom(mgcv,in.out)
+importFrom(randtoolbox,halton)

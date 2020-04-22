@@ -231,7 +231,10 @@ gridMethod <- function(resolution=1, window, control){
   return(list(grid=grid,newres=newres))
 }
 
-
+#'@name quasirandomMethod
+#'@importFrom mgcv in.out
+#'@importFrom randtoolbox halton
+#'@importFrom class knn1
 # still working on this method.
 quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
 
@@ -256,41 +259,41 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
     stop('more background points than cells avaliable')
   }
 
-  dimensions <- control$quasiDim
+  dimension <- control$quasiDim
   nSampsToConsider <- control$quasiSamps
 
   samp <- randtoolbox::halton( nSampsToConsider * 2, dim = dimension + 1, init = TRUE)
   skips <- sample(seq_len(nSampsToConsider), size = dimension + 1, replace = TRUE)
-  samp <- do.call("cbind", lapply(1:(dimensions + 1),
+  samp <- do.call("cbind", lapply(1:(dimension + 1),
                                   function(x) samp[skips[x] + 0:(nSampsToConsider - 1), x]))
 
-  myRange <- apply(potential_sites[-na_sites,], -1, range)[,1:dimensions]
+  myRange <- apply(potential_sites[-na_sites,], -1, range)[,1:dimension]
   for (ii in seq_len(dimension)) samp[, ii] <- myRange[1, ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
 
   ## study area
-  study.area <- as.matrix(expand.grid(as.data.frame(apply(potential_sites,-1, range)[,1:dimensions])))
+  study.area <- as.matrix(expand.grid(as.data.frame(apply(potential_sites,-1, range)[,1:dimension])))
   if (dimension == 2){
     study.area <- study.area[c(1, 3, 4, 2), ]
-    tmp <- mgcv::in.out(study.area, samp[,1:dimensions])
+    tmp <- mgcv::in.out(study.area, samp[,1:dimension])
     samp <- samp[tmp, ]
   }
 
   N <- nrow(potential_sites)
-  probs <- rep(1/N, N)
+  inclusion_probs <- rep(1/N, N)
   inclusion_probs[na_sites] <- 0
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
 
-  sampIDs <- class::knn1(potential_sites[,1:dimensions],
-                         samp[, 1:dimensions, drop = FALSE],
+  sampIDs <- class::knn1(potential_sites[,1:dimension],
+                         samp[, 1:dimension, drop = FALSE],
                          1:nrow(potential_sites))
-  sampIDs.2 <- which(samp[, dimensions + 1] < inclusion_probs1[sampIDs])
+  sampIDs.2 <- which(samp[, dimension + 1] < inclusion_probs1[sampIDs])
 
   if (length(sampIDs.2) >= npoints)
     sampIDs <- sampIDs[sampIDs.2][1:npoints]
   else stop("Failed to find a design. It is possible that the inclusion probabilities are very low and uneven OR that the sampling area is very irregular (e.g. long and skinny) OR something else. Please try again (less likely to work) OR make inclusion probabilities more even (more likely but possibly undesireable) OR increase the number of sites considered (likely but computationally expensive).")
-  samp <- as.data.frame(cbind(potential_sites[sampIDs, 1:dimensions, drop = FALSE],
+  samp <- as.data.frame(cbind(potential_sites[sampIDs, 1:dimension, drop = FALSE],
                               inclusion_probs[sampIDs], sampIDs))
-  colnames(samp) <- c(colnames(potential_sites)[1:dimensions],
+  colnames(samp) <- c(colnames(potential_sites)[1:dimension],
                       "inclusion.probabilities", "ID")
   grid <- samp[,1:2]
   colnames(grid) <- coord
@@ -381,7 +384,7 @@ guessResolution <- function(npoints,window){
   message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
-  newres <- floor(round((ncello*reso[1]))/npoints)
+  newres <- (round((ncello*reso[1]))/npoints)
   newres
 }
 
@@ -425,12 +428,12 @@ checkMultispecies <- function(presences){
 checkResolution <- function(resolution,window,control,method){
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
-  fct <- round(reso/resolution)
+  fct <- (reso/resolution)
   fctprod <- prod(fct)
   newncell <- ncello/(1/fctprod)
 if(method%in%"grid"){
-    if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
-  else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
+    if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",round(newncell),",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+  else message("Based on the provided resolution of ",resolution," a grid of approximately ",round(newncell)," quadrature points will be produced.")
   }
 }
 

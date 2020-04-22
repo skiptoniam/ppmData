@@ -16,14 +16,14 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
   covariates <- NULL
   interpolation <- 'bilinear'
   npoints <- 1000
-  resolution <- 0.5
+  resolution <- 0.1
   control <- ppmData.control()
   coord <- c("X","Y")
 
   ## grid
   method <- 'grid'
   backgroundsites <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window),
+                            grid = qrbp:::gridMethod(resolution, window,control),
                             quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates),
                             random = qrbp:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundsites,'list')
