@@ -25,26 +25,31 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   method <- 'grid'
   interpolation <- 'bilinear'
   npoints <- 1000
-  resolution <- ceiling(res(preds)[1]/4)
-  covariates <- preds#NULL
-  control <- ppmData.control(multispeciesFormat = 'wide')
+  resolution <- ceiling(res(preds)[1])
+  covariates <- preds
+  control <- ppmData.control()
 
   backgroundsites <- switch(method,
                             grid = qrbp:::gridMethod(resolution, window),
                             quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates),
                             random = qrbp:::randomMethod(npoints,  window, covariates))
+  testthat::expect_is(backgroundsites,'list')
 
   wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid)
+  testthat::expect_is(wts,'data.frame')
 
-  pbxy <- wts
-
-  sitecovariates <-  qrbp:::getCovariates(pbxy,covariates = preds, interpolation, coord, control)
+  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds,
+                                          interpolation, coord, control)
+  testthat::expect_is(sitecovariates,'data.frame')
 
   parameters <- list(npoints=npoints,resolution=resolution,
                      newresolution=backgroundsites$newres,method=method,
                      interpolation=interpolation,control=control)
+  testthat::expect_is(parameters,'list')
+
   dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                           coord, parameters, control=control)
+  testthat::expect_is(dat,'list')
 
   bkgrid<- ppmData(npoints = npoints,
                    resolution = resolution,
@@ -53,37 +58,43 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
                    covariates = covariates,
                    method = method,
                    interpolation = interpolation,
-                   control=ppmData.control(multispeciesFormat='wide'))
+                   control=ppmData.control())
+  testthat::expect_type(bkgrid,"list")
+  testthat::expect_that(bkgrid, testthat::is_a("ppmdata"))
 
-  ## quasi random
-
+  ## quasirandom
   method <- "quasirandom"
-  # control <- ppmData.control(quasiDims = 2)
   backgroundsites <- switch(method,
                             grid = qrbp:::gridMethod(resolution, window),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates, control, coord),
+                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates,control,coord),
                             random = qrbp:::randomMethod(npoints,  window, covariates))
+  testthat::expect_is(backgroundsites,'list')
 
   wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid)
+  testthat::expect_is(wts,'data.frame')
 
-  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds, interpolation, coord, control)
+  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds,
+                                          interpolation, coord, control)
+  testthat::expect_is(sitecovariates,'data.frame')
 
   parameters <- list(npoints=npoints,resolution=resolution,
                      newresolution=backgroundsites$newres,method=method,
                      interpolation=interpolation,control=control)
+  testthat::expect_is(parameters,'list')
+
   dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                                  coord, parameters, control=control)
+  testthat::expect_is(dat,'list')
 
-
-  bkquasi <- ppmData(npoints = npoints,
+  bkgrid<- ppmData(npoints = npoints,
                    resolution = resolution,
                    presences = presences,
                    window = window,
                    covariates = covariates,
                    method = method,
                    interpolation = interpolation,
-                   control=ppmData.control(multispeciesFormat='long'))
-
-
+                   control=ppmData.control())
+  testthat::expect_type(bkgrid,"list")
+  testthat::expect_that(bkgrid, testthat::is_a("ppmdata"))
 
 })
