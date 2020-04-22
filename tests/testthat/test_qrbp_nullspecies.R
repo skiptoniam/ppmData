@@ -5,14 +5,16 @@ testthat::test_that('Test background generation for null species - i.e. no speci
 
   library(qrbp)
   library(raster)
-  preds <- tassie_preds
+  path <- system.file("extdata", package = "qrbp")
+  lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+  preds <- stack(lst)
   presences <- NULL
   window <- preds[[1]]
   covariates <- NULL#preds
   method <- 'grid'
   interpolation <- 'bilinear'
   npoints <- 1000
-  resolution <- 16000
+  resolution <- 0.1
   covariates <- NULL
 
   bkgrid <- ppmData(npoints = npoints,

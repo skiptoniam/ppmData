@@ -158,7 +158,7 @@ longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord)
   return(dat2)
 }
 
-listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
+listdat <- function(presence=NULL, backgroundsites, sitecovariates, wts=NULL, coord){
 
   if(!is.null(presences)){ #presences true
     if(!is.null(sitecovariates)){ #covariates true

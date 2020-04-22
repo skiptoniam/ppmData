@@ -36,9 +36,9 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 \item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 
-\item{control}{\link[qrbp]{ppmData.control}.}
+\item{coord}{is the name of site coordinates. The default is c('X','Y').}
 
-\item{SpeciesID}{is the name of site coordinates. The default is c('X','Y').}
+\item{control}{\link[qrbp]{ppmData.control}.}
 }
 \description{
 Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
