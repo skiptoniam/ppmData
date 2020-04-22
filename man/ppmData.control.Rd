@@ -8,7 +8,7 @@ ppmData.control(
   quiet = FALSE,
   cores = 1,
   maxpoints = 250000,
-  extractNArm = TRUE,
+  na.rm = TRUE,
   extractBuffer = NULL,
   quasiSamps = 5000,
   quasiDims = 2,
@@ -23,7 +23,7 @@ ppmData.control(
 
 \item{maxpoints}{default is 250000 and sets a limit to number of integration points generated as background data.}
 
-\item{extractNArm}{default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.}
+\item{na.rm}{default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.}
 
 \item{extractBuffer}{default is NULL and is the amount of buffer to provide each point on extract (radius from point).}
 

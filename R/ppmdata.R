@@ -39,7 +39,7 @@ ppmData <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    backgroundsites <- switch(method,
-                             grid = gridMethod(resolution, window),
+                             grid = gridMethod(resolution, window,control),
                              quasirandom = quasirandomMethod(npoints,  window,
                                                              covariates, control, coord),
                              random = randomMethod(npoints, window, covariates))
@@ -55,7 +55,7 @@ ppmData <- function(npoints = 10000,
 
   # create background points based on method.
   backgroundsites <- switch(method,
-                grid = gridMethod(resolution, window),
+                grid = gridMethod(resolution, window,control),
                 quasirandom = quasirandomMethod(npoints,  window,
                                                 covariates, control, coord),
                 random = randomMethod(npoints,  window, covariates))
@@ -87,7 +87,7 @@ ppmData <- function(npoints = 10000,
 #'@param quiet Should any reporting be performed? Default is FALSE, for reporting.
 #'@param cores The number of cores to use in fitting of species_mix models. These will be largely used to model the species-specific parameteres.
 #'@param maxpoints default is 250000 and sets a limit to number of integration points generated as background data.
-#'@param extractNArm default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.
+#'@param na.rm default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.
 #'@param extractBuffer default is NULL and is the amount of buffer to provide each point on extract (radius from point).
 #'@param quasiSamps default is 5000 and is the default number of samples for halton random number generator.
 #'@param quasiDims default 2 and is the dimension estimated the quasirandom samples over. Two is the default and results in a spatial quasirandom sample.
@@ -97,7 +97,7 @@ ppmData <- function(npoints = 10000,
 ppmData.control <- function(quiet = FALSE,
                             cores = 1,
                             maxpoints=250000,
-                            extractNArm=TRUE,
+                            na.rm=TRUE,
                             extractBuffer=NULL,
                             quasiSamps=5000,
                             quasiDims=2,
@@ -105,7 +105,7 @@ ppmData.control <- function(quiet = FALSE,
                             ...){
   #general controls
   rval <- list(maxpoints=maxpoints,
-               extractNArm=extractNArm,
+               na.rm=na.rm,
                extractBuffer=extractBuffer,
                quasiSamps=quasiSamps,
                quasiDims=quasiDims,
@@ -207,7 +207,7 @@ widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
   return(df)
 }
 
-gridMethod <- function(resolution=1, window){
+gridMethod <- function(resolution=1, window, control){
 
   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
     stop("'grid' method currently only works a raster input as a 'window'")
@@ -218,8 +218,8 @@ gridMethod <- function(resolution=1, window){
     fct <- (res(window)/resolution)[1]
 
     #if fct is >= 1 dissaggregate, else aggregate
-    if(fct>=1) dd <- disaggregate(window, fct, na.rm=FALSE)
-    else dd <- aggregate(window, 1/fct, na.rm=FALSE)
+    if(fct>=1) dd <- disaggregate(window, fct, na.rm=control$na.rm)
+    else dd <- aggregate(window, 1/fct, na.rm=control$na.rm)
 
     #create a dataframe of coordinates w/ area
     grid <- as.data.frame(rasterToPoints(dd)[,-3])
@@ -364,7 +364,7 @@ coordMatchDim <- function (known.sites,dimension){
 getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   if(is.null(covariates))return(NULL)
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
-                            na.rm=control$extractNArm, buffer=control$extractBuffer)
+                            na.rm=control$na.rm, buffer=control$extractBuffer)
   # NAsites <- which(!complete.cases(covars))
   # if(length(NAsites)>0){
   #   print(paste0('A total of ',length(NAsites),' sites where removed from the background data,
