@@ -16,7 +16,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for jo
   covariates <- NULL
   interpolation <- 'bilinear'
   npoints <- 1000
-  resolution <- 0.01
+  resolution <- 0.1
   control <- ppmData.control()
   coord <- c("X","Y")
 
