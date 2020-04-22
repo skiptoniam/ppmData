@@ -16,8 +16,6 @@
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param SpeciesID is the name of site coordinates. The default is c('X','Y').
 #' @param control \link[qrbp]{ppmData.control}.
-#' @importFrom mgcv in.out
-#' @importFrom raster extract
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
@@ -35,7 +33,7 @@ ppmData <- function(npoints = 10000,
 
   ## Do some checks.
   presences <- checkDuplicates(presences,coord)
-  checkResolution(resolution,window,control)
+  checkResolution(resolution,window,control,method)
   window <- checkWindow(presences,window)
 
   if(is.null(presences)){
@@ -80,6 +78,7 @@ ppmData <- function(npoints = 10000,
                      interpolation=interpolation,control=control)
   dat <- assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                           coord, parameters, control=control)
+  class(dat) <- "ppmdata"
   return(dat)
 }
 
@@ -143,33 +142,20 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
 
 longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord){
 
-  ismulti <- qrbp:::checkMultispecies(presences)
-
-  if(ismulti){
-    if(!is.null(sitecovariates)){
-      dat2 <- cbind(wts,sitecovariates)
+  if(!is.null(sitecovariates)){
+      dat2 <- merge(wts[,-which(colnames(wts)%in%coord)],sitecovariates[!duplicated(sitecovariates$SiteID),],
+                  by = "SiteID", sort=FALSE)
     } else {
       dat2 <- wts
     }
-  } else {
-    if(!is.null(presences)){ #presences true
-      if(!is.null(sitecovariates)){ #covariates true
-        dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
-        dat2 <- cbind(dat1,sitecovariates,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
-      } else { #covariates false
-        dat1 <- rbind(presences[,c(coord,"SpeciesID")],data.frame(backgroundsites[,c(coord)],SpeciesID='quad'))
-        dat2 <- cbind(dat1,pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),wts=wts)
-      }
-    } else { # presences false
+  if(is.null(presences)){ #presences true
       if(!is.null(sitecovariates)){ # covariates true
-        dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+        dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))))
       } else { # covariates false
-        dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))),wts=wts)
+        dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))))
       }
-    }
   }
   return(dat2)
-
 }
 
 listdat <- function(presence, backgroundsites, sitecovariates, wts, coord){
@@ -334,7 +320,7 @@ randomMethod <- function(npoints, window, covariates = NULL){
     randpoints <- cbind(randpoints,covars)
   }
 
-  return(list(grid=randpoints,newres=res(window)))
+  return(list(grid=as.data.frame(randpoints),newres=res(window)))
 }
 
 coordMatchDim <- function (known.sites,dimension){
@@ -436,14 +422,16 @@ checkMultispecies <- function(presences){
 }
 
 ## check resolution and throw error if lots of quad points to be generated.
-checkResolution <- function(resolution,window,control){
+checkResolution <- function(resolution,window,control,method){
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
   fct <- round(reso/resolution)
   fctprod <- prod(fct)
   newncell <- ncello/(1/fctprod)
-  if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,", choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+if(method%in%"grid"){
+    if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",newncell,",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
   else message("Based on the provided resolution of ",resolution," a grid of approximately ",newncell," quadrature points will be produced.")
+  }
 }
 
 

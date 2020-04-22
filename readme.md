@@ -31,10 +31,10 @@ providing as much unique information as possible (Grafston & Tille,
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series
 in Statistics. Springer, 2007.
 
-Grafstrom, Anton, and Yves Tille. “Doubly balanced spatial sampling with
-spreading and restitution of auxiliary totals.” Environmetrics 24.2
+Grafstrom, Anton, and Yves Tille. Doubly balanced spatial sampling with
+spreading and restitution of auxiliary totals. Environmetrics 24.2
 (2013): 120-131.
 
-Warton, D. I., and L. C. Shepherd. “Poisson point process models solve
-the pseudo-absence problem for presence-only data in ecology.” The
+Warton, D. I., and L. C. Shepherd. Poisson point process models solve
+the pseudo-absence problem for presence-only data in ecology. The
 Annals of Applied Statistics 4.3 (2010): 1383-1402.

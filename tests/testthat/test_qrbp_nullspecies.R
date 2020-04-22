@@ -27,7 +27,7 @@ testthat::test_that('Test background generation for null species - i.e. no speci
   resolution <- 16000
   covariates <- NULL
 
-  bkgrid<- ppmData(npoints = npoints,
+  bkgrid <- ppmData(npoints = npoints,
                    resolution = resolution,
                    presences = presences,
                    window = window,

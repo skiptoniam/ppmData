@@ -17,3 +17,37 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(qrbp)
 ```
+
+For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton & Shepard 2010.
+
+```{r,warning=FALSE,error=FALSE,message=FALSE}
+# library(mgcv)
+# bkpts_quasi <- generate_background_points(number_of_background_points = 5000,
+#                                     known_sites = POdata@coords,
+#                                     study_area = preds[[1]],
+#                                     model_covariates = preds,
+#                                     method = 'single_species_quasi')
+# fm <- gam(presence/weights ~ s(elevation) +
+#               s(precipitation) +
+#               s(temperature) +
+#               s(vegetation),
+#               weights = weights,
+#               data = bkpts_quasi,
+#               family = poisson())
+# 
+# p <- predict(object=preds,
+#              model=fm,
+#              type = 'response',
+#              const=data.frame(weights = 1))
+# 
+# p_cell <- p*(res(preds)[1]*res(preds)[2])/1000 # resolution of raster changes with bkpts_quasi - need to remember that. 
+# cellStats(p_cell,sum)
+
+```
+
+Now let's plot these models.
+```{r,fig.width=8,fig.height=6}
+# jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
+# plot(p_cell,col=jet.colors(100))
+# points(sp_sites,cex=.5,pch=16)
+```

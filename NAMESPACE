@@ -2,5 +2,3 @@
 
 export(ppmData)
 export(ppmData.control)
-importFrom(mgcv,in.out)
-importFrom(raster,extract)
