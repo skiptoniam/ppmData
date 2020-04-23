@@ -2,4 +2,3 @@
 
 export(ppmData)
 export(ppmData.control)
-importFrom(reshape2,dcast)

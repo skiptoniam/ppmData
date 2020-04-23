@@ -119,7 +119,7 @@ ppmData.control <- function(quiet = FALSE,
 assembleQuadData <- function(presences, backgroundsites, sitecovariates,
                              wts, coord, parameters, control){
 
-  ismulti <- qrbp:::checkMultispecies(presences)
+  ismulti <- checkMultispecies(presences)
 
   if(!ismulti) format <- "long"
   else format <- control$multispeciesFormat
@@ -195,7 +195,7 @@ listdat <- function(presence=NULL, backgroundsites, sitecovariates, wts=NULL, co
 widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- qrbp:::fastwidemat(wts)
+  pamat <- fastwidemat(wts)
   presences_pamat <- pamat[pamat[,"quad"]==0,-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[pamat[,"quad"]==1,-which(colnames(pamat)=='quad')]
@@ -204,7 +204,7 @@ widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$SiteID),],
               by = "SiteID", sort=FALSE)
-  wtsmat <- qrbp:::fastwidematwts(wts)
+  wtsmat <- fastwidematwts(wts)
   wtsmat <- wtsmat[df$SiteID,]
   colnames(wtsmat) <- colnames(df)[1:ncol(wtsmat)]
   return(list(mm=df,wtsmat=wtsmat))
@@ -463,7 +463,7 @@ defaultWindow <- function (presences,coord) {
   return (sa)
 }
 
-#'@importFrom reshape2 dcast
+
 fastwidemat <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
@@ -475,7 +475,7 @@ fastwidemat <- function(dat){
   return(result)
 }
 
-#'@importFrom reshape2 dcast
+
 fastwidematwts <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
