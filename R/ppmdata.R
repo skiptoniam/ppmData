@@ -463,64 +463,34 @@ defaultWindow <- function (presences,coord) {
   return (sa)
 }
 
-
-# widemat <- function (x, site.id = "site.id", sp.id = "sp.id",
-#                      abund = FALSE, abund.col = "No.of.specimens",
-#                      siteXsp=TRUE){
-#   a <- site.id
-#   nr <- length(levels(as.factor(x[, a])))
-#   rn <- levels(as.factor(x[, a]))
-#   z <- sp.id
-#   cn <- levels(as.factor(x[, z]))
-#   nc <- length(cn)
-#   nm <- matrix(0, nr, nc, dimnames = list(rn, cn))
-#   for (i in 1:length(x[, 1])) {
-#     m <- as.character(x[i, a])
-#     n <- as.character(x[i, z])
-#     if (is.na(m) == TRUE | is.null(m) == TRUE | is.na(n) ==
-#         TRUE | is.null(n) == TRUE)
-#       (next)(i)
-#     if (m == "" | m == " " | n == "" | n == " ")
-#       (next)(i)
-#     if (abund == TRUE)
-#       nm[m, n] <- nm[m, n] + x[i, abund.col]
-#     else nm[m, n] <- 1
-#   }
-#   fm <- nm[rowSums(nm) > 0, ]
-#   if(siteXsp){ return(as.matrix(fm))
-#   } else {
-#     return(as.matrix(t(fm)))
-#   }
-# }
-
+#'@importFrom reshape2 dcast
 fastwidemat <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
   dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
   fun <- function(x){ifelse(length(x)>0,1,0)}
-  result <- dcast(data=dat,
+  result <- reshape2::dcast(data=dat,
                      formula=SiteID~SpeciesID,value.var="SpeciesID",
                      fun.aggregate=fun)
   return(result)
 }
 
+#'@importFrom reshape2 dcast
 fastwidematwts <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
   dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
-  # fun <- function(x){ifelse(length(x)>0,1,0)}
-  wtsdat <- dcast(data=dat,
+  wtsdat <- reshape2::dcast(data=dat,
                   formula=SiteID~DatasetID,
                     value.var="wts")
+  # if I want to use base matrix indexing.
+  # wtsdat <- with(dat, {
+  #   out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(DatasetID),
+  #                 dimnames=list(levels(SiteID), levels(DatasetID)))
+  #   out[cbind(SiteID, DatasetID)] <- wts
+  #   out
+  # })
 
-  # nsites <- length(unique(dat$SiteID))
-  # nspp <- length(unique(dat$DatasetID))
-  # wtsdat <- matrix(NA,nsites,nspp)
-  # for(ii in 1:nspp){
-  #   wtsdat[dat[dat$DatasetID==ii,"SiteID"],ii] <- dat[dat$DatasetID==ii,"wts"]
-  # }
-  # dat2 <- dat[,c('SiteID','pres')]
-  # dat2 <- dat[!duplicated(dat),]
   wtsdat
 }
 

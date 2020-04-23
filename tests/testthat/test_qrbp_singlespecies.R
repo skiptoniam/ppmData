@@ -1,14 +1,12 @@
 context('Test ppmData for single species')
-set.seed(42)
-library(raster)
-library(qrbp)
 
 testthat::test_that('Test ppm data generation for a single species - i.e. for joint/mixture models', {
 
+  library(raster)
   species <- subset(snails,SpeciesID=='Victaphanta lampra')
   path <- system.file("extdata", package = "qrbp")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
-  preds <- stack(lst)
+  preds <- raster::stack(lst)
 
   presences <- species
   window <- preds[[1]]

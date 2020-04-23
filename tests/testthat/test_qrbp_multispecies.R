@@ -1,12 +1,11 @@
 context('Test ppmData for multiple species')
-library(qrbp)
-library(raster)
 
 testthat::test_that('Test background generation for multiple species - i.e. for joint/mixture models', {
 
+  library(raster)
   path <- system.file("extdata", package = "qrbp")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
-  preds <- stack(lst)
+  preds <- raster::stack(lst)
 
   presences <- snails
   window <- preds[[1]]
@@ -17,6 +16,7 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   resolution <- res(preds)[1]
   covariates <- preds
   control <- ppmData.control()
+  coord <- c("X","Y")
 
   presences$SpeciesID <- factor(presences$SpeciesID)
   presences <- qrbp:::checkDuplicates(presences,coord)
