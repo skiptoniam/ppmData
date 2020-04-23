@@ -1,10 +1,9 @@
 context('Test ppmData for single species')
+set.seed(42)
+library(raster)
+library(qrbp)
 
 testthat::test_that('Test ppm data generation for a single species - i.e. for joint/mixture models', {
-
-  set.seed(42)
-  library(raster)
-  library(qrbp)
 
   species <- subset(snails,SpeciesID=='Victaphanta lampra')
   path <- system.file("extdata", package = "qrbp")

@@ -195,16 +195,19 @@ listdat <- function(presence=NULL, backgroundsites, sitecovariates, wts=NULL, co
 widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- widemat(wts,"SiteID","SpeciesID")
+  pamat <- qrbp:::fastwidemat(wts)
   presences_pamat <- pamat[pamat[,"quad"]==0,-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[pamat[,"quad"]==1,-which(colnames(pamat)=='quad')]
   response_ppmmat <- as.data.frame(rbind(presences_pamat,quad_pamat))
-  response_ppmmat$SiteID <- as.numeric(rownames(response_ppmmat))
   response_ppmmat$Const <- 1
+
   df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$SiteID),],
               by = "SiteID", sort=FALSE)
-  return(df)
+  wtsmat <- qrbp:::fastwidematwts(wts)
+  wtsmat <- wtsmat[df$SiteID,]
+  colnames(wtsmat) <- colnames(df)[1:ncol(wtsmat)]
+  return(list(mm=df,wtsmat=wtsmat))
 }
 
 gridMethod <- function(resolution=1, window, control){
@@ -364,14 +367,7 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   if(is.null(covariates))return(NULL)
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
                             na.rm=control$na.rm, buffer=control$extractBuffer)
-  # NAsites <- which(!complete.cases(covars))
-  # if(length(NAsites)>0){
-  #   print(paste0('A total of ',length(NAsites),' sites where removed from the background data,
-  #                because they contained NAs, check raster and species sites data intersection.'))
-  #   covars <- covars[-NAsites,,drop=FALSE]
-  # }
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
-
   return(covars)
 }
 
@@ -380,7 +376,7 @@ guessResolution <- function(npoints,window){
   message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
   reso <- raster::res(window)
   ncello <-  sum(!is.na(window)[])
-  newres <- (round((ncello*reso[1]))/npoints)
+  newres <- (((ncello*reso[1]))/npoints)
   newres
 }
 
@@ -408,7 +404,7 @@ checkDuplicates <- function(presences,coord){
   } else {
   dat <- presences
   }
-  dat <- as.data.frame(presences)
+  dat <- as.data.frame(dat)
   colnames(dat) <- c(coord,"SpeciesID")
   dat
 }
@@ -468,31 +464,64 @@ defaultWindow <- function (presences,coord) {
 }
 
 
-widemat <- function (x, site.id = "site.id", sp.id = "sp.id",
-                     abund = FALSE, abund.col = "No.of.specimens",
-                     siteXsp=TRUE){
-  a <- site.id
-  nr <- length(levels(as.factor(x[, a])))
-  rn <- levels(as.factor(x[, a]))
-  z <- sp.id
-  cn <- levels(as.factor(x[, z]))
-  nc <- length(cn)
-  nm <- matrix(0, nr, nc, dimnames = list(rn, cn))
-  for (i in 1:length(x[, 1])) {
-    m <- as.character(x[i, a])
-    n <- as.character(x[i, z])
-    if (is.na(m) == TRUE | is.null(m) == TRUE | is.na(n) ==
-        TRUE | is.null(n) == TRUE)
-      (next)(i)
-    if (m == "" | m == " " | n == "" | n == " ")
-      (next)(i)
-    if (abund == TRUE)
-      nm[m, n] <- nm[m, n] + x[i, abund.col]
-    else nm[m, n] <- 1
-  }
-  fm <- nm[rowSums(nm) > 0, ]
-  if(siteXsp){ return(as.matrix(fm))
-  } else {
-    return(as.matrix(t(fm)))
-  }
+# widemat <- function (x, site.id = "site.id", sp.id = "sp.id",
+#                      abund = FALSE, abund.col = "No.of.specimens",
+#                      siteXsp=TRUE){
+#   a <- site.id
+#   nr <- length(levels(as.factor(x[, a])))
+#   rn <- levels(as.factor(x[, a]))
+#   z <- sp.id
+#   cn <- levels(as.factor(x[, z]))
+#   nc <- length(cn)
+#   nm <- matrix(0, nr, nc, dimnames = list(rn, cn))
+#   for (i in 1:length(x[, 1])) {
+#     m <- as.character(x[i, a])
+#     n <- as.character(x[i, z])
+#     if (is.na(m) == TRUE | is.null(m) == TRUE | is.na(n) ==
+#         TRUE | is.null(n) == TRUE)
+#       (next)(i)
+#     if (m == "" | m == " " | n == "" | n == " ")
+#       (next)(i)
+#     if (abund == TRUE)
+#       nm[m, n] <- nm[m, n] + x[i, abund.col]
+#     else nm[m, n] <- 1
+#   }
+#   fm <- nm[rowSums(nm) > 0, ]
+#   if(siteXsp){ return(as.matrix(fm))
+#   } else {
+#     return(as.matrix(t(fm)))
+#   }
+# }
+
+fastwidemat <- function(dat){
+
+  dat[,"SiteID"] <- factor(dat[,"SiteID"])
+  dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
+  fun <- function(x){ifelse(length(x)>0,1,0)}
+  result <- dcast(data=dat,
+                     formula=SiteID~SpeciesID,value.var="SpeciesID",
+                     fun.aggregate=fun)
+  return(result)
 }
+
+fastwidematwts <- function(dat){
+
+  dat[,"SiteID"] <- factor(dat[,"SiteID"])
+  dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
+  # fun <- function(x){ifelse(length(x)>0,1,0)}
+  wtsdat <- dcast(data=dat,
+                  formula=SiteID~DatasetID,
+                    value.var="wts")
+
+  # nsites <- length(unique(dat$SiteID))
+  # nspp <- length(unique(dat$DatasetID))
+  # wtsdat <- matrix(NA,nsites,nspp)
+  # for(ii in 1:nspp){
+  #   wtsdat[dat[dat$DatasetID==ii,"SiteID"],ii] <- dat[dat$DatasetID==ii,"wts"]
+  # }
+  # dat2 <- dat[,c('SiteID','pres')]
+  # dat2 <- dat[!duplicated(dat),]
+  wtsdat
+}
+
+

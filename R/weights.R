@@ -37,9 +37,10 @@ getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
+  spps <- unique(presences[,"SpeciesID"])
   backgroundsites$SpeciesID <- "quad"
   backgroundsites$OrigOrder <- seq_len(nrow(backgroundsites))+max(presences$OrigOrder)
-  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==ii,])
+  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
   sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)qrbp:::getWeights(sppdata[[ii]],backgroundsites,coord))
   sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundsites))
