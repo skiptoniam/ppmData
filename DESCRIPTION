@@ -9,6 +9,13 @@ Description: qrbp is a package to create quasi-random background points for use
     in Poisson point process modelling in R.
 License: GPL-3
 LazyData: TRUE
-RoxygenNote: 6.0.1
-Import: raster, sp, MBHdesign, maptools, rgdal
-Suggests: testthat
+RoxygenNote: 7.1.0
+Import: Rcpp, raster, mcgv, randtoolbox, reshape2
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown,
+    covr
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
