@@ -18,6 +18,8 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   control <- ppmData.control()
   coord <- c("X","Y")
 
+
+  ## test built in functions.
   presences$SpeciesID <- factor(presences$SpeciesID)
   presences <- qrbp:::checkDuplicates(presences,coord)
 
@@ -42,6 +44,24 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                           coord, parameters, control=control)
   testthat::expect_is(dat,'list')
+
+  rm(list=ls())
+
+  ## test function alone
+  path <- system.file("extdata", package = "qrbp")
+  lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+  preds <- raster::stack(lst)
+
+  presences <- snails
+  window <- preds[[1]]
+  covariates <- NULL#preds
+  method <- 'grid'
+  interpolation <- 'bilinear'
+  npoints <- 1000
+  resolution <- res(preds)[1]
+  covariates <- preds
+  control <- ppmData.control()
+  coord <- c("X","Y")
 
   bkgrid<- ppmData(npoints = npoints,
                    resolution = resolution,
