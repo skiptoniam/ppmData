@@ -199,6 +199,7 @@ widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
+  quad_pamat[is.na(quad_pamat)]<-0
   response_ppmmat <- as.data.frame(rbind(presences_pamat,quad_pamat))
   response_ppmmat$Const <- 1
   response_ppmmat$SiteID <- as.integer(rownames(response_ppmmat))
