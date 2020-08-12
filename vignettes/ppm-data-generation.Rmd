@@ -3,8 +3,10 @@ title: "ppm-data-generation"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{ppm-data-generation}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -30,7 +32,7 @@ preds <- raster::stack(lst)
 presences <- snails
 window <- preds[[1]]
 covariates <- NULL#preds
-method <- 'grid'
+method <- 'quasirandom'
 interpolation <- 'bilinear'
 npoints <- 1000
 resolution <- 0.0083
@@ -38,7 +40,7 @@ covariates <- preds
 control <- ppmData.control()
 coord <- c("X","Y")
 
-snail1 <- subset(snails,SpeciesID=='Austrorhytida lamproides')
+snail1 <- subset(snails,SpeciesID=='Victaphanta lampra')
 
 bkgrid<- ppmData(npoints = npoints,
                  resolution = resolution,
@@ -51,20 +53,33 @@ bkgrid<- ppmData(npoints = npoints,
 
 dat <- bkgrid$modelmatrix
 dat <- na.omit(dat)
+bkgrid$modelmatrix$wts
 
-fm <- gam(pres/wts ~ s(max_temp_hottest_month)+ s(min_temp_coldest_month)+s(precip_of_driest_month),
-              weights = wts,
+fm <- gam(pres/wts ~ s(X,k = 9) + s(Y,k = 9) + s(max_temp_hottest_month,k = 9) +
+            s(annual_mean_precip,k = 9) + s(annual_mean_temp,k = 9),
+              weights = dat$wts,
               data = dat,
               family = poisson())
-
-p <- predict(object=preds,
+plot(fm)
+coords <- xyFromCell(preds,1:ncell(preds))
+X <- preds[[1]]
+Y <- preds[[1]]
+X[] <- coords[,1]
+Y[] <- coords[,2]
+plot(X)
+plot(Y)
+names(X) <- "X"
+names(Y) <- "Y"
+preds2 <- stack(X,Y,preds)
+p <- predict(object=preds2,
              model=fm,
              type = 'response',
              const=data.frame(weights = 1))
 # 
-p_cell <- p*(area(preds)/10000)#prod(bkgrid$parameters$newresolution)
+p_cell <- p*(area(preds)*1e6)#prod(bkgrid$parameters$newresolution)
 # resolution of raster changes with bkpts_quasi - need to remember that. 
 cellStats(p_cell,sum)
+# plot(p_cell)
 
 ```
 

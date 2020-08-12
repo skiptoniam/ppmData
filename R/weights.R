@@ -1,5 +1,5 @@
 # this is code out of ppm lasso package.
-getWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
+getTileWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
 
   sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
   back.col = c(which(names(backgroundsites) == coord[1]), which(names(backgroundsites) == coord[2]))
@@ -17,10 +17,23 @@ getWeights <- function (presences, backgroundsites, coord = c("X", "Y")){
   wts
 }
 
-getSinglespeciesWeights <- function(presences,backgroundsites,coord){
+getRandomWeights <- function(presences, backgroundsites, window, epsilon=sqrt(.Machine$double.eps)){
+
+  # xy <- rbind(presences[,coord],backgroundsites[,coord])
+  preswts <- rep(epsilon,nrow(presences))
+  total_area <- estimateWindowArea(window)
+  nbkg <- nrow(backgroundsites)
+  bkwts <- rep(total_area/nbkg,nbkg)
+  wts <- c(preswts,bkwts)
+
+  return(wts)
+}
+
+getSinglespeciesWeights <- function(presences, backgroundsites, coord, method, window, epsilon){
 
   backgroundsites$SpeciesID <- "quad"
-  wts <- qrbp:::getWeights(presences,backgroundsites,coord)
+  if(method%in%"grid")  wts <- getTileWeights(presences,backgroundsites,coord)
+  if(method%in%c("quasirandom","random")) wts <- getRandomWeights(presences, backgroundsites, window, epsilon)
   pbxy <- rbind(presences,backgroundsites)
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
@@ -33,7 +46,7 @@ getSinglespeciesWeights <- function(presences,backgroundsites,coord){
   return(df)
 }
 
-getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y")){
+getMultispeciesWeights <- function(presences, backgroundsites, coord, method, window, epsilon){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
@@ -41,7 +54,10 @@ getMultispeciesWeights <- function(presences, backgroundsites, coord = c("X", "Y
   backgroundsites$SpeciesID <- "quad"
   backgroundsites$OrigOrder <- seq_len(nrow(backgroundsites))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
-  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)qrbp:::getWeights(sppdata[[ii]],backgroundsites,coord))
+
+  if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)getTileWeights(sppdata[[ii]],backgroundsites,coord))
+  if(method%in%c("quasirandom","random"))  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)getRandomWeights(sppdata[[ii]],backgroundsites, window, epsilon))
+
   sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundsites))
   sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
@@ -65,30 +81,6 @@ getSiteID <- function(dat,coord){
 }
 
 
-# df1 <- f2(dat,c(coord,"pres"))
-
-# getSiteID <- function(dat){
-# require(data.table)
-# dt <- data.table(dat, key="X,Y,pres")
-# dt[, SiteID:=.GRP, by=key(dt)]
-# df <- as.data.frame(dt)
-# return(df)
-# }
-
-
-## old function.
-# getWeights <- function(presences, backgroundsites, window, coord=c("X","Y")){
-#
-#   xy <- rbind(presences[,coord],backgroundsites[,coord])
-#   areas <- estimateSiteArea(window = window, site_coords = xy)
-#   cell_id <- raster::cellFromXY(window, xy)
-#   count_pts <- table(cell_id)
-#   wts <- areas/as.numeric(count_pts[match(cell_id, names(count_pts))])
-#   # weights <- data.frame(x=xy[,1],y=xy[,2],weights=weights)
-#
-#   return(wts)
-# }
-
 # estimateSiteArea <- function(window,site_coords){
 #   if(raster::isLonLat(window)){
 #     #calculate area based on area function
@@ -107,20 +99,22 @@ getSiteID <- function(dat,coord){
 #   return(wts)
 # }
 #
-# #estimate the total area of all cells in extent in km^2
-# estimateWindowArea <- function(window){
-#   if(raster::isLonLat(window)){
-#     #calculate area based on area function
-#     #convert kms to ms
-#     area_rast <- area(window)
-#     area_study <- mask(area_rast,window)
-#     area_of_region <- cellStats(area_study,sum, na.rm=TRUE)
-#   } else {
-#     # calculate area based on equal area cell resolution
-#     # mode equal area should be in meters
-#     area_of_region <- (ncell(window[!is.na(window)])  * xres(window) * yres(window))/1000
-#   }
-#   return(area_of_region)
-# }
+
+
+#estimate the total area of all cells in extent in km^2
+estimateWindowArea <- function(window){
+  if(raster::isLonLat(window)){
+    #calculate area based on area function
+    #convert kms to ms
+    area_rast <- raster::area(window)
+    area_study <- raster::mask(area_rast,window)
+    area_of_region <- raster::cellStats(area_study,sum, na.rm=TRUE)*1e+6
+  } else {
+    # calculate area based on equal area cell resolution
+    # mode equal area should be in meters
+    area_of_region <- (raster::ncell(window[!is.na(window)])  * raster::xres(window) * raster::yres(window))
+  }
+  return(area_of_region)
+}
 
 

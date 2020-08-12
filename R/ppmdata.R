@@ -44,7 +44,7 @@ ppmData <- function(npoints = 10000,
                                                              covariates, control, coord),
                              random = randomMethod(npoints, window, covariates))
 
-   # wts <- getWeights(presences,backgroundsites[,1:2],coord)
+   # wts <- getTileWeights(presences,backgroundsites[,1:2],coord)
    sitecovariates <- getCovariates(backgroundsites$grid[,coord],covariates,
                                    interpolation=interpolation,
                                    coord=coord,control=control)
@@ -63,9 +63,9 @@ ppmData <- function(npoints = 10000,
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundsites$grid, coord)
+      wts <- getMultispeciesWeights(presences, backgroundsites$grid, coord, method, window, epsilon=control$epsilon)
     } else {
-      wts <- getSinglespeciesWeights(presences, backgroundsites$grid, coord)
+      wts <- getSinglespeciesWeights(presences, backgroundsites$grid, coord, method, window, epsilon=control$epsilon)
     }
 
   # pbxy <- wts[,coord],backgroundsites[,coord])
@@ -102,6 +102,7 @@ ppmData.control <- function(quiet = FALSE,
                             quasiSamps=5000,
                             quasiDims=2,
                             multispeciesFormat="wide",
+                            epsilon = sqrt(.Machine$double.eps),
                             ...){
   #general controls
   rval <- list(maxpoints=maxpoints,
@@ -109,7 +110,8 @@ ppmData.control <- function(quiet = FALSE,
                extractBuffer=extractBuffer,
                quasiSamps=quasiSamps,
                quasiDims=quasiDims,
-               multispeciesFormat=multispeciesFormat)
+               multispeciesFormat=multispeciesFormat,
+               epsilon = epsilon)
   rval <- c(rval, list(...))
   rval
 }
@@ -474,11 +476,7 @@ fastwidemat <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
   dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
-  # fun <- function(x){ifelse(length(x)>0,1,0)}
-  # result <- reshape2::dcast(data=dat,
-  #                    formula=SiteID~SpeciesID,value.var="SpeciesID",
-  #                    fun.aggregate=fun)
-  #
+
   result <- with(dat, {
     out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(SpeciesID),
                   dimnames=list(levels(SiteID), levels(SpeciesID)))
@@ -495,23 +493,13 @@ fastwidematwts <- function(dat){
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
   dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
   # dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
-  # wtsdat <- reshape2::dcast(data=dat,
-  #                 formula=SiteID~DatasetID,
-  #                   value.var="wts")
-  # if I want to use base matrix indexing.
+
   wtsdat <- with(dat, {
     out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(DatasetID),
                   dimnames=list(levels(SiteID), levels(DatasetID)))
     out[cbind(SiteID, DatasetID)] <- wts
     out
   })
-
-  # wtsdat <- with(dat, {
-  #   out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(SpeciesID),
-  #                 dimnames=list(levels(SiteID), levels(SpeciesID)))
-  #   out[cbind(SiteID, SpeciesID)] <- wts
-  #   out
-  # })
 
   wtsdat
 }
