@@ -3,8 +3,10 @@ title: "ppm-data-generation"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{ppm-data-generation}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -21,33 +23,69 @@ library(qrbp)
 For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton & Shepard 2010.
 
 ```{r,warning=FALSE,error=FALSE,message=FALSE}
-# library(mgcv)
-# bkpts_quasi <- generate_background_points(number_of_background_points = 5000,
-#                                     known_sites = POdata@coords,
-#                                     study_area = preds[[1]],
-#                                     model_covariates = preds,
-#                                     method = 'single_species_quasi')
-# fm <- gam(presence/weights ~ s(elevation) +
-#               s(precipitation) +
-#               s(temperature) +
-#               s(vegetation),
-#               weights = weights,
-#               data = bkpts_quasi,
-#               family = poisson())
+library(mgcv)
+library(raster)
+path <- system.file("extdata", package = "qrbp")
+lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+preds <- raster::stack(lst)
+
+presences <- snails
+window <- preds[[1]]
+covariates <- NULL#preds
+method <- 'quasirandom'
+interpolation <- 'bilinear'
+npoints <- 1000
+resolution <- 0.0083
+covariates <- preds
+control <- ppmData.control()
+coord <- c("X","Y")
+
+snail1 <- subset(snails,SpeciesID=='Victaphanta lampra')
+
+bkgrid<- ppmData(npoints = npoints,
+                 resolution = resolution,
+                 presences = snail1,
+                 window = window,
+                 covariates = covariates,
+                 method = method,
+                 interpolation = interpolation,
+                 control=ppmData.control())
+
+dat <- bkgrid$modelmatrix
+dat <- na.omit(dat)
+bkgrid$modelmatrix$wts
+
+fm <- gam(pres/wts ~ s(X,k = 9) + s(Y,k = 9) + s(max_temp_hottest_month,k = 9) +
+            s(annual_mean_precip,k = 9) + s(annual_mean_temp,k = 9),
+              weights = dat$wts,
+              data = dat,
+              family = poisson())
+plot(fm)
+coords <- xyFromCell(preds,1:ncell(preds))
+X <- preds[[1]]
+Y <- preds[[1]]
+X[] <- coords[,1]
+Y[] <- coords[,2]
+plot(X)
+plot(Y)
+names(X) <- "X"
+names(Y) <- "Y"
+preds2 <- stack(X,Y,preds)
+p <- predict(object=preds2,
+             model=fm,
+             type = 'response',
+             const=data.frame(weights = 1))
 # 
-# p <- predict(object=preds,
-#              model=fm,
-#              type = 'response',
-#              const=data.frame(weights = 1))
-# 
-# p_cell <- p*(res(preds)[1]*res(preds)[2])/1000 # resolution of raster changes with bkpts_quasi - need to remember that. 
-# cellStats(p_cell,sum)
+p_cell <- p*(area(preds)*1e6)#prod(bkgrid$parameters$newresolution)
+# resolution of raster changes with bkpts_quasi - need to remember that. 
+cellStats(p_cell,sum)
+# plot(p_cell)
 
 ```
 
 Now let's plot these models.
 ```{r,fig.width=8,fig.height=6}
-# jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")))
-# plot(p_cell,col=jet.colors(100))
-# points(sp_sites,cex=.5,pch=16)
+jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")[-11]))
+plot(p_cell,col=jet.colors(100))
+points(snail1[,1:2],cex=.5,pch=16)
 ```
