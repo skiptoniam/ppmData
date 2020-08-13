@@ -13,6 +13,7 @@ ppmData.control(
   quasiSamps = 5000,
   quasiDims = 2,
   multispeciesFormat = "wide",
+  epsilon = sqrt(.Machine$double.eps),
   ...
 )
 }

@@ -21,7 +21,7 @@ getWeights <- function( presences, backgroundpoints, window, epsilon=sqrt(.Machi
   window_ext <- convert2pts( window)  #Don't really know what window is, nor what it contains
   if( method=="voronoi"){
     #this doesn't scale well with very large numbers
-    allpts <- rbind(presences[,1:2], backgroundpoints)
+    allpts <- rbind(presences, backgroundpoints)
     tmptmp <- deldir::deldir( x=allpts[,1], y=allpts[,2], plot=FALSE, rw=window_ext)
     return( tmptmp$summary$dir.area)#there may be some round-off error...
   }
@@ -54,7 +54,7 @@ getSinglespeciesWeights <- function(presences, backgroundpoints, coord, method, 
 
   backgroundpoints$SpeciesID <- "quad"
   if(method%in%"grid")  wts <- getTileWeights(presences,backgroundpoints,coord)
-  if(method%in%c("quasirandom","psuedorandom")) wts <- qrbp:::getWeights(presences, backgroundpoints, window, epsilon)
+  if(method%in%c("quasirandom","psuedorandom")) wts <- qrbp:::getWeights(presences[,coord], backgroundpoints, window, epsilon)
   pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1

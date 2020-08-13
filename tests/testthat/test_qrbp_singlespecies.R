@@ -17,6 +17,10 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
   control <- ppmData.control()
   coord <- c("X","Y")
 
+  presences <- qrbp:::checkDuplicates(presences,coord)
+  qrbp:::checkResolution(resolution,window,control,method)
+  window <- qrbp:::checkWindow(presences,window)
+
   ## grid
   method <- 'grid'
   backgroundpoints <- switch(method,

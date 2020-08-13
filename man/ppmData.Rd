@@ -10,7 +10,7 @@ ppmData(
   window = NULL,
   covariates = NULL,
   resolution = NULL,
-  method = c("grid", "quasirandom", "random"),
+  method = c("grid", "quasirandom", "psuedorandom"),
   interpolation = "bilinear",
   coord = c("X", "Y"),
   control = ppmData.control()
@@ -31,7 +31,7 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 \item{method}{the type of method that should be used to generate background points. The options are:
 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-'random' generates a random set of background points. See Philips 2006 (ala MaxEnt) for details.}
+'psuedorandom' generates a psuedorandom set of background points. See Philips 2006 (ala MaxEnt) for details.}
 
 \item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
