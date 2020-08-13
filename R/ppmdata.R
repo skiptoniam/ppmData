@@ -11,7 +11,7 @@
 #' @param method the type of method that should be used to generate background points. The options are:
 #' 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-#' 'random' generates a random set of background points. See Philips 2006 (ala MaxEnt) for details.
+#' 'psuedorandom' generates a psuedorandom set of background points. See Philips 2006 (ala MaxEnt) for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
@@ -23,7 +23,7 @@ ppmData <- function(npoints = 10000,
                     window = NULL,
                     covariates = NULL,
                     resolution = NULL,
-                    method = c('grid','quasirandom','random'),
+                    method = c('grid','quasirandom','psuedorandom'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
                     control=ppmData.control()){
@@ -37,6 +37,7 @@ ppmData <- function(npoints = 10000,
   checkResolution(resolution,window,control,method)
   window <- checkWindow(presences,window)
   tmp <- disaggregateWindow(window,npoints)
+  if(!is.null(tmp$ddwindow)) window <- tmp$ddwindow; newres <- tmp$newres
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -44,7 +45,7 @@ ppmData <- function(npoints = 10000,
                              grid = gridMethod(resolution, window,control),
                              quasirandom = quasirandomMethod(npoints,  window,
                                                              covariates, control, coord),
-                             random = randomMethod(npoints, window, covariates))
+                             psuedorandom = randomMethod(npoints, window, covariates))
 
    # wts <- getTileWeights(presences,backgroundsites[,1:2],coord)
    sitecovariates <- getCovariates(backgroundsites$grid[,coord],covariates,
@@ -60,7 +61,7 @@ ppmData <- function(npoints = 10000,
                 grid = gridMethod(resolution, window,control),
                 quasirandom = quasirandomMethod(npoints,  window,
                                                 covariates, control, coord),
-                random = randomMethod(npoints,  window, covariates))
+                psuedorandom = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
   if(ismulti){
@@ -513,9 +514,15 @@ disaggregateWindow <- function(window, npoints){
   nc <- length(window[!is.na(window[])])
 
   fct <- (nc/npoints)
-  if(fct<1) dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
+  if(fct<1){
+    dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
+    newres <- res(dd)
+  } else {
+    dd <- NULL
+    newres <- NULL
+  }
 
-  return(list(ddwindow = dd,newres=res(dd)))
+  return(list(ddwindow = dd, newres = newres))
 
 }
 

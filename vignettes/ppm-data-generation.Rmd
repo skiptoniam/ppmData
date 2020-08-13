@@ -25,26 +25,26 @@ For a laugh, let's generate some quasirandom background points and plot them aga
 ```{r,warning=FALSE,error=FALSE,message=FALSE}
 library(mgcv)
 library(raster)
+library(randomForest)
 path <- system.file("extdata", package = "qrbp")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
 
-presences <- snails
+snails1 <- subset(snails,SpeciesID=='Victaphanta lampra')
+presences <- snails1
 window <- preds[[1]]
 covariates <- NULL#preds
-method <- 'quasirandom'
+method <- 'grid'
 interpolation <- 'bilinear'
-npoints <- 1000
+npoints <- 10000
 resolution <- 0.0083
 covariates <- preds
 control <- ppmData.control()
 coord <- c("X","Y")
 
-snail1 <- subset(snails,SpeciesID=='Victaphanta lampra')
-
 bkgrid<- ppmData(npoints = npoints,
                  resolution = resolution,
-                 presences = snail1,
+                 presences = snails1,
                  window = window,
                  covariates = covariates,
                  method = method,
@@ -55,12 +55,18 @@ dat <- bkgrid$modelmatrix
 dat <- na.omit(dat)
 bkgrid$modelmatrix$wts
 
-fm <- gam(pres/wts ~ s(X,k = 9) + s(Y,k = 9) + s(max_temp_hottest_month,k = 9) +
-            s(annual_mean_precip,k = 9) + s(annual_mean_temp,k = 9),
+test <- randomForest(pres/wts ~ X + Y + max_temp_hottest_month + annual_mean_precip + annual_mean_temp,
               weights = dat$wts,
               data = dat,
               family = poisson())
-plot(fm)
+
+
+fm <- gam(pres/wts ~ s(X) + s(Y) + s(max_temp_hottest_month) +
+            s(annual_mean_precip) + s(annual_mean_temp),
+              weights = dat$wts,
+              data = dat,
+              family = poisson())
+plot(test)
 coords <- xyFromCell(preds,1:ncell(preds))
 X <- preds[[1]]
 Y <- preds[[1]]
@@ -75,11 +81,17 @@ p <- predict(object=preds2,
              model=fm,
              type = 'response',
              const=data.frame(weights = 1))
-# 
-p_cell <- p*(area(preds)*1e6)#prod(bkgrid$parameters$newresolution)
-# resolution of raster changes with bkpts_quasi - need to remember that. 
+
+p2 <- predict(object=preds2,
+             model=test,
+             type = 'response',
+             const=data.frame(weights = 1))
+
+
+p_cell <- p*prod(res(preds))#prod(bkgrid$parameters$newresolution)
+p_cell2 <- p2*prod(res(preds))#prod(bkgrid$parameters$newresolution)
 cellStats(p_cell,sum)
-# plot(p_cell)
+cellStats(p_cell2,sum)
 
 ```
 
@@ -87,5 +99,7 @@ Now let's plot these models.
 ```{r,fig.width=8,fig.height=6}
 jet.colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11 , "Spectral")[-11]))
 plot(p_cell,col=jet.colors(100))
-points(snail1[,1:2],cex=.5,pch=16)
+points(snails1[,1:2],cex=.5,pch=16)
+plot(p_cell2,col=jet.colors(100))
+points(snails1[,1:2],cex=.5,pch=16)
 ```
