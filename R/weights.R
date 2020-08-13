@@ -28,7 +28,7 @@ getWeights <- function( presences, backgroundpoints, window, epsilon=sqrt(.Machi
   # if(method == "Scott2"){
   # ###  #using Scott's made-up method based on expected
   # ###  #based on David's made-up method based on expected (but assumes lots of points)
-  #  total_area <- qrbp:::estimateWindowArea(window)
+  #  total_area <- estimateWindowArea(window)
   #  npres <- nrow( presences)
   #  nbkg <- nrow( backgroundpoints)
   #  bkwts.single <- total_area/nbkg#assumes that all bkg points occupy the same space
@@ -54,8 +54,8 @@ getSinglespeciesWeights <- function(presences, backgroundpoints, coord, method, 
 
   backgroundpoints$SpeciesID <- "quad"
   if(method%in%"grid")  wts <- getTileWeights(presences,backgroundpoints,coord)
-  if(method%in%c("quasirandom","psuedorandom")) wts <- qrbp:::getWeights(presences[,coord], backgroundpoints, window, epsilon)
-  pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
+  if(method%in%c("quasirandom","psuedorandom")) wts <- getWeights(presences[,coord], backgroundpoints, window, epsilon)
+  pbxy <- rbind(presences,backgroundpoints)
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
   dat <- cbind(pbxy,

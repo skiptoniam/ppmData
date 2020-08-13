@@ -42,10 +42,10 @@ ppmData <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    backgroundpoints <- switch(method,
-                             grid = gridMethod(resolution, window,control),
-                             quasirandom = quasirandomMethod(npoints,  window,
+                             grid = qrbp:::gridMethod(resolution, window,control),
+                             quasirandom = qrbp:::quasirandomMethod(npoints,  window,
                                                              covariates, control, coord),
-                             psuedorandom = randomMethod(npoints, window, covariates))
+                             psuedorandom = qrbp:::randomMethod(npoints, window))
 
    # wts <- getTileWeights(presences,backgroundpoints[,1:2],coord)
    sitecovariates <- getCovariates(backgroundpoints$grid[,coord],covariates,

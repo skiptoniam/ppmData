@@ -34,7 +34,7 @@ snails1 <- subset(snails,SpeciesID=='Victaphanta lampra')
 presences <- snails1
 window <- preds[[1]]
 covariates <- NULL#preds
-method <- 'grid'
+method <- 'pseudorandom'
 interpolation <- 'bilinear'
 npoints <- 10000
 resolution <- 0.0083
