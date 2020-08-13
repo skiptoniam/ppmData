@@ -16,6 +16,7 @@
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
 #' @param control \link[qrbp]{ppmData.control}.
+#'
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
@@ -35,6 +36,7 @@ ppmData <- function(npoints = 10000,
   presences <- checkDuplicates(presences,coord)
   checkResolution(resolution,window,control,method)
   window <- checkWindow(presences,window)
+  tmp <- disaggregateWindow(window,npoints)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -503,5 +505,20 @@ fastwidematwts <- function(dat){
 
   wtsdat
 }
+
+# a little function for making a finer scale window.
+disaggregateWindow <- function(window, npoints){
+
+  #set up the dissaggreation or aggregate
+  nc <- length(window[!is.na(window[])])
+
+  fct <- (nc/npoints)
+  if(fct<1) dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
+
+  return(list(ddwindow = dd,newres=res(dd)))
+
+}
+
+
 
 
