@@ -41,14 +41,14 @@ ppmData <- function(npoints = 10000,
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
-   backgroundsites <- switch(method,
+   backgroundpoints <- switch(method,
                              grid = gridMethod(resolution, window,control),
                              quasirandom = quasirandomMethod(npoints,  window,
                                                              covariates, control, coord),
                              psuedorandom = randomMethod(npoints, window, covariates))
 
-   # wts <- getTileWeights(presences,backgroundsites[,1:2],coord)
-   sitecovariates <- getCovariates(backgroundsites$grid[,coord],covariates,
+   # wts <- getTileWeights(presences,backgroundpoints[,1:2],coord)
+   sitecovariates <- getCovariates(backgroundpoints$grid[,coord],covariates,
                                    interpolation=interpolation,
                                    coord=coord,control=control)
 
@@ -57,29 +57,29 @@ ppmData <- function(npoints = 10000,
   presences <- coordMatchDim(presences,3)
 
   # create background points based on method.
-  backgroundsites <- switch(method,
-                grid = gridMethod(resolution, window,control),
-                quasirandom = quasirandomMethod(npoints,  window,
-                                                covariates, control, coord),
-                psuedorandom = randomMethod(npoints,  window, covariates))
+  backgroundpoints <- switch(method,
+                            grid = gridMethod(resolution, window,control),
+                            quasirandom = quasirandomMethod(npoints,  window,
+                                                            covariates, control, coord),
+                            psuedorandom = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundsites$grid, coord, method, window, epsilon=control$epsilon)
+      wts <- getMultispeciesWeights(presences, backgroundpoints$grid, coord, method, window, epsilon=control$epsilon)
     } else {
-      wts <- getSinglespeciesWeights(presences, backgroundsites$grid, coord, method, window, epsilon=control$epsilon)
+      wts <- getSinglespeciesWeights(presences, backgroundpoints$grid, coord, method, window, epsilon=control$epsilon)
     }
 
-  # pbxy <- wts[,coord],backgroundsites[,coord])
+  # pbxy <- wts[,coord],backgroundpoints[,coord])
   sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation,
                                   coord=coord,control=control)
   }
 
   parameters <- list(npoints=npoints,resolution=resolution,
-                     newresolution=backgroundsites$newres,method=method,
+                     newresolution=backgroundpoints$newres,method=method,
                      interpolation=interpolation,control=control)
-  dat <- assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
+  dat <- assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
                           coord, parameters, control=control)
   class(dat) <- "ppmdata"
   return(dat)
@@ -121,7 +121,7 @@ ppmData.control <- function(quiet = FALSE,
 
 
 
-assembleQuadData <- function(presences, backgroundsites, sitecovariates,
+assembleQuadData <- function(presences, backgroundpoints, sitecovariates,
                              wts, coord, parameters, control){
 
   ismulti <- checkMultispecies(presences)
@@ -130,13 +130,13 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
   else format <- control$multispeciesFormat
 
   final_dat <- switch(format,
-                      long=longdat(presences, backgroundsites,
+                      long=longdat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord),
-                      wide=widedat(presences, backgroundsites,
+                      wide=widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord),
-                      list=listdat(presences, backgroundsites,
+                      list=listdat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
 
@@ -145,7 +145,7 @@ assembleQuadData <- function(presences, backgroundsites, sitecovariates,
 }
 
 
-longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord){
+longdat <- function(presences, backgroundpoints, sitecovariates=NULL, wts, coord){
 
   if(!is.null(sitecovariates)){
       dat2 <- merge(wts[,-which(colnames(wts)%in%coord)],sitecovariates[!duplicated(sitecovariates$SiteID),],
@@ -155,49 +155,49 @@ longdat <- function(presences, backgroundsites, sitecovariates=NULL, wts, coord)
     }
   if(is.null(presences)){ #presences true
       if(!is.null(sitecovariates)){ # covariates true
-        dat2 <- cbind(backgroundsites[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundsites))))
+        dat2 <- cbind(backgroundpoints[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundpoints))))
       } else { # covariates false
-        dat2 <- cbind(backgroundsites[,c(coord)],pres=c(rep(0,nrow(backgroundsites))))
+        dat2 <- cbind(backgroundpoints[,c(coord)],pres=c(rep(0,nrow(backgroundpoints))))
       }
   }
   return(dat2)
 }
 
-listdat <- function(presence=NULL, backgroundsites, sitecovariates, wts=NULL, coord){
+listdat <- function(presence=NULL, backgroundpoints, sitecovariates, wts=NULL, coord){
 
   if(!is.null(presences)){ #presences true
     if(!is.null(sitecovariates)){ #covariates true
       dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
-                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   background=backgroundpoints[,c(coord,"SpeciesID")],
                    covariates=sitecovariates,
-                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundpoints))),
                    wts=wts)
     } else { #covariates false
       dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
-                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   background=backgroundpoints[,c(coord,"SpeciesID")],
                    covariates=NULL,
-                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundsites))),
+                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundpoints))),
                    wts=wts)
     }
   } else { # presences false
     if(!is.null(sitecovariates)){
       dat2 <- list(presences=NULL,
-                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   background=backgroundpoints[,c(coord,"SpeciesID")],
                    covariates=sitecovariates,
-                   pres=c(rep(0,nrow(backgroundsites))),
+                   pres=c(rep(0,nrow(backgroundpoints))),
                    wts=wts)
       } else { # covariates false
       dat2 <- list(presences=NULL,
-                   background=backgroundsites[,c(coord,"SpeciesID")],
+                   background=backgroundpoints[,c(coord,"SpeciesID")],
                    covariates=NULL,
-                   pres=c(rep(0,nrow(backgroundsites))),
+                   pres=c(rep(0,nrow(backgroundpoints))),
                    wts=wts)
     }
   }
   return(dat2)
 }
 
-widedat <- function(presence, backgroundsites, sitecovariates, wts, coord){
+widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
   pamat <- fastwidemat(wts)
