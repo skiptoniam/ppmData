@@ -17,25 +17,23 @@ getTileWeights <- function (presences, backgroundpoints, coord = c("X", "Y")){
   wts
 }
 
-getWeights <- function( presences, backgroundpoints, window, epsilon=sqrt(.Machine$double.eps), method='voronoi'){
-  window_ext <- convert2pts( window)  #Don't really know what window is, nor what it contains
+getWeights <- function( presences, backgroundpoints, coord, window, epsilon=sqrt(.Machine$double.eps), method='voronoi'){
+  window_ext <- convert2pts( window)
   if( method=="voronoi"){
     #this doesn't scale well with very large numbers
-    allpts <- rbind(presences, backgroundpoints)
+    allpts <- rbind(presences[,coord], backgroundpoints[,coord])
     tmptmp <- deldir::deldir( x=allpts[,1], y=allpts[,2], plot=FALSE, rw=window_ext)
     return( tmptmp$summary$dir.area)#there may be some round-off error...
   }
-  # if(method == "Scott2"){
-  # ###  #using Scott's made-up method based on expected
-  # ###  #based on David's made-up method based on expected (but assumes lots of points)
-  #  total_area <- estimateWindowArea(window)
-  #  npres <- nrow( presences)
-  #  nbkg <- nrow( backgroundpoints)
-  #  bkwts.single <- total_area/nbkg#assumes that all bkg points occupy the same space
-  #  tmptmp <- deldir::deldir( x=presences[,1], y=presences[,2], plot=FALSE, rw=window_ext)
-  #  pres.areas_nobkg <- tmptmp$summary$del.area
-  #  pres.props_nobkg <- pres.areas_nobkg / sum( pres.areas_nobkg)
-  # }
+  if(method == "quick"){
+  ###  based on David's method which uses expected area (but assumes lots of points)
+    total_area <- estimateWindowArea(window)
+    npres <- nrow( presences)
+    nbkg <- nrow( backgroundpoints)
+    bkwts.single <- rep( total_area/(nbkg+npres), nbkg)#assumes that all bkg points occupy the same space
+    pres.props_nobkg <- rep( epsilon, npres)
+    return( c( pres.props_nobkg, bkwts.single))
+  }
 }
 
 # getRandomWeights <- function(presences, backgroundpoints, window, epsilon=sqrt(.Machine$double.eps)){
@@ -67,7 +65,20 @@ getSinglespeciesWeights <- function(presences, backgroundpoints, coord, method, 
   return(df)
 }
 
-getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, window, epsilon){
+
+combineDF.fun <- function( ii, xxx, yyy, coords){
+  ####  Assumes that the colnames of xxx are a subset of those from yyy
+  ####  This is not a totally memory efficient implementation: data on all species is passed to all species...
+  xxx <- xxx[[ii]]
+  newdf <- as.data.frame( matrix( NA, nrow=nrow( xxx) + nrow( yyy), ncol=length( coords) + 2))
+  colnames( newdf) <- c(coords,"SpeciesID","OrigOrder")
+  newdf[1:nrow( xxx), ] <- xxx[,colnames( newdf)]
+  newdf[nrow( xxx) + 1:nrow( yyy), ] <- yyy[,colnames( newdf)]
+
+  return( newdf)
+}
+
+getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, areaMethod, window, epsilon){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
@@ -76,11 +87,13 @@ getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, w
   backgroundpoints$OrigOrder <- seq_len(nrow(backgroundpoints))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)getTileWeights(sppdata[[ii]],backgroundpoints,coord))
-  if(method%in%c("quasirandom","psuedorandom"))  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii)getWeights(sppdata[[ii]],backgroundpoints, window, epsilon))
+  if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii) getTileWeights(sppdata[[ii]],backgroundpoints,coord))
+  if(method%in%c("quasirandom","psuedorandom"))  sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, window, epsilon, areaMethod)})
+
+  sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)
 
   sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
-  sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundpoints))
+#  sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundpoints))
   sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
   sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
@@ -141,7 +154,7 @@ estimateWindowArea <- function(window){
 convert2pts <- function( window) {
   #convert raster to extreme points (of bounding rectangle)
   #example only, *should* work for raster.  But what data type have we got?
-  tmp <- raster::coordinates( window)
+  tmp <- sp::coordinates( window)
   tmp1 <- c( range( tmp[,1]), range( tmp[,2]))
 
   return( tmp1)

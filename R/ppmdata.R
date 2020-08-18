@@ -33,7 +33,13 @@ ppmData <- function(npoints = 10000,
   if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*2)
 
   ## Do some checks.
-  presences <- checkDuplicates(presences,coord)
+  ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
+  ####  the the same observation recorded multiple times in the database?
+  ####  Note that this function also depends upon a very particular format for the presences data.  It might be wise to robustify?
+#  presences <- checkDuplicates(presences,coord)
+  ####
+
+  ####  SDF: I don't know what all this does, so I will assume that it is sensible.
   checkResolution(resolution,window,control,method)
   window <- checkWindow(presences,window)
   tmp <- disaggregateWindow(window,npoints)
@@ -42,13 +48,12 @@ ppmData <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    backgroundpoints <- switch(method,
-                             grid = qrbp:::gridMethod(resolution, window,control),
-                             quasirandom = qrbp:::quasirandomMethod(npoints,  window,
-                                                             covariates, control, coord),
-                             psuedorandom = qrbp:::randomMethod(npoints, window))
+                             grid = gridMethod(resolution, window,control),
+                             quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
+                             psuedorandom = randomMethod(npoints, window))
 
    # wts <- getTileWeights(presences,backgroundpoints[,1:2],coord)
-   sitecovariates <- getCovariates(backgroundpoints$grid[,coord],covariates,
+   sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
                                    interpolation=interpolation,
                                    coord=coord,control=control)
 
@@ -59,16 +64,16 @@ ppmData <- function(npoints = 10000,
   # create background points based on method.
   backgroundpoints <- switch(method,
                             grid = gridMethod(resolution, window,control),
-                            quasirandom = quasirandomMethod(npoints,  window,
-                                                            covariates, control, coord),
+                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
                             psuedorandom = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundpoints$grid, coord, method, window, epsilon=control$epsilon)
+      wts <- getMultispeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, areaMethod=control$weightMethod, window, epsilon=control$epsilon)
     } else {
-      wts <- getSinglespeciesWeights(presences, backgroundpoints$grid, coord, method, window, epsilon=control$epsilon)
+      ####  Will need to look at areaMethod -- hard-wired for now.
+      wts <- getSinglespeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, window, epsilon=control$epsilon)
     }
 
   # pbxy <- wts[,coord],backgroundpoints[,coord])
@@ -79,7 +84,7 @@ ppmData <- function(npoints = 10000,
   parameters <- list(npoints=npoints,resolution=resolution,
                      newresolution=backgroundpoints$newres,method=method,
                      interpolation=interpolation,control=control)
-  dat <- assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
+  dat <- assembleQuadData(presences, backgroundpoints$bkg_pts, sitecovariates, wts,
                           coord, parameters, control=control)
   class(dat) <- "ppmdata"
   return(dat)
@@ -103,6 +108,7 @@ ppmData.control <- function(quiet = FALSE,
                             na.rm=TRUE,
                             extractBuffer=NULL,
                             quasiSamps=5000,
+                            weightMethod="quick",
                             quasiDims=2,
                             multispeciesFormat="wide",
                             epsilon = sqrt(.Machine$double.eps),
@@ -112,6 +118,7 @@ ppmData.control <- function(quiet = FALSE,
                na.rm=na.rm,
                extractBuffer=extractBuffer,
                quasiSamps=quasiSamps,
+               weightMethod=weightMethod,
                quasiDims=quasiDims,
                multispeciesFormat=multispeciesFormat,
                epsilon = epsilon)
@@ -242,11 +249,11 @@ gridMethod <- function(resolution=1, window, control){
 
   newres <- res(dd)
 
-  return(list(grid=grid,newres=newres))
+  return( list( bkg_pts = as.data.frame( randpoints), newres = newres))
+
 }
 
-# still working on this method.
-quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
+quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
 
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
@@ -261,53 +268,27 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control,coord){
     covariates_ext <- raster::extent(window)[1:4]
     }
 
-  potential_sites <- cbind(rast_coord,rast_data)
-  potential_sites[na_sites,-1:-2] <- 0
-
-  #if npoints>nrow(potential_sites) recursively create a finer grid.
-  if(npoints>nrow(potential_sites[-na_sites,])){
-    stop('more background points than cells avaliable')
-  }
-
   dimension <- control$quasiDim
   nSampsToConsider <- control$quasiSamps
 
-  samp <- randtoolbox::halton( nSampsToConsider * 2, dim = dimension + 1, init = TRUE)
-  skips <- sample(seq_len(nSampsToConsider), size = dimension + 1, replace = TRUE)
-  samp <- do.call("cbind", lapply(1:(dimension + 1),
-                                  function(x) samp[skips[x] + 0:(nSampsToConsider - 1), x]))
+  samp <- randtoolbox::halton( nSampsToConsider * 2, dim = dimension, init = TRUE)
+  skips <- sample( seq_len( nSampsToConsider), size = dimension, replace = TRUE)
+  samp <- do.call( "cbind", lapply( 1:dimension, function(x) samp[skips[x] + 0:(nSampsToConsider - 1), x]))
 
-  myRange <- apply(potential_sites[-na_sites,], -1, range)[,1:dimension]
+  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
+    stop("'grid' method currently only works a raster input as a 'window'")
+
+  #scale from unit square to 'natural' scale
+  myRange <- matrix( as.vector( raster::extent( window)), ncol=dimension) #for some reason as.matrix( extent()) was giving me a scalar...
   for (ii in seq_len(dimension)) samp[, ii] <- myRange[1, ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
 
-  ## study area
-  study.area <- as.matrix(expand.grid(as.data.frame(apply(potential_sites,-1, range)[,1:dimension])))
-  if (dimension == 2){
-    study.area <- study.area[c(1, 3, 4, 2), ]
-    tmp <- mgcv::in.out(study.area, samp[,1:dimension])
-    samp <- samp[tmp, ]
+  colnames( samp) <- coord
+  if(!is.null(covariates)){
+    covars <- raster::extract(covariates,samp)
+    randpoints <- cbind(samp,covars)
   }
 
-  N <- nrow(potential_sites)
-  inclusion_probs <- rep(1/N, N)
-  inclusion_probs[na_sites] <- 0
-  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-
-  sampIDs <- class::knn1(potential_sites[,1:dimension],
-                         samp[, 1:dimension, drop = FALSE],
-                         1:nrow(potential_sites))
-  sampIDs.2 <- which(samp[, dimension + 1] < inclusion_probs1[sampIDs])
-
-  if (length(sampIDs.2) >= npoints)
-    sampIDs <- sampIDs[sampIDs.2][1:npoints]
-  else stop("Failed to find a design. It is possible that the inclusion probabilities are very low and uneven OR that the sampling area is very irregular (e.g. long and skinny) OR something else. Please try again (less likely to work) OR make inclusion probabilities more even (more likely but possibly undesireable) OR increase the number of sites considered (likely but computationally expensive).")
-  samp <- as.data.frame(cbind(potential_sites[sampIDs, 1:dimension, drop = FALSE],
-                              inclusion_probs[sampIDs], sampIDs))
-  colnames(samp) <- c(colnames(potential_sites)[1:dimension],
-                      "inclusion.probabilities", "ID")
-  grid <- samp[,1:2]
-  colnames(grid) <- coord
-  return(list(grid=grid,samp=samp,newres=res(window)))
+  return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
 }
 
 randomMethod <- function(npoints, window, covariates = NULL){
@@ -333,7 +314,7 @@ randomMethod <- function(npoints, window, covariates = NULL){
     randpoints <- cbind(randpoints,covars)
   }
 
-  return(list(grid=as.data.frame(randpoints),newres=res(window)))
+  return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
 }
 
 coordMatchDim <- function (known.sites,dimension){
