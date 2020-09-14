@@ -7,7 +7,7 @@
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
-#' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
+# #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 #' @param method the type of method that should be used to generate background points. The options are:
 #' 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
@@ -22,14 +22,14 @@ ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
-                    resolution = NULL,
+                    # resolution = NULL,
                     method = c('grid','quasirandom','psuedorandom'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
                     control=ppmData.control()){
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
-  if(is.null(resolution)) resolution <- guessResolution(npoints,window)
+  # if(is.null(resolution)) resolution <- guessResolution(npoints,window)
   if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*2)
 
   ## Do some checks.
@@ -40,17 +40,17 @@ ppmData <- function(npoints = 10000,
   ####
 
   ####  SDF: I don't know what all this does, so I will assume that it is sensible.
-  checkResolution(resolution,window,control,method)
+  # checkResolution(resolution,window,control,method)
   window <- checkWindow(presences,window)
-  tmp <- disaggregateWindow(window,npoints)
-  if(!is.null(tmp$ddwindow)) window <- tmp$ddwindow; newres <- tmp$newres
+  # tmp <- disaggregateWindow(window,npoints)
+  # if(!is.null(tmp$ddwindow)) window <- tmp$ddwindow; newres <- tmp$newres
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    backgroundpoints <- switch(method,
-                             grid = gridMethod(resolution, window,control),
-                             quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
-                             psuedorandom = randomMethod(npoints, window))
+                             # grid = gridMethod(resolution, window,control),
+                             quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord))#,
+                             # psuedorandom = randomMethod(npoints, window))
 
    # wts <- getTileWeights(presences,backgroundpoints[,1:2],coord)
    sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
@@ -63,9 +63,9 @@ ppmData <- function(npoints = 10000,
 
   # create background points based on method.
   backgroundpoints <- switch(method,
-                            grid = gridMethod(resolution, window,control),
-                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
-                            psuedorandom = randomMethod(npoints,  window, covariates))
+                            # grid = gridMethod(resolution, window,control),
+                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord))#,
+                            # psuedorandom = randomMethod(npoints,  window, covariates))
 
   ismulti <- checkMultispecies(presences)
   if(ismulti){
@@ -81,7 +81,7 @@ ppmData <- function(npoints = 10000,
                                   coord=coord,control=control)
   }
 
-  parameters <- list(npoints=npoints,resolution=resolution,
+  parameters <- list(npoints=npoints,#resolution=resolution,
                      newresolution=backgroundpoints$newres,method=method,
                      interpolation=interpolation,control=control)
   dat <- assembleQuadData(presences, backgroundpoints$bkg_pts, sitecovariates, wts,
