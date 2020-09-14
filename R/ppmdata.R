@@ -2,16 +2,14 @@
 #' @title Create a Point Process dataset for spatial presence-only modelling.
 #' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
-#' @param npoints number of background points to create.
+#' @param npoints Approximate number of background points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
 # #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 #' @param method the type of method that should be used to generate background points. The options are:
-#' 'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
 #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-#' 'psuedorandom' generates a psuedorandom set of background points. See Philips 2006 (ala MaxEnt) for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
@@ -364,13 +362,13 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
 }
 
 # adjust the resolution to match desired number of background points
-guessResolution <- function(npoints,window){
-  message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
-  reso <- raster::res(window)
-  ncello <-  sum(!is.na(window)[])
-  newres <- (((ncello*reso[1]))/npoints)
-  newres
-}
+# guessResolution <- function(npoints,window){
+#   message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
+#   reso <- raster::res(window)
+#   ncello <-  sum(!is.na(window)[])
+#   newres <- (((ncello*reso[1]))/npoints)
+#   newres
+# }
 
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
 ## check the covariates that go into building the quadrature scheme.
@@ -409,17 +407,17 @@ checkMultispecies <- function(presences){
 }
 
 ## check resolution and throw error if lots of quad points to be generated.
-checkResolution <- function(resolution,window,control,method){
-  reso <- raster::res(window)
-  ncello <-  sum(!is.na(window)[])
-  fct <- (reso/resolution)
-  fctprod <- prod(fct)
-  newncell <- ncello/(1/fctprod)
-if(method%in%"grid"){
-    if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",round(newncell),",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
-  else message("Based on the provided resolution of ",resolution," a grid of approximately ",round(newncell)," quadrature points will be produced.")
-  }
-}
+# checkResolution <- function(resolution,window,control,method){
+#   reso <- raster::res(window)
+#   ncello <-  sum(!is.na(window)[])
+#   fct <- (reso/resolution)
+#   fctprod <- prod(fct)
+#   newncell <- ncello/(1/fctprod)
+# if(method%in%"grid"){
+#     if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",round(newncell),",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
+#   else message("Based on the provided resolution of ",resolution," a grid of approximately ",round(newncell)," quadrature points will be produced.")
+#   }
+# }
 
 
 checkWindow <- function(presences,window,coord){
@@ -489,23 +487,23 @@ fastwidematwts <- function(dat){
 }
 
 # a little function for making a finer scale window.
-disaggregateWindow <- function(window, npoints){
-
-  #set up the dissaggreation or aggregate
-  nc <- length(window[!is.na(window[])])
-
-  fct <- (nc/npoints)
-  if(fct<1){
-    dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
-    newres <- res(dd)
-  } else {
-    dd <- NULL
-    newres <- NULL
-  }
-
-  return(list(ddwindow = dd, newres = newres))
-
-}
+# disaggregateWindow <- function(window, npoints){
+# 
+#   #set up the dissaggreation or aggregate
+#   nc <- length(window[!is.na(window[])])
+# 
+#   fct <- (nc/npoints)
+#   if(fct<1){
+#     dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
+#     newres <- res(dd)
+#   } else {
+#     dd <- NULL
+#     newres <- NULL
+#   }
+# 
+#   return(list(ddwindow = dd, newres = newres))
+# 
+# }
 
 
 

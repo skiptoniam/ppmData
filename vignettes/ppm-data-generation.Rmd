@@ -34,7 +34,7 @@ snails1 <- subset(snails,SpeciesID=='Victaphanta lampra')
 presences <- snails1
 window <- preds[[1]]
 covariates <- NULL#preds
-method <- 'pseudorandom'
+method <- 'quasirandom'
 interpolation <- 'bilinear'
 npoints <- 10000
 resolution <- 0.0083
@@ -44,7 +44,7 @@ coord <- c("X","Y")
 
 bkgrid<- ppmData(npoints = npoints,
                  resolution = resolution,
-                 presences = snails1,
+                 presences = snails,
                  window = window,
                  covariates = covariates,
                  method = method,
