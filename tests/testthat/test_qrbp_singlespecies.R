@@ -3,6 +3,7 @@ context('Test ppmData for single species')
 testthat::test_that('Test ppm data generation for a single species - i.e. for a single species model', {
 
   library(raster)
+  library(qrbp)
   species <- subset(snails,SpeciesID=='Victaphanta lampra')
   path <- system.file("extdata", package = "qrbp")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
@@ -10,7 +11,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
 
   presences <- species
   window <- preds[[1]]
-  covariates <- NULL
+  covariates <- preds
   interpolation <- 'bilinear'
   npoints <- 1000
   resolution <- 0.1

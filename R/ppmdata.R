@@ -1,6 +1,8 @@
 #' @name ppmData
 #' @title Create a Point Process dataset for spatial presence-only modelling.
-#' @description Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
+#' @description Creates a point process data frame for multiple species (marked) presences. 
+#' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
+#' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
 #' @param npoints Approximate number of background points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
@@ -21,7 +23,7 @@ ppmData <- function(npoints = 10000,
                     window = NULL,
                     covariates = NULL,
                     # resolution = NULL,
-                    method = c('grid','quasirandom','psuedorandom'),
+                    method = c('quasirandom'),#,'grid','psuedorandom'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
                     control=ppmData.control()){
@@ -226,30 +228,30 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-gridMethod <- function(resolution=1, window, control){
-
-  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'grid' method currently only works a raster input as a 'window'")
-
-  if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
-
-    #set up the dissaggreation or aggregate
-    fct <- (res(window)/resolution)[1]
-
-    #if fct is >= 1 dissaggregate, else aggregate
-    if(fct>=1) dd <- disaggregate(window, fct, na.rm=control$na.rm)
-    else dd <- aggregate(window, 1/fct, na.rm=control$na.rm)
-
-    #create a dataframe of coordinates w/ area
-    grid <- as.data.frame(rasterToPoints(dd)[,-3])
-    colnames(grid) <- c('X','Y')
-  }
-
-  newres <- res(dd)
-
-  return( list( bkg_pts = as.data.frame( randpoints), newres = newres))
-
-}
+# gridMethod <- function(resolution=1, window, control){
+# 
+#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
+#     stop("'grid' method currently only works a raster input as a 'window'")
+# 
+#   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
+# 
+#     #set up the dissaggreation or aggregate
+#     fct <- (res(window)/resolution)[1]
+# 
+#     #if fct is >= 1 dissaggregate, else aggregate
+#     if(fct>=1) dd <- disaggregate(window, fct, na.rm=control$na.rm)
+#     else dd <- aggregate(window, 1/fct, na.rm=control$na.rm)
+# 
+#     #create a dataframe of coordinates w/ area
+#     grid <- as.data.frame(rasterToPoints(dd)[,-3])
+#     colnames(grid) <- c('X','Y')
+#   }
+# 
+#   newres <- res(dd)
+# 
+#   return( list( bkg_pts = as.data.frame( randpoints), newres = newres))
+# 
+# }
 
 quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
 
@@ -259,61 +261,59 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
     rast_data <- raster::values(covariates)
     na_sites <- which(!complete.cases(rast_data))
     covariates_ext <- raster::extent(covariates)[1:4]
+    potential_sites <- cbind(rast_coord,rast_data)
   } else {
     rast_coord <- raster::xyFromCell(window,1:raster::ncell(window))
     rast_data <- raster::values(window)
     na_sites <- which(!complete.cases(rast_data))
     covariates_ext <- raster::extent(window)[1:4]
-    }
-
-  dimension <- control$quasiDim
-  nSampsToConsider <- control$quasiSamps
-
-  samp <- randtoolbox::halton( nSampsToConsider * 2, dim = dimension, init = TRUE)
-  skips <- sample( seq_len( nSampsToConsider), size = dimension, replace = TRUE)
-  samp <- do.call( "cbind", lapply( 1:dimension, function(x) samp[skips[x] + 0:(nSampsToConsider - 1), x]))
-
-  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'grid' method currently only works a raster input as a 'window'")
-
-  #scale from unit square to 'natural' scale
-  myRange <- matrix( as.vector( raster::extent( window)), ncol=dimension) #for some reason as.matrix( extent()) was giving me a scalar...
-  for (ii in seq_len(dimension)) samp[, ii] <- myRange[1, ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
-
-  colnames( samp) <- coord
-  if(!is.null(covariates)){
-    covars <- raster::extract(covariates,samp)
-    randpoints <- cbind(samp,covars)
+    potential_sites <- rast_coord
   }
+  
+  ## setup the inclusion probs.
+  N <- nrow(potential_sites)
+  inclusion_probs <- rep(1/N, N)	
+  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
+  inclusion_probs1[na_sites] <- 0	
 
-  return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
+  samp <- MBHdesign::quasiSamp(n = npoints, dimension = control$quasiDim,
+                               potential.sites = potential_sites[,1:control$quasiDim],
+                               inclusion.probs = inclusion_probs1, nSampsToConsider = control$quasiSamps)
+
+  colnames( samp[,1:2]) <- coord
+  if(!is.null(covariates)){
+    covars <- raster::extract(covariates,samp[,1:2])
+    randpoints <- cbind(samp[,1:2],covars)
+  } 
+
+  return( list( bkg_pts = as.data.frame( randpoints)))
 }
 
-randomMethod <- function(npoints, window, covariates = NULL){
-
-  if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-    stop("'grid' method currently only works a raster input as a 'window'")
-
-  if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
-
-    if(npoints>sum(!is.na(window[]))){
-      stop('Eeek! More background points than cells avaliable... maybe use a finer grid or less points')
-    }
-
-    ## use dismo to get random points.
-    randpoints <- dismo::randomPoints(window,npoints)
-
-    #create a dataframe of coordinates w/ area
-    colnames(randpoints) <- c('X','Y')
-  }
-
-  if(!is.null(covariates)){
-    covars <- extract(covariates,randpoints)
-    randpoints <- cbind(randpoints,covars)
-  }
-
-  return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
-}
+# randomMethod <- function(npoints, window, covariates = NULL){
+# 
+#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
+#     stop("'grid' method currently only works a raster input as a 'window'")
+# 
+#   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
+# 
+#     if(npoints>sum(!is.na(window[]))){
+#       stop('Eeek! More background points than cells avaliable... maybe use a finer grid or less points')
+#     }
+# 
+#     ## use dismo to get random points.
+#     randpoints <- dismo::randomPoints(window,npoints)
+# 
+#     #create a dataframe of coordinates w/ area
+#     colnames(randpoints) <- c('X','Y')
+#   }
+# 
+#   if(!is.null(covariates)){
+#     covars <- extract(covariates,randpoints)
+#     randpoints <- cbind(randpoints,covars)
+#   }
+# 
+#   return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
+# }
 
 coordMatchDim <- function (known.sites,dimension){
 

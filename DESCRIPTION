@@ -10,7 +10,7 @@ Description: qrbp is a package to create quasi-random background points for use
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.0
-Import: Rcpp, raster, mcgv, randtoolbox, reshape2, deldir
+Import: Rcpp, raster, mcgv, randtoolbox, reshape2, deldir, MBHdesign
 Suggests: 
     testthat,
     knitr,
