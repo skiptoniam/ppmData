@@ -1,5 +1,5 @@
 #' @name ppmData
-#' @title Create a Point Process dataset for spatial presence-only modelling.
+#' @title Create a Point Process dataset for spatial modelling.
 #' @description Creates a point process data frame for multiple species (marked) presences. 
 #' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
@@ -30,7 +30,7 @@ ppmData <- function(npoints = 10000,
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   # if(is.null(resolution)) resolution <- guessResolution(npoints,window)
-  if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*2)
+  if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*4)
 
   ## Do some checks.
   ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
@@ -104,23 +104,25 @@ ppmData <- function(npoints = 10000,
 #'@export
 ppmData.control <- function(quiet = FALSE,
                             cores = 1,
-                            maxpoints=250000,
+                            # maxpoints=250000,
                             na.rm=TRUE,
-                            extractBuffer=NULL,
+                            # extractBuffer=NULL,
                             quasiSamps=5000,
-                            weightMethod="quick",
+                            # weightMethod="quick",
                             quasiDims=2,
-                            multispeciesFormat="wide",
+                            # multispeciesFormat="wide",
                             epsilon = sqrt(.Machine$double.eps),
                             ...){
   #general controls
-  rval <- list(maxpoints=maxpoints,
+  rval <- list(quiet=quiet,
+               cores = cores,
+               # maxpoints=maxpoints,
                na.rm=na.rm,
-               extractBuffer=extractBuffer,
+               # extractBuffer=extractBuffer,
                quasiSamps=quasiSamps,
-               weightMethod=weightMethod,
+               # weightMethod=weightMethod,
                quasiDims=quasiDims,
-               multispeciesFormat=multispeciesFormat,
+               # multispeciesFormat=multispeciesFormat,
                epsilon = epsilon)
   rval <- c(rval, list(...))
   rval
@@ -254,7 +256,7 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
 # }
 
 quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
-
+  
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
     rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
@@ -275,20 +277,26 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
   inclusion_probs <- rep(1/N, N)	
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   inclusion_probs1[na_sites] <- 0	
-
-  samp <- MBHdesign::quasiSamp(n = npoints, dimension = control$quasiDim,
+  
+  ####SDF CHANGE
+  ids <- inclusion_probs1 > 0
+  potential_sites <- potential_sites[ids,]
+  inclusion_probs1 <- inclusion_probs1[ids]
+  control$quasiSamps <- ifelse(npoints<1000,10000,10*npoints)
+  ####
+  
+  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = control$quasiDim,
                                potential.sites = potential_sites[,1:control$quasiDim],
-                               inclusion.probs = inclusion_probs1, nSampsToConsider = control$quasiSamps)
-
+                               inclusion.probs = inclusion_probs1, nSampsToConsider = control$quasiSamps))
+  
   colnames( samp[,1:2]) <- coord
   if(!is.null(covariates)){
     covars <- raster::extract(covariates,samp[,1:2])
     randpoints <- cbind(samp[,1:2],covars)
   } 
-
+  
   return( list( bkg_pts = as.data.frame( randpoints)))
 }
-
 # randomMethod <- function(npoints, window, covariates = NULL){
 # 
 #   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
