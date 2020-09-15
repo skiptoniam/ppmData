@@ -4,14 +4,16 @@
 #' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
-#' @param npoints Approximate number of background points to generate.
-#' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.
+#' @param npoints The number of background points to generate.
+#' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+#' with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
+#' If presences parameter is NULL then ppmDat will return the quadrature (background) points.
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
-#' @param covariates an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
+#' @param covariates A Raster* object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
 # #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
-#' @param method the type of method that should be used to generate background points. The options are:
-#' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
+## #' @param method the type of method that should be used to generate background points. The options are:
+## #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
@@ -23,7 +25,7 @@ ppmData <- function(npoints = 10000,
                     window = NULL,
                     covariates = NULL,
                     # resolution = NULL,
-                    method = c('quasirandom'),#,'grid','psuedorandom'),
+                    # method = c('quasirandom'),#,'grid','psuedorandom'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
                     control=ppmData.control()){
@@ -47,12 +49,12 @@ ppmData <- function(npoints = 10000,
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
-   backgroundpoints <- switch(method,
-                             # grid = gridMethod(resolution, window,control),
-                             quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord))#,
-                             # psuedorandom = randomMethod(npoints, window))
-
-   # wts <- getTileWeights(presences,backgroundpoints[,1:2],coord)
+   # backgroundpoints <- switch(method,
+   #                            grid = gridMethod(resolution, window,control),
+   #                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
+   #                            psuedorandom = randomMethod(npoints, window))
+   backgroundpoints <- quasirandomMethod(npoints,  window, covariates, control, coord)
+   
    sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
                                    interpolation=interpolation,
                                    coord=coord,control=control)
@@ -62,28 +64,31 @@ ppmData <- function(npoints = 10000,
   presences <- coordMatchDim(presences,3)
 
   # create background points based on method.
-  backgroundpoints <- switch(method,
-                            # grid = gridMethod(resolution, window,control),
-                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord))#,
-                            # psuedorandom = randomMethod(npoints,  window, covariates))
-
+  # backgroundpoints <- switch(method,
+  #                            grid = gridMethod(resolution, window,control),
+  #                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
+  #                            psuedorandom = randomMethod(npoints, window))
+  backgroundpoints <- quasirandomMethod(npoints,  window, covariates, control, coord)
+  
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       wts <- getMultispeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, areaMethod=control$weightMethod, window, epsilon=control$epsilon)
     } else {
+      message("Developing a quadrature scheme for a single species dataset.")
       ####  Will need to look at areaMethod -- hard-wired for now.
       wts <- getSinglespeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, window, epsilon=control$epsilon)
     }
 
-  # pbxy <- wts[,coord],backgroundpoints[,coord])
   sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation,
                                   coord=coord,control=control)
   }
 
   parameters <- list(npoints=npoints,#resolution=resolution,
-                     newresolution=backgroundpoints$newres,method=method,
-                     interpolation=interpolation,control=control)
+                     newresolution=backgroundpoints$newres,
+                     # method=method,
+                     interpolation=interpolation,
+                     control=control)
   dat <- assembleQuadData(presences, backgroundpoints$bkg_pts, sitecovariates, wts,
                           coord, parameters, control=control)
   class(dat) <- "ppmdata"
@@ -93,7 +98,7 @@ ppmData <- function(npoints = 10000,
 #'@title Controls for ppmData generation.
 #'@name ppmData.control
 #'@param quiet Should any reporting be performed? Default is FALSE, for reporting.
-#'@param cores The number of cores to use in fitting of species_mix models. These will be largely used to model the species-specific parameteres.
+#'@param cores The number of cores to use when generating the quadrature scheme.
 #'@param maxpoints default is 250000 and sets a limit to number of integration points generated as background data.
 #'@param na.rm default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.
 #'@param extractBuffer default is NULL and is the amount of buffer to provide each point on extract (radius from point).

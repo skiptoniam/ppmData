@@ -1,21 +1,21 @@
 # this is code out of ppm lasso package.
-getTileWeights <- function (presences, backgroundpoints, coord = c("X", "Y")){
-
-  sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
-  back.col = c(which(names(backgroundpoints) == coord[1]), which(names(backgroundpoints) == coord[2]))
-  X.inc = sort(unique(backgroundpoints[, back.col[1]]))[2] - sort(unique(backgroundpoints[, back.col[1]]))[1]
-  Y.inc = sort(unique(backgroundpoints[, back.col[2]]))[2] - sort(unique(backgroundpoints[, back.col[2]]))[1]
-  back.0X = min(backgroundpoints[, back.col[1]]) - floor(min(backgroundpoints[, back.col[1]])/X.inc) * X.inc
-  back.0Y = min(backgroundpoints[, back.col[2]]) - floor(min(backgroundpoints[, back.col[2]])/Y.inc) * Y.inc
-  X = c(presences[, back.col[1]], backgroundpoints[, back.col[1]])
-  Y = c(presences[, back.col[2]], backgroundpoints[, back.col[2]])
-  round.X = round((X - back.0X)/X.inc) * X.inc
-  round.Y = round((Y - back.0Y)/Y.inc) * Y.inc
-  round.id = paste(round.X, round.Y)
-  round.table = table(round.id)
-  wts = X.inc * Y.inc/as.numeric(round.table[match(round.id, names(round.table))])
-  wts
-}
+# getTileWeights <- function (presences, backgroundpoints, coord = c("X", "Y")){
+# 
+#   sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
+#   back.col = c(which(names(backgroundpoints) == coord[1]), which(names(backgroundpoints) == coord[2]))
+#   X.inc = sort(unique(backgroundpoints[, back.col[1]]))[2] - sort(unique(backgroundpoints[, back.col[1]]))[1]
+#   Y.inc = sort(unique(backgroundpoints[, back.col[2]]))[2] - sort(unique(backgroundpoints[, back.col[2]]))[1]
+#   back.0X = min(backgroundpoints[, back.col[1]]) - floor(min(backgroundpoints[, back.col[1]])/X.inc) * X.inc
+#   back.0Y = min(backgroundpoints[, back.col[2]]) - floor(min(backgroundpoints[, back.col[2]])/Y.inc) * Y.inc
+#   X = c(presences[, back.col[1]], backgroundpoints[, back.col[1]])
+#   Y = c(presences[, back.col[2]], backgroundpoints[, back.col[2]])
+#   round.X = round((X - back.0X)/X.inc) * X.inc
+#   round.Y = round((Y - back.0Y)/Y.inc) * Y.inc
+#   round.id = paste(round.X, round.Y)
+#   round.table = table(round.id)
+#   wts = X.inc * Y.inc/as.numeric(round.table[match(round.id, names(round.table))])
+#   wts
+# }
 
 getWeights <- function( presences, backgroundpoints, coord, window, epsilon=sqrt(.Machine$double.eps), method='voronoi'){
   window_ext <- convert2pts( window)
@@ -78,7 +78,8 @@ combineDF.fun <- function( ii, xxx, yyy, coords){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, areaMethod, window, epsilon){
+getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, #areaMethod,
+                                   window, epsilon){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
@@ -87,8 +88,9 @@ getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, a
   backgroundpoints$OrigOrder <- seq_len(nrow(backgroundpoints))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii) getTileWeights(sppdata[[ii]],backgroundpoints,coord))
-  if(method%in%c("quasirandom","psuedorandom"))  sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, window, epsilon, areaMethod)})
+  # if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii) getTileWeights(sppdata[[ii]],backgroundpoints,coord))
+  # if(method%in%c("quasirandom","psuedorandom"))  
+  sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, window, epsilon, areaMethod)})
 
   sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)
 
