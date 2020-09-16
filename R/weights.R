@@ -1,52 +1,137 @@
-# this is code out of ppm lasso package.
-# getTileWeights <- function (presences, backgroundpoints, coord = c("X", "Y")){
-# 
-#   sp.col = c(which(names(presences) == coord[1]), which(names(presences) == coord[2]))
-#   back.col = c(which(names(backgroundpoints) == coord[1]), which(names(backgroundpoints) == coord[2]))
-#   X.inc = sort(unique(backgroundpoints[, back.col[1]]))[2] - sort(unique(backgroundpoints[, back.col[1]]))[1]
-#   Y.inc = sort(unique(backgroundpoints[, back.col[2]]))[2] - sort(unique(backgroundpoints[, back.col[2]]))[1]
-#   back.0X = min(backgroundpoints[, back.col[1]]) - floor(min(backgroundpoints[, back.col[1]])/X.inc) * X.inc
-#   back.0Y = min(backgroundpoints[, back.col[2]]) - floor(min(backgroundpoints[, back.col[2]])/Y.inc) * Y.inc
-#   X = c(presences[, back.col[1]], backgroundpoints[, back.col[1]])
-#   Y = c(presences[, back.col[2]], backgroundpoints[, back.col[2]])
-#   round.X = round((X - back.0X)/X.inc) * X.inc
-#   round.Y = round((Y - back.0Y)/Y.inc) * Y.inc
-#   round.id = paste(round.X, round.Y)
-#   round.table = table(round.id)
-#   wts = X.inc * Y.inc/as.numeric(round.table[match(round.id, names(round.table))])
-#   wts
-# }
+library( qrbp)
+path <- system.file("extdata", package = "qrbp")
+lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+preds <- raster::stack(lst)
 
-getWeights <- function( presences, backgroundpoints, coord, window, epsilon=sqrt(.Machine$double.eps), method='voronoi'){
-  window_ext <- convert2pts( window)
-  if( method=="voronoi"){
-    #this doesn't scale well with very large numbers
-    allpts <- rbind(presences[,coord], backgroundpoints[,coord])
-    tmptmp <- deldir::deldir( x=allpts[,1], y=allpts[,2], plot=FALSE, rw=window_ext)
-    return( tmptmp$summary$dir.area)#there may be some round-off error...
-  }
-  if(method == "quick"){
-  ###  based on David's method which uses expected area (but assumes lots of points)
-    total_area <- estimateWindowArea(window)
-    npres <- nrow( presences)
-    nbkg <- nrow( backgroundpoints)
-    bkwts.single <- rep( total_area/(nbkg+npres), nbkg)#assumes that all bkg points occupy the same space
-    pres.props_nobkg <- rep( epsilon, npres)
-    return( c( pres.props_nobkg, bkwts.single))
-  }
+presences <- snails
+window <- preds[[1]]
+covariates <- preds
+interpolation <- 'bilinear'
+npoints <- 100000
+coord <- c("X","Y")
+mc.cores <- 1
+
+backgroundpoints <- qrbp:::quasirandomMethod(npoints, window, covariates, coord, mc.cores = 2, quasirandom.samples = 1000000, quasirandom.dimensions = 2)
+backgroundpoints <- backgroundpoints$bkg_pts[,1:2]
+colnames(backgroundpoints) <- coord
+presences <- presences[,1:2]
+
+####
+getWeights( presences[,c('x','y')], backy, coord = c("x","y"), window = Xbrick[[1]])
+
+
+
+getWeights <- function( presences, backgroundpoints, coord, window, mc.cores){
+  
+  allpts <- rbind(presences[,coord], backgroundpoints[,coord])
+  window_ext <- convert2pts(allpts)
+  window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
+  window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
+  allpts$id <- 1:nrow( allpts)
+  
+  ##generate some dummy points around allpts 
+  
+  
+  
+  ###Skip: this is hardwired to unit square
+  #this is a bit of a dodge and exists due to < not being the same as <=.  Only a problem for the upper edge of of unit square
+  # allpts[allpts[,1]==1,1] <- 1-1e-10
+  # allpts[allpts[,2]==1,2] <- 1-1e-10
+  ptsPerArea <- 5000
+  primmy <- primest(ceiling( nrow( allpts)/ptsPerArea))
+  prod.primmy <- outer( primmy, primmy)
+  prod.primmy[upper.tri(prod.primmy)] <- Inf
+  diag( prod.primmy) <- Inf
+  
+  tmp <- apply( prod.primmy, 1, function(xx) which.min( abs( xx - nrow( allpts))))
+  tmp.id <- cbind( 1:nrow( prod.primmy), tmp)
+  min.id <- which.min( abs( prod.primmy[tmp.id]-nrow( allpts)))
+  ndivisions <- primmy[tmp.id[min.id,]]
+  
+  ###SKIP: this is hardwired to unit square
+  #cuts on unit square in arrangement 1
+  cuts1 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[1]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[2]+1), ndivisions)
+  all.boxes <- getBoxes( cuts1)
+  
+  ##############
+  #voronoi areas for first rotation
+  
+  #set up a cluster for parallel
+  cl <- parallel::makeCluster(mc.cores)
+  parallel::clusterExport( cl, "deldir", envir = .getNamespace( "deldir"))
+  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  areas1 <- do.call( "rbind", tmp)
+  
+  ###SKIP: this is hardwired to unit square
+  #cuts on unit square in arrangement 2
+  cuts2 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[2]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[1]+1), ndivisions[2:1])
+  all.boxes <- getBoxes( cuts2)
+  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  areas2 <- do.call( "rbind", tmp)
+  
+  ###SKIP: this is hardwired to unit square
+  #cuts on unit square in arrangement 3 (squares)
+  ndivisions <- rep( ceiling( sqrt(nrow( allpts)/ptsPerArea)), 2)
+  cuts3 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[1]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[2]+1), ndivisions)
+  all.boxes <- getBoxes( cuts3)
+  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  areas3 <- do.call( "rbind", tmp)
+  
+  #tidying
+  parallel::stopCluster(cl)
+  
+  #put them both together
+  allAreas <- merge( areas1, areas2, all=T, by="id", sort=TRUE)
+  allAreas <- merge( allAreas, areas3, all=TRUE, by='id', sort=TRUE)
+  allAreas[allAreas==-99999] <- NA
+  res <- cbind( allAreas$id, apply( allAreas[,-1], 1, median, na.rm=TRUE))
+  colnames( res) <- c("id","area")
+  
+  #form the return object
+  res <- merge( allpts, res, by='id', all=TRUE, sort=TRUE)
+  
+  return( res)
+  
 }
 
-# getRandomWeights <- function(presences, backgroundpoints, window, epsilon=sqrt(.Machine$double.eps)){
-#
-#   # xy <- rbind(presences[,coord],backgroundpoints[,coord])
-#   preswts <- rep(epsilon,nrow(presences))
-#   total_area <- estimateWindowArea(window)
-#   nbkg <- nrow(backgroundpoints)
-#   bkwts <- rep(total_area/nbkg,nbkg)
-#   wts <- c(preswts,bkwts)
-#
-#   return(wts)
-# }
+areasWithinBoxes <- function(kounter, allpts, boxes){
+  res <- data.frame( id=1:nrow( allpts), area=NA)
+  # for(kounter in 1:nrow(boxes)){
+  subsetty <- (1:nrow( allpts))[allpts[,1]>=boxes[kounter,1] & allpts[,1]<boxes[kounter,2] & allpts[,2]>=boxes[kounter,3] & allpts[,2]<boxes[kounter,4]]
+    # cat(length(subsetty)," ",kounter,"\n")
+  # }
+  # 
+  if( length( subsetty)>1){
+    coords <- allpts[subsetty,-3]
+    coordsDups <- coords[!duplicated(coords),]
+    if(nrow(coordsDups)==1){ 
+      res$area <- -99999
+    } else {
+      res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,])$summary$dir.area
+    }
+  } else {
+    res$area <- -9999
+  }
+  return( res[subsetty,])
+}
+
+getBoxes <- function(cutsPts){
+  ids <- expand.grid( seq_len(cutsPts[[3]][1]), seq_len(cutsPts[[3]][2]))
+  boxes <- matrix( NA, nrow=nrow( ids), ncol=4)
+  for( kount in 1:nrow( ids)) boxes[kount,] <- c( cutsPts[[1]][ids[kount,1]+0:1], cutsPts[[2]][ids[kount,2]+0:1])
+  return( boxes)
+}
+
+primest <- function(n){
+  ### Stolen from https://stackoverflow.com/questions/3789968/generate-a-list-of-primes-up-to-a-certain-number
+  p <- 2:n
+  i <- 1
+  while (p[i] <= sqrt(n)) {
+    p <-  p[p %% p[i] != 0 | p==p[i]]
+    i <- i+1
+  }
+  p
+}
 
 getSinglespeciesWeights <- function(presences, backgroundpoints, coord, method, window, epsilon){
 
@@ -115,27 +200,6 @@ getSiteID <- function(dat,coord){
   df <- stidfn(dat,c(coord,'pres'))
   return(df)
 }
-
-
-# estimateSiteArea <- function(window,site_coords){
-#   if(raster::isLonLat(window)){
-#     #calculate area based on area function
-#     #convert kms to ms
-#     area_rast <- raster::area(window)
-#     area_study <- raster::mask(area_rast,window)
-#     total_area <- cellStats(area_study,sum,na.rm=TRUE)
-#     wts <- total_area/raster::extract(area_study,site_coords,na.rm=TRUE)
-#   } else {
-#     # calculate area based on equal area cell resolution
-#     # mode equal area should be in meters
-#     cell_area <- raster::res(window)[1]*raster::res(window)[2]
-#     n_cell <- length(window[!is.na(window[])])
-#     wts <- rep((n_cell*cell_area)/nrow(site_coords),nrow(site_coords))/1000
-#   }
-#   return(wts)
-# }
-#
-
 
 #estimate the total area of all cells in extent in km^2
 estimateWindowArea <- function(window){

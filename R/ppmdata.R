@@ -17,22 +17,28 @@
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
-#' @param control \link[qrbp]{ppmData.control}.
-#'
+#' @param mc.cores The number of cores to use in the processing to quasirandom points and weighting scheme. 
+#' @param quasirandom.samples This set the total number of samples to consider in the BAS step (rejection sampling). 
+#' The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
+#' You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points. 
+#' The more quasirandomSample selected the slower the background point generation will be.
+#' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling. 
+#' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
+#' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
-                    # resolution = NULL,
-                    # method = c('quasirandom'),#,'grid','psuedorandom'),
                     interpolation='bilinear',
                     coord = c('X','Y'),
-                    control=ppmData.control()){
+                    mc.cores = parallel::detectCores()-1,
+                    quasirandom.samples = 10000,
+                    quasirandom.dimensions = 2){
 
   ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
   # if(is.null(resolution)) resolution <- guessResolution(npoints,window)
-  if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*4)
+  # if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*4)
 
   ## Do some checks.
   ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
@@ -53,7 +59,9 @@ ppmData <- function(npoints = 10000,
    #                            grid = gridMethod(resolution, window,control),
    #                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
    #                            psuedorandom = randomMethod(npoints, window))
-   backgroundpoints <- quasirandomMethod(npoints,  window, covariates, control, coord)
+   backgroundpoints <- quasirandomMethod(npoints,  window, covariates, coord, mc.cores,
+                                         quasirandom.samples,
+                                         quasirandom.dimensions)
    
    sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
                                    interpolation=interpolation,
@@ -94,46 +102,6 @@ ppmData <- function(npoints = 10000,
   class(dat) <- "ppmdata"
   return(dat)
 }
-
-#'@title Controls for ppmData generation.
-#'@name ppmData.control
-#'@param quiet Should any reporting be performed? Default is FALSE, for reporting.
-#'@param cores The number of cores to use when generating the quadrature scheme.
-#'@param maxpoints default is 250000 and sets a limit to number of integration points generated as background data.
-#'@param na.rm default is TRUE and uses "na.rm=TRUE" for extracting raster covariate data.
-#'@param extractBuffer default is NULL and is the amount of buffer to provide each point on extract (radius from point).
-#'@param quasiSamps default is 5000 and is the default number of samples for halton random number generator.
-#'@param quasiDims default 2 and is the dimension estimated the quasirandom samples over. Two is the default and results in a spatial quasirandom sample.
-#'@param multispeciesFormat default "wide" and is the format required by ecomix. Alternatives are "long" which returns a long table format or "list" which returns a list per species for all species related covariates, weights and presences/background points.
-#'@param \dots Other control calls.
-#'@export
-ppmData.control <- function(quiet = FALSE,
-                            cores = 1,
-                            # maxpoints=250000,
-                            na.rm=TRUE,
-                            # extractBuffer=NULL,
-                            quasiSamps=5000,
-                            # weightMethod="quick",
-                            quasiDims=2,
-                            # multispeciesFormat="wide",
-                            epsilon = sqrt(.Machine$double.eps),
-                            ...){
-  #general controls
-  rval <- list(quiet=quiet,
-               cores = cores,
-               # maxpoints=maxpoints,
-               na.rm=na.rm,
-               # extractBuffer=extractBuffer,
-               quasiSamps=quasiSamps,
-               # weightMethod=weightMethod,
-               quasiDims=quasiDims,
-               # multispeciesFormat=multispeciesFormat,
-               epsilon = epsilon)
-  rval <- c(rval, list(...))
-  rval
-}
-
-
 
 assembleQuadData <- function(presences, backgroundpoints, sitecovariates,
                              wts, coord, parameters, control){
@@ -235,32 +203,10 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-# gridMethod <- function(resolution=1, window, control){
-# 
-#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-#     stop("'grid' method currently only works a raster input as a 'window'")
-# 
-#   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
-# 
-#     #set up the dissaggreation or aggregate
-#     fct <- (res(window)/resolution)[1]
-# 
-#     #if fct is >= 1 dissaggregate, else aggregate
-#     if(fct>=1) dd <- disaggregate(window, fct, na.rm=control$na.rm)
-#     else dd <- aggregate(window, 1/fct, na.rm=control$na.rm)
-# 
-#     #create a dataframe of coordinates w/ area
-#     grid <- as.data.frame(rasterToPoints(dd)[,-3])
-#     colnames(grid) <- c('X','Y')
-#   }
-# 
-#   newres <- res(dd)
-# 
-#   return( list( bkg_pts = as.data.frame( randpoints), newres = newres))
-# 
-# }
-
-quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
+quasirandomMethod <- function(npoints, window, covariates=NULL, coord,
+                              mc.cores,
+                              quasirandom.samples,
+                              quasirandom.dimensions){
   
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
@@ -287,12 +233,12 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
   ids <- inclusion_probs1 > 0
   potential_sites <- potential_sites[ids,]
   inclusion_probs1 <- inclusion_probs1[ids]
-  control$quasiSamps <- ifelse(npoints<1000,10000,10*npoints)
+  quasirandom.samples <- ifelse(npoints<1000,10000,10*npoints)
   ####
   
-  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = control$quasiDim,
-                               potential.sites = potential_sites[,1:control$quasiDim],
-                               inclusion.probs = inclusion_probs1, nSampsToConsider = control$quasiSamps))
+  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
+                               potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
+                               inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
   
   colnames( samp[,1:2]) <- coord
   if(!is.null(covariates)){
@@ -302,31 +248,6 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, control, coord){
   
   return( list( bkg_pts = as.data.frame( randpoints)))
 }
-# randomMethod <- function(npoints, window, covariates = NULL){
-# 
-#   if(!inherits(window, c('RasterLayer','RasterStack','RasterBrick')))
-#     stop("'grid' method currently only works a raster input as a 'window'")
-# 
-#   if(inherits(window, c('RasterLayer','RasterStack','RasterBrick'))){
-# 
-#     if(npoints>sum(!is.na(window[]))){
-#       stop('Eeek! More background points than cells avaliable... maybe use a finer grid or less points')
-#     }
-# 
-#     ## use dismo to get random points.
-#     randpoints <- dismo::randomPoints(window,npoints)
-# 
-#     #create a dataframe of coordinates w/ area
-#     colnames(randpoints) <- c('X','Y')
-#   }
-# 
-#   if(!is.null(covariates)){
-#     covars <- extract(covariates,randpoints)
-#     randpoints <- cbind(randpoints,covars)
-#   }
-# 
-#   return( list( bkg_pts = as.data.frame( randpoints), newres = raster::res( window)))
-# }
 
 coordMatchDim <- function (known.sites,dimension){
 
@@ -374,15 +295,6 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
   return(covars)
 }
 
-# adjust the resolution to match desired number of background points
-# guessResolution <- function(npoints,window){
-#   message('Guessing resolution based on window resolution and approximately ',npoints,' background points')
-#   reso <- raster::res(window)
-#   ncello <-  sum(!is.na(window)[])
-#   newres <- (((ncello*reso[1]))/npoints)
-#   newres
-# }
-
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
 ## check the covariates that go into building the quadrature scheme.
 checkCovariates <- function(covariates){
@@ -418,19 +330,6 @@ checkMultispecies <- function(presences){
   else multi <- FALSE
   multi
 }
-
-## check resolution and throw error if lots of quad points to be generated.
-# checkResolution <- function(resolution,window,control,method){
-#   reso <- raster::res(window)
-#   ncello <-  sum(!is.na(window)[])
-#   fct <- (reso/resolution)
-#   fctprod <- prod(fct)
-#   newncell <- ncello/(1/fctprod)
-# if(method%in%"grid"){
-#     if(newncell>control$maxpoints)stop(message("Hold up, the current resolution of ",resolution," will produce a a grid of approximately ",round(newncell),",\n choose a larger resolution. Limit is currently set to 500000 quadrature points"))
-#   else message("Based on the provided resolution of ",resolution," a grid of approximately ",round(newncell)," quadrature points will be produced.")
-#   }
-# }
 
 
 checkWindow <- function(presences,window,coord){
@@ -499,24 +398,7 @@ fastwidematwts <- function(dat){
   wtsdat
 }
 
-# a little function for making a finer scale window.
-# disaggregateWindow <- function(window, npoints){
-# 
-#   #set up the dissaggreation or aggregate
-#   nc <- length(window[!is.na(window[])])
-# 
-#   fct <- (nc/npoints)
-#   if(fct<1){
-#     dd <- disaggregate(window, 1/fct, na.rm=control$na.rm)
-#     newres <- res(dd)
-#   } else {
-#     dd <- NULL
-#     newres <- NULL
-#   }
-# 
-#   return(list(ddwindow = dd, newres = newres))
-# 
-# }
+
 
 
 

@@ -2,44 +2,50 @@
 % Please edit documentation in R/ppmdata.R
 \name{ppmData}
 \alias{ppmData}
-\title{Create a Point Process dataset for spatial presence-only modelling.}
+\title{Create a Point Process dataset for spatial modelling.}
 \usage{
 ppmData(
   npoints = 10000,
   presences = NULL,
   window = NULL,
   covariates = NULL,
-  resolution = NULL,
-  method = c("grid", "quasirandom", "psuedorandom"),
   interpolation = "bilinear",
   coord = c("X", "Y"),
-  control = ppmData.control()
+  mc.cores = parallel::detectCores() - 1,
+  quasirandom.samples = 10000,
+  quasirandom.dimensions = 2
 )
 }
 \arguments{
-\item{npoints}{number of background points to create.}
+\item{npoints}{The number of background points to generate.}
 
-\item{presences}{a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species. If presences are NULL then ppmdat will return the quadrature (background) points.}
+\item{presences}{a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
+If presences parameter is NULL then ppmDat will return the quadrature (background) points.}
 
 \item{window}{a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 If ignored, a rectangle defining the extent of \code{presences} will be used.}
 
-\item{covariates}{an optional Raster object containing covariates for modelling the point process (best use a Raster stack or Raster brick).}
-
-\item{resolution}{resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.}
-
-\item{method}{the type of method that should be used to generate background points. The options are:
-'grid' generates a regular grid of background points. See Berman & Turner 1992 or Warton & Shepard 2010 for details.
-'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-'psuedorandom' generates a psuedorandom set of background points. See Philips 2006 (ala MaxEnt) for details.}
+\item{covariates}{A Raster* object containing covariates for modelling the point process (best use a Raster stack or Raster brick).}
 
 \item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 
 \item{coord}{is the name of site coordinates. The default is c('X','Y').}
 
-\item{control}{\link[qrbp]{ppmData.control}.}
+\item{mc.cores}{The number of cores to use in the processing to quasirandom points and weighting scheme.}
+
+\item{quasirandom.samples}{This set the total number of samples to consider in the BAS step (rejection sampling). 
+The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
+You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points. 
+The more quasirandomSample selected the slower the background point generation will be.}
+
+\item{quasirandom.dimensions}{The the number of dimensions that the samples are located in. Equal to 2 for areal sampling. 
+Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
+and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.}
 }
 \description{
-Creates a point process data frame for modelling single species or multiple species (marked) presences. Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
+Creates a point process data frame for multiple species (marked) presences. 
+Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
+The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 }

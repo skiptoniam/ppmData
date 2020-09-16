@@ -39,7 +39,7 @@ interpolation <- 'bilinear'
 npoints <- 10000
 resolution <- 0.0083
 covariates <- preds
-control <- ppmData.control()
+# control <- ppmData.control()
 coord <- c("X","Y")
 
 bkgrid<- ppmData(npoints = npoints,
