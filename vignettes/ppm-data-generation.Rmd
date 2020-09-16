@@ -23,6 +23,7 @@ library(qrbp)
 For a laugh, let's generate some quasirandom background points and plot them against the presence points. Here we are using the `quasirandom_covariates` method which tries to select quasirandom points across geographic and environmental space. The other working methods are `quasirandom` which just creates quasirandom points spatially, or `grid` which creates a regular grid at a set resolution - this is every similar to the grid design proposed by Warton & Shepard 2010.
 
 ```{r,warning=FALSE,error=FALSE,message=FALSE}
+library(qrbp)
 library(mgcv)
 library(raster)
 library(randomForest)
@@ -30,26 +31,17 @@ path <- system.file("extdata", package = "qrbp")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
 
-snails1 <- subset(snails,SpeciesID=='Victaphanta lampra')
-presences <- snails1
+presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 window <- preds[[1]]
-covariates <- NULL#preds
-method <- 'quasirandom'
+covariates <- preds
 interpolation <- 'bilinear'
 npoints <- 10000
-resolution <- 0.0083
-covariates <- preds
-# control <- ppmData.control()
 coord <- c("X","Y")
+mc.cores <- 1
 
-bkgrid<- ppmData(npoints = npoints,
-                 resolution = resolution,
-                 presences = snails,
-                 window = window,
-                 covariates = covariates,
-                 method = method,
-                 interpolation = interpolation,
-                 control=ppmData.control())
+mtrace(ppmData)
+
+bkgrid <- ppmData(npoints,presences,window,covariates)
 
 dat <- bkgrid$modelmatrix
 dat <- na.omit(dat)

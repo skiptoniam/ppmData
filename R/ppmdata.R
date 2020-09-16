@@ -1,5 +1,5 @@
 #' @name ppmData
-#' @title Create a Point Process dataset for spatial modelling.
+#' @title Create a spatial point Process dataset for spatial modelling.
 #' @description Creates a point process data frame for multiple species (marked) presences. 
 #' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
@@ -25,6 +25,13 @@
 #' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling. 
 #' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
 #' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
+#' @examples 
+#' library(qrbp)
+#' path <- system.file("extdata", package = "qrbp")
+#' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+#' preds <- raster::stack(lst)
+#' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi") 
+#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
@@ -33,96 +40,73 @@ ppmData <- function(npoints = 10000,
                     interpolation='bilinear',
                     coord = c('X','Y'),
                     mc.cores = parallel::detectCores()-1,
-                    quasirandom.samples = 10000,
-                    quasirandom.dimensions = 2){
-
-  ## if no resolution is provided guess the nearest resolution to return npoints for grid method.
-  # if(is.null(resolution)) resolution <- guessResolution(npoints,window)
-  # if(method=='quasirandom') control$quasiSamps <- ifelse(control$quasiSamps>npoints,control$quasiSamps,npoints*4)
+                    quasirandom.samples = NULL,
+                    quasirandom.dimensions = NULL){
 
   ## Do some checks.
   ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
   ####  the the same observation recorded multiple times in the database?
   ####  Note that this function also depends upon a very particular format for the presences data.  It might be wise to robustify?
-#  presences <- checkDuplicates(presences,coord)
-  ####
-
-  ####  SDF: I don't know what all this does, so I will assume that it is sensible.
-  # checkResolution(resolution,window,control,method)
+  #presences <- checkDuplicates(presences,coord)
+  
+  ####  If not window is provided provide a dummy window
   window <- checkWindow(presences,window)
-  # tmp <- disaggregateWindow(window,npoints)
-  # if(!is.null(tmp$ddwindow)) window <- tmp$ddwindow; newres <- tmp$newres
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
-   # backgroundpoints <- switch(method,
-   #                            grid = gridMethod(resolution, window,control),
-   #                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
-   #                            psuedorandom = randomMethod(npoints, window))
-   backgroundpoints <- quasirandomMethod(npoints,  window, covariates, coord, mc.cores,
-                                         quasirandom.samples,
-                                         quasirandom.dimensions)
+   backgroundpoints <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
+                                         quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
    
    sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
                                    interpolation=interpolation,
-                                   coord=coord,control=control)
+                                   coord=coord)
 
   } else {
 
   presences <- coordMatchDim(presences,3)
 
-  # create background points based on method.
-  # backgroundpoints <- switch(method,
-  #                            grid = gridMethod(resolution, window,control),
-  #                            quasirandom = quasirandomMethod(npoints,  window, covariates, control, coord),
-  #                            psuedorandom = randomMethod(npoints, window))
-  backgroundpoints <- quasirandomMethod(npoints,  window, covariates, control, coord)
+  # create some quasirandom background points.
+  backgroundpoints <- quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
+                                        quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
   
   ismulti <- checkMultispecies(presences)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, areaMethod=control$weightMethod, window, epsilon=control$epsilon)
+      wts <- getMultispeciesWeights(presences, backgroundpoints, coord, window, mc.cores)
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
       ####  Will need to look at areaMethod -- hard-wired for now.
-      wts <- getSinglespeciesWeights(presences, backgroundpoints$bkg_pts, coord, method, window, epsilon=control$epsilon)
+      wts <- getSinglespeciesWeights(presences, backgroundpoints, coord, window, mc.cores)
     }
 
-  sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation,
-                                  coord=coord,control=control)
+  sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
   }
 
-  parameters <- list(npoints=npoints,#resolution=resolution,
-                     newresolution=backgroundpoints$newres,
-                     # method=method,
-                     interpolation=interpolation,
-                     control=control)
-  dat <- assembleQuadData(presences, backgroundpoints$bkg_pts, sitecovariates, wts,
-                          coord, parameters, control=control)
+  # parameters <- list(npoints=npoints,
+                     # interpolation=interpolation)
+  dat <- assembleQuadData(presences, backgroundpoints,
+                          sitecovariates, wts,
+                          coord, parameters)
   class(dat) <- "ppmdata"
   return(dat)
 }
 
-assembleQuadData <- function(presences, backgroundpoints, sitecovariates,
-                             wts, coord, parameters, control){
+assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, coord){
 
   ismulti <- checkMultispecies(presences)
 
   if(!ismulti) format <- "long"
-  else format <- control$multispeciesFormat
+  else format <- "wide"
 
   final_dat <- switch(format,
                       long=longdat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord),
-                      wide=widedat(presences, backgroundpoints,
-                                   sitecovariates,
-                                   wts, coord),
-                      list=listdat(presences, backgroundpoints,
+                       wide=widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
 
-  return(list(modelmatrix=final_dat,parameters=parameters))
+  return(final_dat)
 
 }
 
@@ -141,40 +125,6 @@ longdat <- function(presences, backgroundpoints, sitecovariates=NULL, wts, coord
       } else { # covariates false
         dat2 <- cbind(backgroundpoints[,c(coord)],pres=c(rep(0,nrow(backgroundpoints))))
       }
-  }
-  return(dat2)
-}
-
-listdat <- function(presence=NULL, backgroundpoints, sitecovariates, wts=NULL, coord){
-
-  if(!is.null(presences)){ #presences true
-    if(!is.null(sitecovariates)){ #covariates true
-      dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
-                   background=backgroundpoints[,c(coord,"SpeciesID")],
-                   covariates=sitecovariates,
-                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundpoints))),
-                   wts=wts)
-    } else { #covariates false
-      dat2 <- list(presences=presences[,c(coord,"SpeciesID")],
-                   background=backgroundpoints[,c(coord,"SpeciesID")],
-                   covariates=NULL,
-                   pres=c(rep(1,nrow(presences)),rep(0,nrow(backgroundpoints))),
-                   wts=wts)
-    }
-  } else { # presences false
-    if(!is.null(sitecovariates)){
-      dat2 <- list(presences=NULL,
-                   background=backgroundpoints[,c(coord,"SpeciesID")],
-                   covariates=sitecovariates,
-                   pres=c(rep(0,nrow(backgroundpoints))),
-                   wts=wts)
-      } else { # covariates false
-      dat2 <- list(presences=NULL,
-                   background=backgroundpoints[,c(coord,"SpeciesID")],
-                   covariates=NULL,
-                   pres=c(rep(0,nrow(backgroundpoints))),
-                   wts=wts)
-    }
   }
   return(dat2)
 }
@@ -203,10 +153,7 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-quasirandomMethod <- function(npoints, window, covariates=NULL, coord,
-                              mc.cores,
-                              quasirandom.samples,
-                              quasirandom.dimensions){
+quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL, quasirandom.dimensions=NULL){
   
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
@@ -233,20 +180,17 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord,
   ids <- inclusion_probs1 > 0
   potential_sites <- potential_sites[ids,]
   inclusion_probs1 <- inclusion_probs1[ids]
-  quasirandom.samples <- ifelse(npoints<1000,10000,10*npoints)
-  ####
+  if(is.null(quasirandom.samples)) quasirandom.samples <- ifelse(npoints<1000,10000,10*npoints)
+  if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2
   
+  ####
   samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
                                potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
                                inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
   
-  colnames( samp[,1:2]) <- coord
-  if(!is.null(covariates)){
-    covars <- raster::extract(covariates,samp[,1:2])
-    randpoints <- cbind(samp[,1:2],covars)
-  } 
-  
-  return( list( bkg_pts = as.data.frame( randpoints)))
+  randpoints <- as.data.frame(samp[,1:2])#,covars)
+  colnames(randpoints ) <- coord
+  return(randpoints)
 }
 
 coordMatchDim <- function (known.sites,dimension){
@@ -287,10 +231,10 @@ coordMatchDim <- function (known.sites,dimension){
 
 
 ## function to extract covariates for presence and background points.
-getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, control){
+getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
   if(is.null(covariates))return(NULL)
   covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
-                            na.rm=control$na.rm, buffer=control$extractBuffer)
+                            na.rm=TRUE)
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   return(covars)
 }
@@ -386,7 +330,6 @@ fastwidematwts <- function(dat){
 
   dat[,"SiteID"] <- factor(dat[,"SiteID"])
   dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
-  # dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
 
   wtsdat <- with(dat, {
     out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(DatasetID),

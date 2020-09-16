@@ -2,7 +2,7 @@
 % Please edit documentation in R/ppmdata.R
 \name{ppmData}
 \alias{ppmData}
-\title{Create a Point Process dataset for spatial modelling.}
+\title{Create a spatial point Process dataset for spatial modelling.}
 \usage{
 ppmData(
   npoints = 10000,
@@ -12,8 +12,8 @@ ppmData(
   interpolation = "bilinear",
   coord = c("X", "Y"),
   mc.cores = parallel::detectCores() - 1,
-  quasirandom.samples = 10000,
-  quasirandom.dimensions = 2
+  quasirandom.samples = NULL,
+  quasirandom.dimensions = NULL
 )
 }
 \arguments{
@@ -48,4 +48,12 @@ and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.}
 Creates a point process data frame for multiple species (marked) presences. 
 Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
+}
+\examples{
+library(qrbp)
+path <- system.file("extdata", package = "qrbp")
+lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+preds <- raster::stack(lst)
+presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi") 
+bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 }

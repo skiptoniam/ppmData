@@ -1,38 +1,18 @@
-library( qrbp)
-path <- system.file("extdata", package = "qrbp")
-lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
-preds <- raster::stack(lst)
-
-presences <- snails
-window <- preds[[1]]
-covariates <- preds
-interpolation <- 'bilinear'
-npoints <- 100000
-coord <- c("X","Y")
-mc.cores <- 1
-
-backgroundpoints <- qrbp:::quasirandomMethod(npoints, window, covariates, coord, mc.cores = 2, quasirandom.samples = 1000000, quasirandom.dimensions = 2)
-backgroundpoints <- backgroundpoints$bkg_pts[,1:2]
-colnames(backgroundpoints) <- coord
-presences <- presences[,1:2]
-
-####
-getWeights( presences[,c('x','y')], backy, coord = c("x","y"), window = Xbrick[[1]])
-
-
 
 getWeights <- function( presences, backgroundpoints, coord, window, mc.cores){
   
   allpts <- rbind(presences[,coord], backgroundpoints[,coord])
-  window_ext <- convert2pts(allpts)
+  window_ext <- convert2pts(window)
+  # window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
   
-  ##generate some dummy points around allpts 
-  
-  
-  
+  ##generate some dummy points around allpts - doesn't work very well for odd shaped things.
+  # ch <- allpts[chull(allpts[,coord]),coord]
+  # dummyPts <- do.call(cbind,spatstat::spokes(ch[,1],ch[,2],nrad = 12))
+  # dummyPts <- as.data.frame(dummyPts[chull(dummyPts[,1:2]),])
+
   ###Skip: this is hardwired to unit square
   #this is a bit of a dodge and exists due to < not being the same as <=.  Only a problem for the upper edge of of unit square
   # allpts[allpts[,1]==1,1] <- 1-1e-10
@@ -84,7 +64,11 @@ getWeights <- function( presences, backgroundpoints, coord, window, mc.cores){
   allAreas <- merge( areas1, areas2, all=T, by="id", sort=TRUE)
   allAreas <- merge( allAreas, areas3, all=TRUE, by='id', sort=TRUE)
   allAreas[allAreas==-99999] <- NA
-  res <- cbind( allAreas$id, apply( allAreas[,-1], 1, median, na.rm=TRUE))
+  
+  # remove really extreme areas - this is quite slow.
+  # quant99 <- apply( allAreas[,-1], 1, quantile, .99, na.rm=TRUE)
+  # res <- cbind( allAreas$id, apply(allAreas[,-1], 1, function(x) median(x[x>=quant99[parent.frame()$i[]]], na.rm=TRUE)))
+  res <- cbind( allAreas$id, apply(allAreas[,-1], 1, median, na.rm=TRUE))
   colnames( res) <- c("id","area")
   
   #form the return object
@@ -133,12 +117,13 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, backgroundpoints, coord, method, window, epsilon){
+getSinglespeciesWeights <- function(presences, backgroundpoints, coord, window, mc.cores){
 
   backgroundpoints$SpeciesID <- "quad"
-  if(method%in%"grid")  wts <- getTileWeights(presences,backgroundpoints,coord)
-  if(method%in%c("quasirandom","psuedorandom")) wts <- getWeights(presences[,coord], backgroundpoints, window, epsilon)
-  pbxy <- rbind(presences,backgroundpoints)
+  # if(method%in%"grid")  wts <- getTileWeights(presences,backgroundpoints,coord)
+  # if(method%in%c("quasirandom","psuedorandom")) 
+  wts <- getWeights(presences[,coord], backgroundpoints[,coord], window, mc.cores)
+  pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
   dat <- cbind(pbxy,
@@ -163,8 +148,7 @@ combineDF.fun <- function( ii, xxx, yyy, coords){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, #areaMethod,
-                                   window, epsilon){
+getMultispeciesWeights <- function(presences, backgroundpoints, coord, window, mc.cores){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
@@ -173,14 +157,9 @@ getMultispeciesWeights <- function(presences, backgroundpoints, coord, method, #
   backgroundpoints$OrigOrder <- seq_len(nrow(backgroundpoints))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  # if(method%in%"grid")  sppBckWtsList <- parallel::mclapply(seq_len(nspp), function(ii) getTileWeights(sppdata[[ii]],backgroundpoints,coord))
-  # if(method%in%c("quasirandom","psuedorandom"))  
-  sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, window, epsilon, areaMethod)})
-
+  sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, window, mc.cores)})
   sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)
-
   sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
-#  sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii)rbind(sppdata[[ii]],backgroundpoints))
   sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
   sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
