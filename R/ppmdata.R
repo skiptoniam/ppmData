@@ -33,11 +33,21 @@
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi") 
 #' bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 
+# presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
+# window <- preds[[1]]
+# covariates <- preds
+# interpolation <- 'simple'
+# npoints <- 10000
+# coord <- c("X","Y")
+# mc.cores <- 1
+# quasirandom.samples = NULL
+# quasirandom.dimensions = NULL
+
 ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
-                    interpolation='bilinear',
+                    interpolation='simple',
                     coord = c('X','Y'),
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL,
@@ -50,44 +60,40 @@ ppmData <- function(npoints = 10000,
   #presences <- checkDuplicates(presences,coord)
   
   ####  If not window is provided provide a dummy window
-  window <- checkWindow(presences,window)
+  window <- qrbp:::checkWindow(presences,window)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
-   backgroundpoints <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
+   bckpts <- quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
                                          quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
    
-   sitecovariates <- getCovariates(backgroundpoints$bkg_pts[,coord],covariates,
+   sitecovariates <- getCovariates(bckpts,covariates,
                                    interpolation=interpolation,
                                    coord=coord)
 
   } else {
 
-  presences <- coordMatchDim(presences,3)
+  pressies <- qrbp:::coordMatchDim(presences,3)
 
   # create some quasirandom background points.
-  backgroundpoints <- quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
+  bckpts <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
                                         quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
   
-  ismulti <- checkMultispecies(presences)
+  ismulti <- qrbp:::checkMultispecies(pressies)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences, backgroundpoints, coord, window, mc.cores)
+      wts <- qrbp:::getMultispeciesWeights(pressies, bckpts, coord, window, mc.cores)
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      ####  Will need to look at areaMethod -- hard-wired for now.
-      wts <- getSinglespeciesWeights(presences, backgroundpoints, coord, window, mc.cores)
+      wts <- qrbp:::getSinglespeciesWeights(pressies, bckpts, coord, window, mc.cores)
     }
 
-  sitecovariates <- getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
+  sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
   }
 
-  # parameters <- list(npoints=npoints,
-                     # interpolation=interpolation)
-  dat <- assembleQuadData(presences, backgroundpoints,
+  dat <- assembleQuadData(pressies, bckpts,
                           sitecovariates, wts,
-                          coord, parameters)
-  class(dat) <- "ppmdata"
+                          coord)
   return(dat)
 }
 
@@ -99,10 +105,8 @@ assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, c
   else format <- "wide"
 
   final_dat <- switch(format,
-                      long=longdat(presences, backgroundpoints,
-                                   sitecovariates,
-                                   wts, coord),
-                       wide=widedat(presences, backgroundpoints,
+                      long=longdat(wts, sitecovariates, coord),
+                      wide=widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
 
@@ -111,21 +115,13 @@ assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, c
 }
 
 
-longdat <- function(presences, backgroundpoints, sitecovariates=NULL, wts, coord){
+longdat <- function(wts, sitecovariates=NULL, coord){
 
-  if(!is.null(sitecovariates)){
-      dat2 <- merge(wts[,-which(colnames(wts)%in%coord)],sitecovariates[!duplicated(sitecovariates$SiteID),],
-                  by = "SiteID", sort=FALSE)
-    } else {
-      dat2 <- wts
-    }
-  if(is.null(presences)){ #presences true
-      if(!is.null(sitecovariates)){ # covariates true
-        dat2 <- cbind(backgroundpoints[,c(coord)],sitecovariates,pres=c(rep(0,nrow(backgroundpoints))))
-      } else { # covariates false
-        dat2 <- cbind(backgroundpoints[,c(coord)],pres=c(rep(0,nrow(backgroundpoints))))
-      }
-  }
+  if(!is.null(sitecovariates)) dat2 <- data.frame(wts[,coord],sitecovariates[,-1:-3],presence=wts$pres,weights=wts$wts.area)
+  else dat2 <- data.frame(wts[,coord],presence=wts$pres,weights=wts$wts.area)
+
+  if(length(nrow(dat2[!complete.cases(dat2), ]))>0) message("Your covariate data has ", nrow(dat2[!complete.cases(dat2), ])," rows with NAs in them - check before modelling.")
+  
   return(dat2)
 }
 
@@ -190,7 +186,7 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   
   randpoints <- as.data.frame(samp[,1:2])#,covars)
   colnames(randpoints ) <- coord
-  return(randpoints)
+  return(as.data.frame(randpoints))
 }
 
 coordMatchDim <- function (known.sites,dimension){
@@ -233,8 +229,7 @@ coordMatchDim <- function (known.sites,dimension){
 ## function to extract covariates for presence and background points.
 getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
   if(is.null(covariates))return(NULL)
-  covars <- raster::extract(covariates, pbxy[,coord], method=interpolation,
-                            na.rm=TRUE)
+  covars <- raster::extract(covariates, pbxy[,coord], method=interpolation, na.rm=TRUE)
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   return(covars)
 }

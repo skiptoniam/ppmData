@@ -9,7 +9,7 @@ ppmData(
   presences = NULL,
   window = NULL,
   covariates = NULL,
-  interpolation = "bilinear",
+  interpolation = "simple",
   coord = c("X", "Y"),
   mc.cores = parallel::detectCores() - 1,
   quasirandom.samples = NULL,

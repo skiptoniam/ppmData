@@ -38,7 +38,9 @@ getWeights <- function( presences, backgroundpoints, coord, window, mc.cores){
   
   #set up a cluster for parallel
   cl <- parallel::makeCluster(mc.cores)
-  parallel::clusterExport( cl, "deldir", envir = .getNamespace( "deldir"))
+  # parallel::clusterExport( cl, "deldir", envir = .getNamespace("deldir"))
+  parallel::clusterEvalQ(cl, library("deldir"))
+  
   tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas1 <- do.call( "rbind", tmp)
   
@@ -122,7 +124,7 @@ getSinglespeciesWeights <- function(presences, backgroundpoints, coord, window, 
   backgroundpoints$SpeciesID <- "quad"
   # if(method%in%"grid")  wts <- getTileWeights(presences,backgroundpoints,coord)
   # if(method%in%c("quasirandom","psuedorandom")) 
-  wts <- getWeights(presences[,coord], backgroundpoints[,coord], window, mc.cores)
+  wts <- getWeights(presences, backgroundpoints, coord, window, mc.cores)
   pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
