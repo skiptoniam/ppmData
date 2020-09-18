@@ -33,15 +33,16 @@
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi") 
 #' bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 
-# presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
-# window <- preds[[1]]
-# covariates <- preds
-# interpolation <- 'simple'
-# npoints <- 10000
-# coord <- c("X","Y")
-# mc.cores <- 1
-# quasirandom.samples = NULL
-# quasirandom.dimensions = NULL
+# presences <- snails#subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
+presences <- snails[!snails%in%"",]
+window <- preds[[1]]
+covariates <- preds
+interpolation <- 'simple'
+npoints <- 10000
+coord <- c("X","Y")
+mc.cores <- 1
+quasirandom.samples = NULL
+quasirandom.dimensions = NULL
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
@@ -83,12 +84,15 @@ ppmData <- function(npoints = 10000,
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       wts <- qrbp:::getMultispeciesWeights(pressies, bckpts, coord, window, mc.cores)
+      sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
+      
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
       wts <- qrbp:::getSinglespeciesWeights(pressies, bckpts, coord, window, mc.cores)
+      sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
     }
 
-  sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
+
   }
 
   dat <- assembleQuadData(pressies, bckpts,
