@@ -33,17 +33,6 @@
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi") 
 #' bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 
-# presences <- snails#subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
-presences <- snails[!snails%in%"",]
-window <- preds[[1]]
-covariates <- preds
-interpolation <- 'simple'
-npoints <- 10000
-coord <- c("X","Y")
-mc.cores <- 1
-quasirandom.samples = NULL
-quasirandom.dimensions = NULL
-
 ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
@@ -77,40 +66,41 @@ ppmData <- function(npoints = 10000,
   pressies <- qrbp:::coordMatchDim(presences,3)
 
   # create some quasirandom background points.
-  bckpts <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
-                                        quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
+  bckpts <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,
+                                     covariates =  covariates,coord =  coord,
+                                     quasirandom.samples = quasirandom.samples,
+                                     quasirandom.dimensions = quasirandom.dimensions)
   
   ismulti <- qrbp:::checkMultispecies(pressies)
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- qrbp:::getMultispeciesWeights(pressies, bckpts, coord, window, mc.cores)
-      sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
+      wts <- qrbp:::getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts,
+                                           coord = coord, mc.cores = mc.cores)
+      sitecovariates <- qrbp:::getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
       
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      wts <- qrbp:::getSinglespeciesWeights(pressies, bckpts, coord, window, mc.cores)
-      sitecovariates <- qrbp:::getCovariates(wts,covariates,interpolation=interpolation, coord=coord)
+      wts <- qrbp:::getSinglespeciesWeights(pressies, bckpts, coord, mc.cores)
+      sitecovariates <- qrbp:::getCovariates(pbxy = wts,covariates = covariates,interpolation = interpolation, coord=coord)
     }
 
 
   }
 
-  dat <- assembleQuadData(pressies, bckpts,
-                          sitecovariates, wts,
-                          coord)
+  dat <- assembleQuadData(pressies, bckpts, sitecovariates, wts, coord)
   return(dat)
 }
 
 assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, coord){
 
-  ismulti <- checkMultispecies(presences)
+  ismulti <- qrbp:::checkMultispecies(presences)
 
-  if(!ismulti) format <- "long"
-  else format <- "wide"
+  if(!ismulti) type <- "long"
+  else type <- "wide"
 
-  final_dat <- switch(format,
-                      long=longdat(wts, sitecovariates, coord),
-                      wide=widedat(presences, backgroundpoints,
+  final_dat <- switch(type,
+                      long=qrbp:::longdat(wts, sitecovariates, coord),
+                      wide=qrbp:::widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
 
@@ -132,7 +122,7 @@ longdat <- function(wts, sitecovariates=NULL, coord){
 widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- fastwidemat(wts)
+  pamat <- qrbp:::fastwidemat(wts)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
@@ -141,8 +131,7 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
   response_ppmmat$Const <- 1
   response_ppmmat$SiteID <- as.integer(rownames(response_ppmmat))
 
-  df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$SiteID),],
-              by = "SiteID", sort=FALSE)
+  df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$SiteID),], by = "SiteID", sort=FALSE)
   wtsmat <- fastwidematwts(wts)
   ids <- wts[!duplicated(wts[,c('SpeciesID','DatasetID')]),c('SpeciesID','DatasetID')]
   ids <- ids[-which(ids$SpeciesID=='quad'),]
@@ -233,7 +222,11 @@ coordMatchDim <- function (known.sites,dimension){
 ## function to extract covariates for presence and background points.
 getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
   if(is.null(covariates))return(NULL)
-  covars <- raster::extract(covariates, pbxy[,coord], method=interpolation, na.rm=TRUE)
+  covars <- raster::extract(x = covariates,
+                            y = data.frame(X=as.numeric(pbxy[,coord[1]]),
+                                                   Y=as.numeric(pbxy[,coord[2]])),
+                            method=interpolation,
+                            na.rm=TRUE)
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   return(covars)
 }

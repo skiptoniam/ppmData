@@ -2,7 +2,7 @@ Package: qrbp
 Type: Package
 Title: Quasirandom background point generation for Poisson point process models
 Version: 0.1.0
-Authors@R: c(person("Skipton", "Woolley", email = "skip.woolley@csiro.au", role = c("aut", "cre")),
+Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@utas.edu.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skip.woolley@csiro.au>
 Description: This package generates a quasi-random set of quadrature points, were we calculate each points weights using a voronoi algorithm. The result data.frames from the function calls in this package will enable users to pass these datasets to existing single and multiple species models inorder to extend them to Point Processes.
