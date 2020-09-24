@@ -19,9 +19,9 @@ ppmData(
 \arguments{
 \item{npoints}{The number of background points to generate.}
 
-\item{presences}{a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+\item{presences}{a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
 with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
-If presences parameter is NULL then ppmDat will return the quadrature (background) points.}
+If presences parameter is NULL then ppmDat will return the quadrature (background) points without presences.}
 
 \item{window}{a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 If ignored, a rectangle defining the extent of \code{presences} will be used.}
@@ -48,6 +48,11 @@ and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.}
 Creates a point process data object for modelling Point Process presence-only datasets. 
 Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
+}
+\details{
+This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
+Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space. 
+This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
 }
 \examples{
 library(qrbp)

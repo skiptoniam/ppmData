@@ -3,6 +3,9 @@
 #' @description Creates a point process data object for modelling Point Process presence-only datasets. 
 #' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
+#' @details This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
+#' Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space. 
+#' This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c 
 #' @export
 #' @param npoints The number of background points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
@@ -76,13 +79,13 @@ ppmData <- function(npoints = 10000,
 
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts,
+      wts <- getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts, window = window,
                                            coord = coord, mc.cores = mc.cores)
       sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
       
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      wts <- getSinglespeciesWeights(pressies, bckpts, coord, mc.cores)
+      wts <- getSinglespeciesWeights(pressies, bckpts, window = window, coord, mc.cores)
       sitecovariates <- getCovariates(pbxy = wts,covariates = covariates, interpolation = interpolation, coord=coord)
     }
 

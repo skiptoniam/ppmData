@@ -1,9 +1,9 @@
 
-getWeights <- function( presences, backgroundpoints, coord, mc.cores){
+getWeights <- function( presences, backgroundpoints, window, coord, mc.cores){
   
   allpts <- rbind(presences[,coord], backgroundpoints[,coord])
-  # window_ext <- convert2pts(window)
-  window_ext <- convert2pts(allpts)
+  window_ext <- convert2pts(window)
+  # window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
@@ -118,10 +118,10 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, backgroundpoints, coord, mc.cores){
+getSinglespeciesWeights <- function(presences, backgroundpoints, window, coord, mc.cores){
 
   backgroundpoints$SpeciesID <- "quad"
-  wts <- getWeights(presences, backgroundpoints, coord, mc.cores)
+  wts <- getWeights(presences, backgroundpoints, window, coord, mc.cores)
   pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
@@ -147,7 +147,7 @@ combineDF.fun <- function( ii, xxx, yyy, coords){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, backgroundpoints, coord, mc.cores){
+getMultispeciesWeights <- function(presences, backgroundpoints, window, coord, mc.cores){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
@@ -163,7 +163,7 @@ getMultispeciesWeights <- function(presences, backgroundpoints, coord, mc.cores)
   # sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
 
-  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
+  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, window, coord, mc.cores)})
   sppBckDatList <- lapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
   sppCounts <- lapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   sppBckDatList <- lapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
