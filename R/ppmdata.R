@@ -64,6 +64,7 @@ ppmData <- function(npoints = 10000,
   } else {
 
   pressies <- qrbp:::coordMatchDim(presences,3)
+  sppNames <- qrbp:::getSppNames(pressies)
 
   # create some quasirandom background points.
   bckpts <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,
@@ -72,6 +73,7 @@ ppmData <- function(npoints = 10000,
                                      quasirandom.dimensions = quasirandom.dimensions)
   
   ismulti <- qrbp:::checkMultispecies(pressies)
+
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       wts <- qrbp:::getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts,
@@ -88,6 +90,11 @@ ppmData <- function(npoints = 10000,
   }
 
   dat <- assembleQuadData(pressies, bckpts, sitecovariates, wts, coord)
+  
+  if(!null(covariates)) covarNames <- names(covariates)
+  coordNames <- coord
+  if(multi) dat <- transpose_ppmData(dat, coordNames, covarNames)
+
   return(dat)
 }
 
@@ -103,7 +110,7 @@ assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, c
                       wide=qrbp:::widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
-
+  
   return(final_dat)
 
 }
@@ -231,6 +238,18 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
   return(covars)
 }
 
+
+
+getSppNames <- function(presences){
+  
+  sppIdx <- list()
+  sppIdx$sppNames <- unique(droplevels(presences$SpeciesID))
+  sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
+  
+  return(sppIdx)
+  
+}
+
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
 ## check the covariates that go into building the quadrature scheme.
 checkCovariates <- function(covariates){
@@ -326,15 +345,62 @@ fastwidematwts <- function(dat){
   wtsdat <- with(dat, {
     out <- matrix(nrow=nlevels(SiteID), ncol=nlevels(DatasetID),
                   dimnames=list(levels(SiteID), levels(DatasetID)))
-    out[cbind(SiteID, DatasetID)] <- wts
+    out[cbind(SiteID, DatasetID)] <- wts.area
     out
   })
 
   wtsdat
 }
 
+transpose_ppmData <- function( dat, coordNames, covarNames){
+  
+  
+  dat1 <- list()
+  dat1$wts <- dat$wtsmat
+  my.ord <- gtools::mixedorder( colnames( dat1$wts))
+  dat1$wts <- dat1$wts[,my.ord]
+  dat1$y <- dat$mm[,colnames( dat$mm) %in% colnames( dat1$wts)]
+  dat1$y <- dat1$y[,my.ord]
+  dat1$y <- as.matrix( dat1$y)
+  dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
+  dat1$locations <- dat$mm[,coordNames] #passed to ppmData as coord argument
+  dat1$covars <- dat$mm[,covarNames]
+  dat1$z <- dat1$y / dat1$wts
+  
+  dat1$nspp <- ncol( dat1$wts)
+  dat1$m <- nrow( dat1$wts)
+  dat1$sppNames <- colnames( dat1$wts)
+  dat1$nUniquePres <- sum( !dat1$bkg)
+  dat1$nBkg <- sum( dat1$bkg)
+  
+  return( dat1)
+}
 
-
+print.ppmData <- function (x, ...){
+  
+  function(y, X, W=NULL, S, archetype_formula, species_formula, distribution, quiet=FALSE){
+    if( quiet)
+      return( NULL)
+    n.tot <- nrow(y)
+    if(distribution=='ippm'){
+      n_pres <- sum(unlist(y)==1,na.rm=TRUE)
+      n_bkgrd <- sum(unlist(y[,1])==0,na.rm=TRUE)
+      message("There are ", n_pres, " presence observations for ", S," species")
+      message("There are ", n_bkgrd, " background (integration) points for each of the ", S," species")
+    } else {
+      message("There are ", nrow(X), " site observations for ", S," species")
+      # message("There are ", ncol(W), " parameters for each species, and ",ncol(X),"parameters for each archetype")
+    }
+    
+    archetype_formula[[2]] <- NULL
+    message("The model for the archetype (grouping) is ", Reduce( "paste", deparse(archetype_formula)))
+    if(!is.null(species_formula))
+      message("The model for the species is ", Reduce( "paste", deparse(species_formula)))
+    if(ncol(W)<2) message("You are implementing a ", distribution, " Species Archetype Model.")
+    else message("You are implementing a ", distribution, " Partial Species Archetype Model.")
+  }
+  
+}
 
 
 
