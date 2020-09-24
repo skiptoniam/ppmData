@@ -2,8 +2,8 @@
 getWeights <- function( presences, backgroundpoints, window, coord, mc.cores){
   
   allpts <- rbind(presences[,coord], backgroundpoints[,coord])
-  window_ext <- convert2pts(window)
-  # window_ext <- convert2pts(allpts)
+  # window_ext <- convert2pts(window)
+  window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
