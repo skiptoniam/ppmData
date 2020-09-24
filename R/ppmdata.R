@@ -231,7 +231,7 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
   if(is.null(covariates))return(NULL)
   covars <- raster::extract(x = covariates,
                             y = data.frame(X=as.numeric(pbxy[,coord[1]]),
-                                                   Y=as.numeric(pbxy[,coord[2]])),
+                                           Y=as.numeric(pbxy[,coord[2]])),
                             method=interpolation,
                             na.rm=TRUE)
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
@@ -353,7 +353,6 @@ fastwidematwts <- function(dat){
 }
 
 transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
-  
   
   dat1 <- list()
   dat1$wts <- dat$wtsmat
