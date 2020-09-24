@@ -45,7 +45,7 @@ Care should be taken with large dimensions as :1) the number of potential sampli
 and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.}
 }
 \description{
-Creates a point process data frame for multiple species (marked) presences. 
+Creates a point process data object for modelling Point Process presence-only datasets. 
 Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 }
