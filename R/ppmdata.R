@@ -5,9 +5,9 @@
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
 #' @param npoints The number of background points to generate.
-#' @param presences a matrix, dataframe or SpatialPoints* object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+#' @param presences a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
-#' If presences parameter is NULL then ppmDat will return the quadrature (background) points.
+#' If presences parameter is NULL then ppmDat will return the quadrature (background) points without presences.
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates A Raster* object containing covariates for modelling the point process (best use a Raster stack or Raster brick).
@@ -50,7 +50,7 @@ ppmData <- function(npoints = 10000,
   #presences <- checkDuplicates(presences,coord)
   
   ####  If not window is provided provide a dummy window
-  window <- qrbp:::checkWindow(presences,window)
+  window <- checkWindow(presences,window)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -63,33 +63,33 @@ ppmData <- function(npoints = 10000,
 
   } else {
 
-  pressies <- qrbp:::coordMatchDim(presences,3)
-  sppNames <- qrbp:::getSppNames(pressies)
+  pressies <- coordMatchDim(presences,3)
+  sppNames <- getSppNames(pressies)
 
   # create some quasirandom background points.
-  bckpts <- qrbp:::quasirandomMethod(npoints = npoints,  window = window,
+  bckpts <- quasirandomMethod(npoints = npoints,  window = window,
                                      covariates =  covariates,coord =  coord,
                                      quasirandom.samples = quasirandom.samples,
                                      quasirandom.dimensions = quasirandom.dimensions)
   
-  ismulti <- qrbp:::checkMultispecies(pressies)
+  ismulti <- checkMultispecies(pressies)
 
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- qrbp:::getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts,
+      wts <- getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts,
                                            coord = coord, mc.cores = mc.cores)
-      sitecovariates <- qrbp:::getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
+      sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
       
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      wts <- qrbp:::getSinglespeciesWeights(pressies, bckpts, coord, mc.cores)
-      sitecovariates <- qrbp:::getCovariates(pbxy = wts,covariates = covariates, interpolation = interpolation, coord=coord)
+      wts <- getSinglespeciesWeights(pressies, bckpts, coord, mc.cores)
+      sitecovariates <- getCovariates(pbxy = wts,covariates = covariates, interpolation = interpolation, coord=coord)
     }
 
 
   }
 
-  dat <- qrbp:::assembleQuadData(pressies, bckpts, sitecovariates, wts, coord)
+  dat <- assembleQuadData(pressies, bckpts, sitecovariates, wts, coord)
   
   if(!is.null(covariates)) covarNames <- names(covariates)
   coordNames <- coord
@@ -100,14 +100,14 @@ ppmData <- function(npoints = 10000,
 
 assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, coord){
 
-  ismulti <- qrbp:::checkMultispecies(presences)
+  ismulti <- checkMultispecies(presences)
 
   if(!ismulti) type <- "long"
   else type <- "wide"
 
   final_dat <- switch(type,
-                      long=qrbp:::longdat(wts, sitecovariates, coord),
-                      wide=qrbp:::widedat(presences, backgroundpoints,
+                      long=longdat(wts, sitecovariates, coord),
+                      wide=widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
   
@@ -129,7 +129,7 @@ longdat <- function(wts, sitecovariates=NULL, coord){
 widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- qrbp:::fastwidemat(wts)
+  pamat <- fastwidemat(wts)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
   presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]

@@ -3,7 +3,7 @@ getWeights <- function( presences, backgroundpoints, coord, mc.cores){
   
   allpts <- rbind(presences[,coord], backgroundpoints[,coord])
   # window_ext <- convert2pts(window)
-  window_ext <- qrbp:::convert2pts(allpts)
+  window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
@@ -18,7 +18,7 @@ getWeights <- function( presences, backgroundpoints, coord, mc.cores){
   # allpts[allpts[,1]==1,1] <- 1-1e-10
   # allpts[allpts[,2]==1,2] <- 1-1e-10
   ptsPerArea <- 5000
-  primmy <- qrbp:::primest(ceiling( nrow( allpts)/ptsPerArea))
+  primmy <- primest(ceiling( nrow( allpts)/ptsPerArea))
   prod.primmy <- outer( primmy, primmy)
   prod.primmy[upper.tri(prod.primmy)] <- Inf
   diag( prod.primmy) <- Inf
@@ -31,7 +31,7 @@ getWeights <- function( presences, backgroundpoints, coord, mc.cores){
   ###SKIP: this is hardwired to unit square
   #cuts on unit square in arrangement 1
   cuts1 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[1]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[2]+1), ndivisions)
-  all.boxes <- qrbp:::getBoxes( cuts1)
+  all.boxes <- getBoxes( cuts1)
   
   ##############
   #voronoi areas for first rotation
@@ -40,7 +40,7 @@ getWeights <- function( presences, backgroundpoints, coord, mc.cores){
   # parallel::clusterExport( cl, "deldir", envir = .getNamespace("deldir"))
   parallel::clusterEvalQ(cl, library("deldir"))
   
-  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), qrbp:::areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas1 <- do.call( "rbind", tmp)
   
   ###SKIP: this is hardwired to unit square
@@ -156,14 +156,14 @@ getMultispeciesWeights <- function(presences, backgroundpoints, coord, mc.cores)
   backgroundpoints$OrigOrder <- seq_len(nrow(backgroundpoints))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  # sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); qrbp:::getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
+  # sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
   # sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)
   # sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   # sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
   # sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
 
-  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); qrbp:::getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
+  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
   sppBckDatList <- lapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
   sppCounts <- lapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   sppBckDatList <- lapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
