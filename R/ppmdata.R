@@ -1,6 +1,6 @@
 #' @name ppmData
 #' @title Create a spatial point Process dataset for spatial modelling.
-#' @description Creates a point process data frame for multiple species (marked) presences. 
+#' @description Creates a point process data object for modelling Point Process presence-only datasets. 
 #' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @export
