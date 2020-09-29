@@ -1,14 +1,14 @@
 #' @name ppmData
 #' @title Create a spatial point Process dataset for spatial modelling.
-#' @description Creates a point process data object for modelling Point Process presence-only datasets. 
-#' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
+#' @description Creates a point process data object for modelling Point Process presence-only datasets.
+#' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010.
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @details This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
-#' Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space. 
-#' This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c 
+#' Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space.
+#' This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
 #' @export
 #' @param npoints The number of background points to generate.
-#' @param presences a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+#' @param presences a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
 #' If presences parameter is NULL then ppmDat will return the quadrature (background) points without presences.
 #' @param window a Raster* object giving the area over which to generate background points. NA cells are ignored and masked out of returned data.
@@ -20,38 +20,39 @@
 #' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
 #' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
-#' @param mc.cores The number of cores to use in the processing to quasirandom points and weighting scheme. 
-#' @param quasirandom.samples This set the total number of samples to consider in the BAS step (rejection sampling). 
+#' @param mc.cores The number of cores to use in the processing to quasirandom points and weighting scheme.
+#' @param quasirandom.samples This set the total number of samples to consider in the BAS step (rejection sampling).
 #' The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
-#' You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points. 
+#' You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points.
 #' The more quasirandomSample selected the slower the background point generation will be.
-#' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling. 
+#' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling.
 #' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
 #' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
-#' @examples 
+#' @examples
 #' library(qrbp)
 #' path <- system.file("extdata", package = "qrbp")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' preds <- raster::stack(lst)
-#' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi") 
+#' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 #' bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
-                    interpolation='simple',
                     coord = c('X','Y'),
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL,
                     quasirandom.dimensions = NULL){
+
+  interpolation='simple'
 
   ## Do some checks.
   ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
   ####  the the same observation recorded multiple times in the database?
   ####  Note that this function also depends upon a very particular format for the presences data.  It might be wise to robustify?
   #presences <- checkDuplicates(presences,coord)
-  
+
   ####  If not window is provided provide a dummy window
   window <- checkWindow(presences,window)
 
@@ -59,14 +60,15 @@ ppmData <- function(npoints = 10000,
    message('Generating background points in the absence of species presences')
    bckpts <- quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
                                          quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
-   
+
    sitecovariates <- getCovariates(bckpts,covariates,
                                    interpolation=interpolation,
                                    coord=coord)
 
   } else {
 
-  pressies <- coordMatchDim(presences,3)
+  pressies <- coordMatchDim(presences,coord,3)
+
   sppNames <- getSppNames(pressies)
 
   # create some quasirandom background points.
@@ -74,7 +76,10 @@ ppmData <- function(npoints = 10000,
                                      covariates =  covariates,coord =  coord,
                                      quasirandom.samples = quasirandom.samples,
                                      quasirandom.dimensions = quasirandom.dimensions)
-  
+  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=1e-4)
+  pressies <- tmpPts$pressies
+  bckpts <- tmpPts$bckpts
+
   ismulti <- checkMultispecies(pressies)
 
   if(ismulti){
@@ -82,7 +87,7 @@ ppmData <- function(npoints = 10000,
       wts <- getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts, window = window,
                                            coord = coord, mc.cores = mc.cores)
       sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
-      
+
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
       wts <- getSinglespeciesWeights(pressies, bckpts, window = window, coord, mc.cores)
@@ -93,12 +98,39 @@ ppmData <- function(npoints = 10000,
   }
 
   dat <- assembleQuadData(pressies, bckpts, sitecovariates, wts, coord)
-  
+
   if(!is.null(covariates)) covarNames <- names(covariates)
   coordNames <- coord
   if(ismulti) dat <- transpose_ppmData(dat, sppNames, coordNames, covarNames)
 
   return(dat)
+}
+
+jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-5){
+  #the pressie bit first
+  #are there any duplicates within a species?  If so, then jitter the duplicates
+  for( jj in as.character( unique( pressies$SpeciesID))){ #I think that we have made the assumption that this is called SpeciesID...?
+    sppJ <- which( pressies$SpeciesID==jj)
+    dupes <- which( duplicated( pressies[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
+    if( length( dupes)>0){
+      pressies[sppJ[dupes],coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
+      pressies[sppJ[dupes],coord[2]] <- jitter( pressies[sppJ[dupes],coord[2]], amount=aBit)
+    }
+  }
+
+  #background now
+  #are there any points that duplicate a presence point?  If so, jitter.
+  npres <- nrow( pressies)
+  dupes <- which( duplicated( rbind( pressies[,coord], bckpts)))
+  if( length( dupes)>0)
+    dupes <- dupes[dupes>npres]
+  if( length( dupes)>0){
+    dupes <- dupes - npres
+    bckpts[dupes,coord[1]] <- jitter( bckpts[dupes,coord[1]], amount=aBit)
+    bckpts[dupes,coord[2]] <- jitter( bckpts[dupes,coord[2]], amount=aBit)
+  }
+
+  return( list( pressies=pressies, bckpts=bckpts))
 }
 
 assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, coord){
@@ -113,7 +145,7 @@ assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, c
                       wide=widedat(presences, backgroundpoints,
                                    sitecovariates,
                                    wts, coord))
-  
+
   return(final_dat)
 
 }
@@ -125,7 +157,7 @@ longdat <- function(wts, sitecovariates=NULL, coord){
   else dat2 <- data.frame(wts[,coord],presence=wts$pres,weights=wts$wts.area)
 
   if(length(nrow(dat2[!complete.cases(dat2), ]))>0) message("Your covariate data has ", nrow(dat2[!complete.cases(dat2), ])," rows with NAs in them - check before modelling.")
-  
+
   return(dat2)
 }
 
@@ -153,7 +185,7 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
 }
 
 quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL, quasirandom.dimensions=NULL){
-  
+
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
     rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
@@ -168,31 +200,31 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
     covariates_ext <- raster::extent(window)[1:4]
     potential_sites <- rast_coord
   }
-  
+
   ## setup the inclusion probs.
   N <- nrow(potential_sites)
-  inclusion_probs <- rep(1/N, N)	
+  inclusion_probs <- rep(1/N, N)
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  inclusion_probs1[na_sites] <- 0	
-  
+  inclusion_probs1[na_sites] <- 0
+
   ####SDF CHANGE
   ids <- inclusion_probs1 > 0
   potential_sites <- potential_sites[ids,]
   inclusion_probs1 <- inclusion_probs1[ids]
   if(is.null(quasirandom.samples)) quasirandom.samples <- ifelse(npoints<1000,10000,10*npoints)
   if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2
-  
+
   ####
   samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
                                potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
                                inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
-  
+
   randpoints <- as.data.frame(samp[,1:2])#,covars)
   colnames(randpoints ) <- coord
   return(as.data.frame(randpoints))
 }
 
-coordMatchDim <- function (known.sites,dimension){
+coordMatchDim <- function (known.sites,coord,dimension){
 
   # check object classes
   expectClasses(known.sites,
@@ -220,10 +252,15 @@ coordMatchDim <- function (known.sites,dimension){
 
   # set column names
   if (ncol(known.sites)>2) {
-    if(!is.null(colnames(known.sites))) colnames(df) <- c("X","Y",colnames(known.sites)[-1:-2])
-    colnames(df) <- c('X','Y','SpeciesID')
+####SDF please consider what you want this to do..  Do you want only 3 cols to the result?  Do you want the spp to be labeled as SpeciesID?
+####It seems that some of the rest of the code falls over if the third column is something other than SpeciesID...
+
+#    if(!is.null(colnames(known.sites)))
+#      colnames(df) <- c(coord,colnames(known.sites)[!colnames( known.sites) %in% coord])
+#    else
+      colnames(df) <- c(coord,'SpeciesID')#note that this makes some pretty uncomfortable assumptions about the number of columns...
   } else {
-    colnames(df) <- c('X','Y')
+    colnames(df) <- coord
   }
   return (df)
 }
@@ -244,13 +281,13 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
 
 
 getSppNames <- function(presences){
-  
+
   sppIdx <- list()
   sppIdx$sppNames <- unique(droplevels(presences$SpeciesID))
   sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
-  
+
   return(sppIdx)
-  
+
 }
 
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
@@ -356,7 +393,7 @@ fastwidematwts <- function(dat){
 }
 
 transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
-  
+
   dat1 <- list()
   dat1$wts <- dat$wtsmat
   my.ord <- gtools::mixedorder( colnames( dat1$wts))
@@ -366,23 +403,23 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
   dat1$y <- as.matrix( dat1$y)
   colnames(dat1$y) <- sppNames$sppNames[my.ord]
   colnames(dat1$wts) <- sppNames$sppNames[my.ord]
-  
+
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
   dat1$locations <- dat$mm[,coordNames] #passed to ppmData as coord argument
   dat1$covars <- dat$mm[,covarNames]
   dat1$z <- dat1$y / dat1$wts
-  
+
   dat1$nspp <- ncol( dat1$wts)
   dat1$m <- nrow( dat1$wts)
   dat1$sppNames <- colnames( dat1$wts)
   dat1$nUniquePres <- sum( !dat1$bkg)
   dat1$nBkg <- sum( dat1$bkg)
-  
+
   return( dat1)
 }
-# 
+#
 # print.ppmData <- function (x, ...){
-#   
+#
 #   function(y, X, W=NULL, S, archetype_formula, species_formula, distribution, quiet=FALSE){
 #     if( quiet)
 #       return( NULL)
@@ -396,7 +433,7 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
 #       message("There are ", nrow(X), " site observations for ", S," species")
 #       # message("There are ", ncol(W), " parameters for each species, and ",ncol(X),"parameters for each archetype")
 #     }
-#     
+#
 #     archetype_formula[[2]] <- NULL
 #     message("The model for the archetype (grouping) is ", Reduce( "paste", deparse(archetype_formula)))
 #     if(!is.null(species_formula))
@@ -404,7 +441,7 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
 #     if(ncol(W)<2) message("You are implementing a ", distribution, " Species Archetype Model.")
 #     else message("You are implementing a ", distribution, " Partial Species Archetype Model.")
 #   }
-#   
+#
 # }
 
 
