@@ -76,6 +76,7 @@ ppmData <- function(npoints = 10000,
                                      covariates =  covariates,coord =  coord,
                                      quasirandom.samples = quasirandom.samples,
                                      quasirandom.dimensions = quasirandom.dimensions)
+  #Skip: in the following aBit should be taken as half the size of a raster cell...  Please change.
   tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=1e-4)
   pressies <- tmpPts$pressies
   bckpts <- tmpPts$bckpts
@@ -126,6 +127,7 @@ jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-5){
     dupes <- dupes[dupes>npres]
   if( length( dupes)>0){
     dupes <- dupes - npres
+#    bckpts <- bckpts[-dupes,]
     bckpts[dupes,coord[1]] <- jitter( bckpts[dupes,coord[1]], amount=aBit)
     bckpts[dupes,coord[2]] <- jitter( bckpts[dupes,coord[2]], amount=aBit)
   }
@@ -207,17 +209,36 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   inclusion_probs1[na_sites] <- 0
 
-  ####SDF CHANGE
   ids <- inclusion_probs1 > 0
   potential_sites <- potential_sites[ids,]
   inclusion_probs1 <- inclusion_probs1[ids]
-  if(is.null(quasirandom.samples)) quasirandom.samples <- ifelse(npoints<1000,10000,10*npoints)
-  if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2
+  if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints#ifelse(npoints<1000,10000,10*npoints)#This ifelse would have been a problem if npoints>10000
+  if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2 #I don't understand why we need this...
 
-  ####
-  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
-                               potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
-                               inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
+#  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
+#                               potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
+#                               inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
+  exty <- raster::extent( window)
+  study.area <- matrix( as.vector( exty)[c( 1,2,2,1, 3,3,4,4)], nrow=4, ncol=2)
+  #this gives many many samples, unless the study region is an odd shape, which it shouldn't be (as it is just an extent at this stage)
+  samp <- MBHdesign:::quasiSamp_fromhyperRect( nSampsToConsider=quasirandom.samples, randStartType=2, designParams=list(dimension=2,study.area=study.area))
+
+  ####Skip: TO DO!
+  #1. get the inclusion probabilities under each point.
+  #1a. convert inclusion probs to raster (if needed)
+  #1b. extract from each point in samp[,1:2]
+  #this will produce an object called "my.inclProb" say.
+  #this next line will need to be changed (hard-wired to squares/rectangles)
+  my.inclProb <- rep( 1, nrow( samp))
+
+  #2. spatially thin the sample
+  #2a drop all rows with
+  samp <- samp[samp[,3]<my.inclProb,1:2]
+  if( nrow( samp) < npoints)
+    stop( "No set of background points found for this region.  Please increase the number of possible samples.")
+  samp <- samp[1:npoints,]
+
+  ### should then be done with the sampling!
 
   randpoints <- as.data.frame(samp[,1:2])#,covars)
   colnames(randpoints ) <- coord
