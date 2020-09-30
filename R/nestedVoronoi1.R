@@ -82,6 +82,7 @@ getWeights <- function( presences, backgroundpoints, coord, window, epsilon=sqrt
   #voronoi areas for first rotation
 
   #set up a cluster for parallel
+  #Skip: this could be made quicker by passing the cluster to each call of getWeights.  Creating clusters can take time...
   cl <- parallel::makeCluster(mc.cores)
 #  parallel::clusterExport(cl, c("allpts", "window_ext", "boxes"), envir = environment())
   parallel::clusterExport( cl, "deldir", envir = as.environment( "package:deldir"))
