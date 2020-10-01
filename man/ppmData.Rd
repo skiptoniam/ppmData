@@ -9,17 +9,15 @@ ppmData(
   presences = NULL,
   window = NULL,
   covariates = NULL,
-  interpolation = "simple",
   coord = c("X", "Y"),
   mc.cores = parallel::detectCores() - 1,
-  quasirandom.samples = NULL,
-  quasirandom.dimensions = NULL
+  quasirandom.samples = NULL
 )
 }
 \arguments{
 \item{npoints}{The number of background points to generate.}
 
-\item{presences}{a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3) 
+\item{presences}{a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3)
 with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
 If presences parameter is NULL then ppmDat will return the quadrature (background) points without presences.}
 
@@ -28,30 +26,26 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 
 \item{covariates}{A Raster* object containing covariates for modelling the point process (best use a Raster stack or Raster brick).}
 
-\item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
-'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
-
 \item{coord}{is the name of site coordinates. The default is c('X','Y').}
 
 \item{mc.cores}{The number of cores to use in the processing to quasirandom points and weighting scheme.}
 
-\item{quasirandom.samples}{This set the total number of samples to consider in the BAS step (rejection sampling). 
+\item{quasirandom.samples}{This set the total number of samples to consider in the BAS step (rejection sampling).
 The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
-You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points. 
+You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points.
 The more quasirandomSample selected the slower the background point generation will be.}
 
-\item{quasirandom.dimensions}{The the number of dimensions that the samples are located in. Equal to 2 for areal sampling. 
-Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
-and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.}
+\item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
+'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 }
 \description{
-Creates a point process data object for modelling Point Process presence-only datasets. 
-Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010. 
+Creates a point process data object for modelling Point Process presence-only datasets.
+Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010.
 The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 }
 \details{
 This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
-Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space. 
+Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space.
 This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
 }
 \examples{
@@ -59,6 +53,6 @@ library(qrbp)
 path <- system.file("extdata", package = "qrbp")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
-presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi") 
+presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")
 bkgrid <- ppmData(npoints = 1000, presences=presences, window = preds[[1]], covariates = preds)
 }

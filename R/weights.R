@@ -2,8 +2,8 @@
 getWeights <- function( presences, backgroundpoints, window, coord, mc.cores){
   
   allpts <- rbind(presences[,coord], backgroundpoints[,coord])
-  # window_ext <- convert2pts(window)
-  window_ext <- convert2pts(allpts)
+  window_ext <- convert2pts(window)
+  # window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
@@ -34,16 +34,13 @@ getWeights <- function( presences, backgroundpoints, window, coord, mc.cores){
   all.boxes <- getBoxes( cuts1)
   
   ##############
-  #voronoi areas for first rotation
-  #set up a cluster for parallel
+  #voronoi areas for first rotation, set up a cluster for parallel
   cl <- parallel::makeCluster(mc.cores)
-  # parallel::clusterExport( cl, "deldir", envir = .getNamespace("deldir"))
   parallel::clusterEvalQ(cl, library("deldir"))
   
   tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas1 <- do.call( "rbind", tmp)
   
-  ###SKIP: this is hardwired to unit square
   #cuts on unit square in arrangement 2
   cuts2 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[2]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[1]+1), ndivisions[2:1])
   all.boxes <- getBoxes( cuts2)

@@ -25,9 +25,9 @@
 #' The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
 #' You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points.
 #' The more quasirandomSample selected the slower the background point generation will be.
-#' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling.
-#' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
-#' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
+# #' @param quasirandom.dimensions The the number of dimensions that the samples are located in. Equal to 2 for areal sampling.
+# #' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
+# #' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
 #' @examples
 #' library(qrbp)
 #' path <- system.file("extdata", package = "qrbp")
@@ -42,8 +42,7 @@ ppmData <- function(npoints = 10000,
                     covariates = NULL,
                     coord = c('X','Y'),
                     mc.cores = parallel::detectCores()-1,
-                    quasirandom.samples = NULL,
-                    quasirandom.dimensions = NULL){
+                    quasirandom.samples = NULL){
 
   interpolation='simple'
 
@@ -59,7 +58,7 @@ ppmData <- function(npoints = 10000,
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
    bckpts <- quasirandomMethod(npoints = npoints,  window = window,covariates =  covariates,coord =  coord,
-                                         quasirandom.samples = quasirandom.samples, quasirandom.dimensions = quasirandom.dimensions)
+                                         quasirandom.samples = quasirandom.samples)
 
    sitecovariates <- getCovariates(bckpts,covariates,
                                    interpolation=interpolation,
@@ -73,9 +72,8 @@ ppmData <- function(npoints = 10000,
 
   # create some quasirandom background points.
   bckpts <- quasirandomMethod(npoints = npoints,  window = window,
-                                     covariates =  covariates,coord =  coord,
-                                     quasirandom.samples = quasirandom.samples,
-                                     quasirandom.dimensions = quasirandom.dimensions)
+                              covariates =  covariates,coord =  coord,
+                              quasirandom.samples = quasirandom.samples)
   #Skip: in the following aBit should be taken as half the size of a raster cell...  Please change.
   tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=1e-4)
   pressies <- tmpPts$pressies
@@ -186,7 +184,7 @@ widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL, quasirandom.dimensions=NULL){
+quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL){
 
   #generate a set of potential sites for quasirandom generation
   if(!is.null(covariates)){
@@ -204,16 +202,16 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   }
 
   ## setup the inclusion probs.
-  N <- nrow(potential_sites)
-  inclusion_probs <- rep(1/N, N)
-  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  inclusion_probs1[na_sites] <- 0
+  # N <- nrow(potential_sites)
+  # inclusion_probs <- rep(1/N, N)
+  # inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
+  # inclusion_probs1[na_sites] <- 0
 
-  ids <- inclusion_probs1 > 0
-  potential_sites <- potential_sites[ids,]
-  inclusion_probs1 <- inclusion_probs1[ids]
+  # ids <- inclusion_probs1 > 0
+  # potential_sites <- potential_sites[ids,]
+  # inclusion_probs1 <- inclusion_probs1[ids]
   if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints#ifelse(npoints<1000,10000,10*npoints)#This ifelse would have been a problem if npoints>10000
-  if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2 #I don't understand why we need this...
+  # if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2 #I don't understand why we need this...
 
 #  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
 #                               potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
@@ -229,11 +227,17 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   #1b. extract from each point in samp[,1:2]
   #this will produce an object called "my.inclProb" say.
   #this next line will need to be changed (hard-wired to squares/rectangles)
-  my.inclProb <- rep( 1, nrow( samp))
+  # my.inclProb <- rep( 1, nrow( samp))
+  ## setup the inclusion probs.
+  N <- nrow(potential_sites)
+  inclusion_probs <- rep(1/N, N)
+  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
+  inclusion_probs1[na_sites] <- 0
+  
 
   #2. spatially thin the sample
   #2a drop all rows with
-  samp <- samp[samp[,3]<my.inclProb,1:2]
+  samp <- samp[samp[,3]<inclusion_probs1,1:2]
   if( nrow( samp) < npoints)
     stop( "No set of background points found for this region.  Please increase the number of possible samples.")
   samp <- samp[1:npoints,]
