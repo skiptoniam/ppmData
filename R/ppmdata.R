@@ -75,7 +75,8 @@ ppmData <- function(npoints = 10000,
                               covariates =  covariates,coord =  coord,
                               quasirandom.samples = quasirandom.samples)
   #Skip: in the following aBit should be taken as half the size of a raster cell...  Please change.
-  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=1e-4)
+  reswindow <- raster::res(window)[1]
+  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=reswindow/2)
   pressies <- tmpPts$pressies
   bckpts <- tmpPts$bckpts
 
@@ -83,7 +84,7 @@ ppmData <- function(npoints = 10000,
 
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences = pressies, backgroundpoints = bckpts, window = window,
+      wts <- getMultispeciesWeights(presences = pressies, quadrature = bckpts, window = window,
                                            coord = coord, mc.cores = mc.cores)
       sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
 
@@ -105,7 +106,7 @@ ppmData <- function(npoints = 10000,
   return(dat)
 }
 
-jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-5){
+jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-4){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
   for( jj in as.character( unique( pressies$SpeciesID))){ #I think that we have made the assumption that this is called SpeciesID...?
@@ -126,14 +127,14 @@ jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-5){
   if( length( dupes)>0){
     dupes <- dupes - npres
 #    bckpts <- bckpts[-dupes,]
-    bckpts[dupes,coord[1]] <- jitter( bckpts[dupes,coord[1]], amount=aBit)
+      bckpts[dupes,coord[1]] <- jitter( bckpts[dupes,coord[1]], amount=aBit)
     bckpts[dupes,coord[2]] <- jitter( bckpts[dupes,coord[2]], amount=aBit)
   }
 
   return( list( pressies=pressies, bckpts=bckpts))
 }
 
-assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, coord){
+assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord){
 
   ismulti <- checkMultispecies(presences)
 
@@ -142,7 +143,7 @@ assembleQuadData <- function(presences, backgroundpoints, sitecovariates, wts, c
 
   final_dat <- switch(type,
                       long=longdat(wts, sitecovariates, coord),
-                      wide=widedat(presences, backgroundpoints,
+                      wide=widedat(presences, quadrature,
                                    sitecovariates,
                                    wts, coord))
 
@@ -161,7 +162,7 @@ longdat <- function(wts, sitecovariates=NULL, coord){
   return(dat2)
 }
 
-widedat <- function(presence, backgroundpoints, sitecovariates, wts, coord){
+widedat <- function(presence, quadrature, sitecovariates, wts, coord){
 
   # Assemble a data.frame with all the bits we want.
   pamat <- fastwidemat(wts)
@@ -201,50 +202,29 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
     potential_sites <- rast_coord
   }
 
-  ## setup the inclusion probs.
-  # N <- nrow(potential_sites)
-  # inclusion_probs <- rep(1/N, N)
-  # inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  # inclusion_probs1[na_sites] <- 0
-
-  # ids <- inclusion_probs1 > 0
-  # potential_sites <- potential_sites[ids,]
-  # inclusion_probs1 <- inclusion_probs1[ids]
-  if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints#ifelse(npoints<1000,10000,10*npoints)#This ifelse would have been a problem if npoints>10000
+  if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints
   # if(is.null(quasirandom.dimensions)) quasirandom.dimensions <- 2 #I don't understand why we need this...
 
-#  samp <- suppressMessages(MBHdesign::quasiSamp(n = npoints, dimension = quasirandom.dimensions,
-#                               potential.sites = potential_sites[, seq_len(quasirandom.dimensions)],
-#                               inclusion.probs = inclusion_probs1, nSampsToConsider = quasirandom.samples))
   exty <- raster::extent( window)
   study.area <- matrix( as.vector( exty)[c( 1,2,2,1, 3,3,4,4)], nrow=4, ncol=2)
   #this gives many many samples, unless the study region is an odd shape, which it shouldn't be (as it is just an extent at this stage)
   samp <- MBHdesign:::quasiSamp_fromhyperRect( nSampsToConsider=quasirandom.samples, randStartType=2, designParams=list(dimension=2,study.area=study.area))
 
-  ####Skip: TO DO!
-  #1. get the inclusion probabilities under each point.
-  #1a. convert inclusion probs to raster (if needed)
-  #1b. extract from each point in samp[,1:2]
-  #this will produce an object called "my.inclProb" say.
-  #this next line will need to be changed (hard-wired to squares/rectangles)
-  # my.inclProb <- rep( 1, nrow( samp))
   ## setup the inclusion probs.
-  N <- nrow(potential_sites)
-  inclusion_probs <- rep(1/N, N)
+  sampValues <- extract(window,samp[,1:2])
+  NAsamps <- which(!complete.cases(sampValues))
+  Nsamps <- length(sampValues)
+  inclusion_probs <- rep(1/Nsamps, Nsamps)
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  inclusion_probs1[na_sites] <- 0
+  inclusion_probs1[NAsamps] <- 0
   
-
-  #2. spatially thin the sample
-  #2a drop all rows with
+  #Spatially thin the sample which are NA sites in the raster window
   samp <- samp[samp[,3]<inclusion_probs1,1:2]
-  if( nrow( samp) < npoints)
-    stop( "No set of background points found for this region.  Please increase the number of possible samples.")
+  if(nrow( samp) < npoints)
+    stop("No set of background points found for this region.  Please increase the number of possible samples.")
   samp <- samp[1:npoints,]
 
-  ### should then be done with the sampling!
-
-  randpoints <- as.data.frame(samp[,1:2])#,covars)
+  randpoints <- as.data.frame(samp[,1:2])
   colnames(randpoints ) <- coord
   return(as.data.frame(randpoints))
 }

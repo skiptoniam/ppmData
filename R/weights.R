@@ -1,7 +1,7 @@
 
-getWeights <- function( presences, backgroundpoints, window, coord, mc.cores){
+getWeights <- function( presences, quadrature, window, coord, mc.cores){
   
-  allpts <- rbind(presences[,coord], backgroundpoints[,coord])
+  allpts <- rbind(presences[,coord], quadrature[,coord])
   window_ext <- convert2pts(window)
   # window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
@@ -89,7 +89,7 @@ areasWithinBoxes <- function(kounter, allpts, boxes){
     if(nrow(coordsDups)==1){ 
       res$area <- -99999
     } else {
-      res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,])$summary$dir.area
+      res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,],round=FALSE,digits=12)$summary$dir.area
     }
   } else {
     res$area <- -9999
@@ -115,16 +115,16 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, backgroundpoints, window, coord, mc.cores){
+getSinglespeciesWeights <- function(presences, quadrature, window, coord, mc.cores){
 
-  backgroundpoints$SpeciesID <- "quad"
-  wts <- getWeights(presences, backgroundpoints, window, coord, mc.cores)
-  pbxy <- rbind(presences[,coord],backgroundpoints[,coord])
+  quadrature$SpeciesID <- "quad"
+  wts <- getWeights(presences, quadrature, window, coord, mc.cores)
+  pbxy <- rbind(presences[,coord],quadrature[,coord])
   pbxy$OrigOrder <- seq_len(nrow(pbxy))
   pbxy$DatasetID <- 1
   dat <- cbind(pbxy,
                pres=c(rep(1,nrow(presences)),
-                     rep(0,nrow(backgroundpoints))),
+                     rep(0,nrow(quadrature))),
                wts=wts)
 
   df <- getSiteID(dat,coord)
@@ -144,28 +144,28 @@ combineDF.fun <- function( ii, xxx, yyy, coords){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, backgroundpoints, window, coord, mc.cores){
+getMultispeciesWeights <- function(presences, quadrature, window, coord, mc.cores){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
   spps <- unique(presences[,"SpeciesID"])
-  backgroundpoints$SpeciesID <- "quad"
-  backgroundpoints$OrigOrder <- seq_len(nrow(backgroundpoints))+max(presences$OrigOrder)
+  quadrature$SpeciesID <- "quad"
+  quadrature$OrigOrder <- seq_len(nrow(quadrature))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  # sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, coord, mc.cores)})
-  # sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)
+  # sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, coord, mc.cores)})
+  # sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)
   # sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   # sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
   # sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
-                                                                    # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
+                                                                    # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
 
-  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], backgroundpoints, window, coord, mc.cores)})
-  sppBckDatList <- lapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=backgroundpoints, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
+  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)})
+  sppBckDatList <- lapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
   sppCounts <- lapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
   sppBckDatList <- lapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
   sppWtsList <- lapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
-                                                                    pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(backgroundpoints))),
+                                                                    pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
                                                                     wts=sppBckWtsList[[ii]]))
  dat <- do.call(rbind,sppWtsList)
  df <- getSiteID(dat,coord)
