@@ -49,8 +49,8 @@ Quasirandom points are a nice alternative to pseudorandom samples, this is becau
 This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
 }
 \examples{
-library(qrbp)
-path <- system.file("extdata", package = "qrbp")
+library(ppmData)
+path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")

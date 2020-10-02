@@ -3,9 +3,9 @@ context('Test ppmData for single species')
 testthat::test_that('Test ppm data generation for a single species - i.e. for a single species model', {
 
   library(raster)
-  library(qrbp)
+  library(ppmData)
   species <- subset(snails,SpeciesID=='Victaphanta lampra')
-  path <- system.file("extdata", package = "qrbp")
+  path <- system.file("extdata", package = "ppmData")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
   preds <- raster::stack(lst)
 
@@ -18,25 +18,25 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
   control <- ppmData.control()
   coord <- c("X","Y")
 
-  presences <- qrbp:::checkDuplicates(presences,coord)
-  qrbp:::checkResolution(resolution,window,control,method)
-  window <- qrbp:::checkWindow(presences,window)
+  presences <- ppmData:::checkDuplicates(presences,coord)
+  ppmData:::checkResolution(resolution,window,control,method)
+  window <- ppmData:::checkWindow(presences,window)
 
   ## grid
   method <- 'grid'
   backgroundpoints <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window,control),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates),
-                            psuedorandom = qrbp:::randomMethod(npoints,  window, covariates))
+                            grid = ppmData:::gridMethod(resolution, window,control),
+                            quasirandom = ppmData:::quasirandomMethod(npoints,  window, covariates),
+                            psuedorandom = ppmData:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundpoints,'list')
 
 
-  wts <- qrbp:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord,method)
+  wts <- ppmData:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord,method)
   testthat::expect_is(wts,'data.frame')
 
   pbxy <- wts
 
-  sitecovariates <-  qrbp:::getCovariates(pbxy,covariates = preds, interpolation, coord, control)
+  sitecovariates <-  ppmData:::getCovariates(pbxy,covariates = preds, interpolation, coord, control)
   testthat::expect_is(sitecovariates,'data.frame')
 
   parameters <- list(npoints=npoints,resolution=resolution,
@@ -44,7 +44,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
                      interpolation=interpolation,control=control)
   testthat::expect_is(parameters,'list')
 
-  dat <- qrbp:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
+  dat <- ppmData:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 
@@ -62,15 +62,15 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
   ## psuedorandom
   method <- "psuedorandom"
   backgroundpoints <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates),
-                            psuedorandom = qrbp:::randomMethod(npoints,  window, covariates))
+                            grid = ppmData:::gridMethod(resolution, window),
+                            quasirandom = ppmData:::quasirandomMethod(npoints,  window, covariates),
+                            psuedorandom = ppmData:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundpoints,'list')
 
-  wts <- qrbp:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord,method,window)
+  wts <- ppmData:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord,method,window)
   testthat::expect_is(wts,'data.frame')
 
-  sitecovariates <-  qrbp:::getCovariates(wts,covariates = preds, interpolation, coord, control)
+  sitecovariates <-  ppmData:::getCovariates(wts,covariates = preds, interpolation, coord, control)
   testthat::expect_is(sitecovariates,'data.frame')
 
   parameters <- list(npoints=npoints,resolution=resolution,
@@ -78,7 +78,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
                      interpolation=interpolation,control=control)
   testthat::expect_is(parameters,'list')
 
-  dat <- qrbp:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
+  dat <- ppmData:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 
@@ -96,16 +96,16 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
   ## quasirandom
   method <- "quasirandom"
   backgroundpoints <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates,
+                            grid = ppmData:::gridMethod(resolution, window),
+                            quasirandom = ppmData:::quasirandomMethod(npoints,  window, covariates,
                                                                    control=control,coord=coord),
-                            psuedorandom = qrbp:::randomMethod(npoints,  window, covariates))
+                            psuedorandom = ppmData:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundpoints,'list')
 
-  wts <- qrbp:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord)
+  wts <- ppmData:::getSinglespeciesWeights(presences,backgroundpoints$grid,coord)
   testthat::expect_is(wts,'data.frame')
 
-  sitecovariates <-  qrbp:::getCovariates(wts,covariates = preds, interpolation, coord, control)
+  sitecovariates <-  ppmData:::getCovariates(wts,covariates = preds, interpolation, coord, control)
   testthat::expect_is(sitecovariates,'data.frame')
 
   parameters <- list(npoints=npoints,resolution=resolution,
@@ -113,7 +113,7 @@ testthat::test_that('Test ppm data generation for a single species - i.e. for a 
                      interpolation=interpolation,control=control)
   testthat::expect_is(parameters,'list')
 
-  dat <- qrbp:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
+  dat <- ppmData:::assembleQuadData(presences, backgroundpoints$grid, sitecovariates, wts,
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 

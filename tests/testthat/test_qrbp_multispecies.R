@@ -3,7 +3,7 @@ context('Test ppmData for multiple species')
 testthat::test_that('Test background generation for multiple species - i.e. for joint/mixture models', {
 
   library(raster)
-  path <- system.file("extdata", package = "qrbp")
+  path <- system.file("extdata", package = "ppmData")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
   preds <- raster::stack(lst)
 
@@ -21,18 +21,18 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
 
   ## test built in functions.
   presences$SpeciesID <- factor(presences$SpeciesID)
-  presences <- qrbp:::checkDuplicates(presences,coord)
+  presences <- ppmData:::checkDuplicates(presences,coord)
 
   backgroundsites <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window,control),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates,control,coord),
-                            random = qrbp:::randomMethod(npoints,  window, covariates))
+                            grid = ppmData:::gridMethod(resolution, window,control),
+                            quasirandom = ppmData:::quasirandomMethod(npoints,  window, covariates,control,coord),
+                            random = ppmData:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundsites,'list')
 
-  wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid,coord)
+  wts <- ppmData:::getMultispeciesWeights(presences,backgroundsites$grid,coord)
   testthat::expect_is(wts,'data.frame')
 
-  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds,
+  sitecovariates <-  ppmData:::getCovariates(wts, covariates = preds,
                                           interpolation, coord, control)
   testthat::expect_is(sitecovariates,'data.frame')
 
@@ -41,14 +41,14 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
                      interpolation=interpolation,control=control)
   testthat::expect_is(parameters,'list')
 
-  dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
+  dat <- ppmData:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                           coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 
   rm(list=ls())
 
   ## test function alone
-  path <- system.file("extdata", package = "qrbp")
+  path <- system.file("extdata", package = "ppmData")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
   preds <- raster::stack(lst)
 
@@ -77,15 +77,15 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
   ## quasirandom
   method <- "quasirandom"
   backgroundsites <- switch(method,
-                            grid = qrbp:::gridMethod(resolution, window),
-                            quasirandom = qrbp:::quasirandomMethod(npoints,  window, covariates,control,coord),
-                            random = qrbp:::randomMethod(npoints,  window, covariates))
+                            grid = ppmData:::gridMethod(resolution, window),
+                            quasirandom = ppmData:::quasirandomMethod(npoints,  window, covariates,control,coord),
+                            random = ppmData:::randomMethod(npoints,  window, covariates))
   testthat::expect_is(backgroundsites,'list')
 
-  wts <- qrbp:::getMultispeciesWeights(presences,backgroundsites$grid)
+  wts <- ppmData:::getMultispeciesWeights(presences,backgroundsites$grid)
   testthat::expect_is(wts,'data.frame')
 
-  sitecovariates <-  qrbp:::getCovariates(wts, covariates = preds,
+  sitecovariates <-  ppmData:::getCovariates(wts, covariates = preds,
                                           interpolation, coord, control)
   testthat::expect_is(sitecovariates,'data.frame')
 
@@ -94,7 +94,7 @@ testthat::test_that('Test background generation for multiple species - i.e. for 
                      interpolation=interpolation,control=control)
   testthat::expect_is(parameters,'list')
 
-  dat <- qrbp:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
+  dat <- ppmData:::assembleQuadData(presences, backgroundsites$grid, sitecovariates, wts,
                                  coord, parameters, control=control)
   testthat::expect_is(dat,'list')
 

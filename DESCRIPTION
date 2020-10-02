@@ -1,4 +1,4 @@
-Package: qrbp
+Package: ppmData
 Type: Package
 Title: Quasirandom background point generation for Poisson point process models
 Version: 0.1.0

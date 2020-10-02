@@ -1,4 +1,4 @@
 library(testthat)
-library(qrbp)
+library(ppmData)
 
-test_check("qrbp")
+test_check("ppmData")

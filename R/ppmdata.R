@@ -29,8 +29,8 @@
 # #' Care should be taken with large dimensions as :1) the number of potential sampling sites needed for effective coverage starts to explode (curse of dimensionality);
 # #' and 2) the well-spaced behaviour of the Halton sequence starts to deteriorate.
 #' @examples
-#' library(qrbp)
-#' path <- system.file("extdata", package = "qrbp")
+#' library(ppmData)
+#' path <- system.file("extdata", package = "ppmData")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' preds <- raster::stack(lst)
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")

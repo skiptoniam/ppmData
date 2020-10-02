@@ -1,9 +1,9 @@
-context('Test qrbp for null species')
+context('Test ppmData for null species')
 
 testthat::test_that('Test background generation for null species - i.e. no species presences', {
 
   library(raster)
-  path <- system.file("extdata", package = "qrbp")
+  path <- system.file("extdata", package = "ppmData")
   lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
   preds <- raster::stack(lst)
   presences <- NULL

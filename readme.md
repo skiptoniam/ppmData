@@ -1,10 +1,10 @@
 [![Travis build
-status](https://travis-ci.com/skiptoniam/qrbp.svg?branch=master)](https://travis-ci.com/skiptoniam/qrbp)
+status](https://travis-ci.com/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.com/skiptoniam/ppmData)
 
 [![Codecov test
-coverage](https://codecov.io/gh/skiptoniam/qrbp/branch/master/graph/badge.svg)](https://codecov.io/gh/skiptoniam/qrbp?branch=master)
+coverage](https://codecov.io/gh/skiptoniam/ppmData/branch/master/graph/badge.svg)](https://codecov.io/gh/skiptoniam/ppmData?branch=master)
 
-## qrbp is temporary R package that will be ingested into [ecomix](https://github.com/skiptoniam/ecomix) for generating quasi random background points for multiple species Poisson point process models.
+## ppmData is temporary R package that will be ingested into [ecomix](https://github.com/skiptoniam/ecomix) for generating quasi random background points for multiple species Poisson point process models.
 
 The package aims to setup a model matrix for point process modelling for
 multiple species (marked) point processes. The package is based on the
