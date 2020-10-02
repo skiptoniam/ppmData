@@ -4,7 +4,7 @@ status](https://travis-ci.com/skiptoniam/ppmData.svg?branch=master)](https://tra
 [![Codecov test
 coverage](https://codecov.io/gh/skiptoniam/ppmData/branch/master/graph/badge.svg)](https://codecov.io/gh/skiptoniam/ppmData?branch=master)
 
-## ppmData is temporary R package that will be ingested into [ecomix](https://github.com/skiptoniam/ecomix) for generating quasi random background points for multiple species Poisson point process models.
+## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix).
 
 The package aims to setup a model matrix for point process modelling for
 multiple species (marked) point processes. The package is based on the
