@@ -86,7 +86,7 @@ ppmData <- function(npoints = 10000,
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
       wts <- getSinglespeciesWeights(pressies, bckpts, window = window, coord, mc.cores)
-      sitecovariates <- getCovariates(pbxy = wts,covariates = covariates, interpolation = interpolation, coord=coord)
+      sitecovariates <- getCovariates(pbxy = wts,covariates = covariates, interpolation="simple", coord=coord)
     }
 
 
