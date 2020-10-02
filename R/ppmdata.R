@@ -44,12 +44,7 @@ ppmData <- function(npoints = 10000,
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL){
 
-  interpolation='simple'
-
   ## Do some checks.
-  ####  SDF: Do we really need to check for duplicates?  I realise that this will be within species, but roundoff error could kill us?  Or are duplicates assumed to
-  ####  the the same observation recorded multiple times in the database?
-  ####  Note that this function also depends upon a very particular format for the presences data.  It might be wise to robustify?
   #presences <- checkDuplicates(presences,coord)
 
   ####  If not window is provided provide a dummy window
@@ -61,7 +56,7 @@ ppmData <- function(npoints = 10000,
                                          quasirandom.samples = quasirandom.samples)
 
    sitecovariates <- getCovariates(bckpts,covariates,
-                                   interpolation=interpolation,
+                                   interpolation="simple",
                                    coord=coord)
 
   } else {
@@ -86,7 +81,7 @@ ppmData <- function(npoints = 10000,
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       wts <- getMultispeciesWeights(presences = pressies, quadrature = bckpts, window = window,
                                            coord = coord, mc.cores = mc.cores)
-      sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
+      sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation="simple", coord=coord)
 
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
@@ -217,7 +212,7 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   inclusion_probs <- rep(1/Nsamps, Nsamps)
   inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
   inclusion_probs1[NAsamps] <- 0
-  
+
   #Spatially thin the sample which are NA sites in the raster window
   samp <- samp[samp[,3]<inclusion_probs1,1:2]
   if(nrow( samp) < npoints)
