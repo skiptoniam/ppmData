@@ -69,7 +69,7 @@ ppmData <- function(npoints = 10000,
   bckpts <- quasirandomMethod(npoints = npoints,  window = window,
                               covariates =  covariates,coord =  coord,
                               quasirandom.samples = quasirandom.samples)
-  #Skip: in the following aBit should be taken as half the size of a raster cell...  Please change.
+
   reswindow <- raster::res(window)[1]
   tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts, coord=coord, aBit=reswindow/2)
   pressies <- tmpPts$pressies
