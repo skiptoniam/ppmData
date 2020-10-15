@@ -9,11 +9,11 @@ Description: This package generates a quasi-random set of quadrature scheme wher
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.1
-Import: raster, deldir, MBHdesign
+Import: raster, deldir, MBHdesign, parallel
 Suggests: 
     testthat,
     knitr,
     rmarkdown,
     covr
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5.0)

@@ -1,9 +1,6 @@
 [![Travis build
 status](https://travis-ci.com/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.com/skiptoniam/ppmData)
 
-[![Codecov test
-coverage](https://codecov.io/gh/skiptoniam/ppmData/branch/master/graph/badge.svg)](https://codecov.io/gh/skiptoniam/ppmData?branch=master)
-
 ## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix).
 
 The package aims to setup a model matrix for point process modelling for
@@ -28,9 +25,6 @@ modelling) by reducing the amount of spatial auto-correlation between
 data implying that each sample is providing as much unique information
 as possible (Grafston & Tille, 2013) and thus reducing low errors for
 geostatistical prediction (Diggle & Ribeiro, 2007).
-
-For a worked example with single and multiple species presences see the
-package vignette.
 
 ### References
 
