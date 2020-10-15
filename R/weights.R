@@ -24,27 +24,30 @@ getWeights <- function( presences, quadrature, window, coord, mc.cores){
   all.boxes <- getBoxes( cuts1)
 
   #voronoi areas for first rotation, set up a cluster for parallel
-  cl <- parallel::makeCluster(mc.cores)
-  parallel::clusterEvalQ(cl, library("deldir"))
+  # cl <- parallel::makeCluster(mc.cores)
+  # parallel::clusterEvalQ(cl, library("deldir"))
 
-  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas1 <- do.call( "rbind", tmp)
 
   #cuts on unit square in arrangement 2
   cuts2 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[2]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[1]+1), ndivisions[2:1])
   all.boxes <- getBoxes( cuts2)
-  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas2 <- do.call( "rbind", tmp)
 
   #cuts on unit square in arrangement 3 (squares)
   ndivisions <- rep( ceiling( sqrt(nrow( allpts)/ptsPerArea)), 2)
   cuts3 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[1]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[2]+1), ndivisions)
   all.boxes <- getBoxes( cuts3)
-  tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas3 <- do.call( "rbind", tmp)
 
   #tidying
-  parallel::stopCluster(cl)
+  # parallel::stopCluster(cl)
 
   #put them both together
   allAreas <- merge( areas1, areas2, all=T, by="id", sort=TRUE)
@@ -77,7 +80,7 @@ areasWithinBoxes <- function(kounter, allpts, boxes){
     if(nrow(coordsDups)==1){
       res$area <- -99999
     } else {
-      res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,],round=FALSE,digits=12)$summary$dir.area
+      res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,],round=FALSE,digits=12, suppressMsge=TRUE)$summary$dir.area
     }
   } else {
     res$area <- -9999
@@ -148,13 +151,19 @@ getMultispeciesWeights <- function(presences, quadrature, window, coord, mc.core
   # sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
 
-  sppBckWtsList <- lapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)})
-  sppBckDatList <- lapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
-  sppCounts <- lapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
-  sppBckDatList <- lapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
-  sppWtsList <- lapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
+  cl <- parallel::makeCluster(mc.cores)
+  # parallel::clusterEvalQ(cl, library("deldir"))
+  parallel::clusterExport( cl, "deldir", envir = .getNamespace( "deldir"))
+  sppBckWtsList <- parallel::parLapply( cl,  seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)})
+  sppBckDatList <- parallel::parLapply( cl,  seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
+  sppCounts <- parallel::parLapply( cl, seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
+  sppBckDatList <- parallel::parLapply( cl, seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
+  sppWtsList <- parallel::parLapply( cl, seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
                                                                     wts=sppBckWtsList[[ii]]))
+
+  parallel::stopCluster(cl)
+
  dat <- do.call(rbind,sppWtsList)
  df <- getSiteID(dat,coord)
  return(df)

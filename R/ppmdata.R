@@ -1,7 +1,12 @@
 #' @name ppmData
 #' @title Create a spatial point Process dataset for spatial modelling.
 #' @description Creates a point process data object for modelling Point Process presence-only datasets.
-#' Generates a quadrature scheme based on Berman & Turner 1992; Warton & Shepard 2010.
+#' The approach uses quasi-random sampling to generate a quadrature scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010).
+#' The weights each quasi-random point represents is calculated using a dirichlet tesselation (Turner 2020).
+#' To improve comptational efficiency of the using the deldir (Turner 2020) function for a large number of points,
+#' we break the study area up into subregions. We do this, to keep the number point per deldir run at < 5000 pts
+#' (which appears to be the point where the algorithm slowes noticibly). To avoid edge effect (large areas on the edges of sub-areas),
+#' we rotate the subregions three times, the first time using the two primate number closest to (number of total quadrature points/5000)
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @details This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
 #' Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space.
