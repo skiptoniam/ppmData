@@ -15,7 +15,7 @@ ppmData(
 )
 }
 \arguments{
-\item{npoints}{The number of background points to generate.}
+\item{npoints}{The number of quadrature points to generate.}
 
 \item{presences}{a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3)
 with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
@@ -34,9 +34,6 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 The default is 10000, which means that 10000 halton numbers are drawn and then thinned according to the inclusion probabilities.
 You will need to increase the number of samples if sampling across > 2 dimensions or selecting a large number of background points.
 The more quasirandomSample selected the slower the background point generation will be.}
-
-\item{interpolation}{either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
-'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.}
 }
 \description{
 Creates a point process data object for modelling Point Process presence-only datasets.
@@ -51,7 +48,7 @@ The function can generate a quadrature scheme for a regular grid, quasi-random o
 \details{
 This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
 Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space.
-This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
+This in turn should reduce autocorrelation in quadrature scheme. The weight of each quadrature point is calculated using Dirichlet (Voronoi) Tessellation.
 }
 \examples{
 library(ppmData)

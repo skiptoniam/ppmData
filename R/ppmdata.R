@@ -10,9 +10,9 @@
 #' The function can generate a quadrature scheme for a regular grid, quasi-random or random points.
 #' @details This package is a way to efficiently generate a quasirandom set of background points for presence-only modelling of single or multiple respones. The package was set up to model muliple species presence-only datasets, but could be used for an point process spatial modelling.
 #' Quasirandom points are a nice alternative to pseudorandom samples, this is because we can generate a quasirandom sample across and areal region (X and Y coordinates), but we can also extend the dimensions of the quasirandom sample to a N-dimensional hypervolume, which will allow users to effectively sample the spatial and environmental space.
-#' This in turn should reduce autocorrelation in spatial or environmental covariates in the models. or spatial modelling. a quadrature weighting scheme using Dirichlet (Voronoi) Tessellation to c
+#' This in turn should reduce autocorrelation in quadrature scheme. The weight of each quadrature point is calculated using Dirichlet (Voronoi) Tessellation.
 #' @export
-#' @param npoints The number of background points to generate.
+#' @param npoints The number of quadrature points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints object giving the coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude, Y is latitude and SpeciesID is a integer, character or factor which assoicates each point to a species.
 #' If presences parameter is NULL then ppmDat will return the quadrature (background) points without presences.
@@ -22,8 +22,6 @@
 # #' @param resolution resolution setup grid for integration points (default is 1 deg) - but this need to be setup  with reference to original raster resolution.
 ## #' @param method the type of method that should be used to generate background points. The options are:
 ## #' 'quasirandom' generates quasirandom background points. See Bratley & Fox 1998 or Foster etal 2015 for details.
-#' @param interpolation either 'simple' or 'bilinear' and this determines the interpolation method for interpolating data across different cell resolutions.
-#' 'simple' is nearest neighbour, 'bilinear' is bilinear interpolation.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
 #' @param mc.cores The number of cores to use in the processing to quasirandom points and weighting scheme.
 #' @param quasirandom.samples This set the total number of samples to consider in the BAS step (rejection sampling).
