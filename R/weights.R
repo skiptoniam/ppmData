@@ -144,25 +144,13 @@ getMultispeciesWeights <- function(presences, quadrature, window, coord, mc.core
   quadrature$OrigOrder <- seq_len(nrow(quadrature))+max(presences$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  # sppBckWtsList <- parallel::mclapply( seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, coord, mc.cores)})
-  # sppBckDatList <- parallel::mclapply( seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)
-  # sppCounts <- parallel::mclapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
-  # sppBckDatList <- parallel::mclapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
-  # sppWtsList <- parallel::mclapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
-                                                                    # pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
-
-  cl <- parallel::makeCluster(mc.cores)
-  # parallel::clusterEvalQ(cl, library("deldir"))
-  parallel::clusterExport( cl, "deldir", envir = .getNamespace( "deldir"))
-  sppBckWtsList <- parallel::parLapply( cl,  seq_len(nspp), function(ii) {cat( ii, " "); getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)})
-  sppBckDatList <- parallel::parLapply( cl,  seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord)                                                                    # wts=sppBckWtsList[[ii]]))
-  sppCounts <- parallel::parLapply( cl, seq_len(nspp),function(ii)nrow(sppdata[[ii]]))
-  sppBckDatList <- parallel::parLapply( cl, seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]})
-  sppWtsList <- parallel::parLapply( cl, seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
+  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)},.parallel = mc.cores, .verbose = FALSE)
+  sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, .parallel = mc.cores, .verbose = FALSE)
+  sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
+  sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)
+  sppWtsList <- plapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
                                                                     pres=c(rep(1,sppCounts[[ii]]),rep(0,nrow(quadrature))),
-                                                                    wts=sppBckWtsList[[ii]]))
-
-  parallel::stopCluster(cl)
+                                                                    wts=sppBckWtsList[[ii]]),.parallel = mc.cores, .verbose = FALSE)
 
  dat <- do.call(rbind,sppWtsList)
  df <- getSiteID(dat,coord)
