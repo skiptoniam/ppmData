@@ -10,6 +10,7 @@ License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.1
 Import: raster, deldir, MBHdesign, parallel
+Imports: Rdpack
 Suggests: 
     testthat,
     knitr,
