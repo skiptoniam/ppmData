@@ -11,10 +11,5 @@ LazyData: TRUE
 RoxygenNote: 7.1.1
 Import: raster, deldir, MBHdesign, parallel
 Imports: Rdpack
-Suggests: 
-    testthat,
-    knitr,
-    rmarkdown,
-    covr
-Depends: 
-    R (>= 3.5.0)
+Suggests: knitr, rmarkdown
+Depends: R (>= 3.5.0)

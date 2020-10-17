@@ -4,13 +4,31 @@ output:
     variant: gfm
 ---
 
-[![Travis build status](https://travis-ci.com/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.com/skiptoniam/ppmData)
+[![Travis build status](https://travis-ci.org/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.org/skiptoniam/ppmData)
   
-## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix).
+## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) or for other multiple species Point Processes.
 
-The package aims to setup a model matrix for point process modelling for multiple species (marked) point processes. The package is based on the quadrature scheme proposed by Berman & Turner 1993, and Warton & Shepard 2010. The idea behind this package is simple, provided a set of presences for a species (or multiple species) and a spatial region, we can generate generate a model matrix which can be included in a Poisson point process model.  The code does provide the ability to produce a background point data-set without the inclusion of presences (a dummy grid) or for single species (which was developed as a proof of concept for the multispecies approach).
-
-We also provide the capacity to generate quasi-random points are an alternative to grid-based or random background point designs. Quasi-random (sampling) background points are an advanced form of spatially-balanced survey design or point stratification, that aims to reduce the frequency of placing samples close to each other (relative to simple randomization or grid designs). A quasi-random background point design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial auto-correlation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007).
+The approach uses quasi-random sampling to generate a quadrature
+scheme based (e.g Berman & Turner 1992; Foster et al, 2017). Quasi-random 
+sampling quadrature are form of spatially-balanced survey design or 
+point stratification, that aims to reduce the frequency of placing samples 
+close to each other (relative to pseudo-random or grid designs). A 
+quasi-random quadrature design improves efficiency of background point 
+sampling (and subsequent modelling) by reducing the amount of spatial 
+auto-correlation between data implying that each sample is providing as much 
+unique information as possible (Grafston & Tille, 2013) and thus reducing low 
+errors for geostatistical prediction (Diggle & Ribeiro, 2007).
+The weights each quasi-random point in the quadrature scheme is calculated 
+using a dirichlet tesselation (Turner 2020). To improve comptational efficiency 
+\link[deldir]{deldir} funcion for a large number of of quadrature points, we 
+set up an approach which breaks up the problem into manageable sub-windows. 
+We do this by keeping each deldir call to less that 5000 points (which appears 
+to be the point where the algorithm slowes noticibly). To avoid edge effect 
+(large areas on the edges of sub-areas), we rotate the subregions three times, 
+the first two use a set of prime number to closest to total number of points 
+(presences+quadrature points) divided by 5000. This allows us to split the study
+region in to an subsetable number of subwindows. We then take the median weight 
+across all weight calculated for each point. 
 
 ### References 
 
