@@ -4,7 +4,7 @@ status](https://travis-ci.org/skiptoniam/ppmData.svg?branch=master)](https://tra
 ## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) or for other multiple species Point Processes.
 
 The approach uses quasi-random sampling to generate a quadrature scheme
-based (e.g Berman & Turner 1992; Foster et al, 2017). Quasi-random
+based (e.g Berman & Turner 1992; Foster et al, 2018). Quasi-random
 sampling quadrature are form of spatially-balanced survey design or
 point stratification, that aims to reduce the frequency of placing
 samples close to each other (relative to pseudo-random or grid designs).
@@ -31,9 +31,15 @@ the median weight across all weight calculated for each point.
 Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series
 in Statistics. Springer, 2007.
 
+Foster, S.D., Monk, J., Lawrence, E., Hayes, K.R., Hosack, G.R. and
+Przeslawski, R., 2018. Statistical Considerations for Monitoring and
+Sampling.
+
 Grafstrom, Anton, and Yves Tille. “Doubly balanced spatial sampling with
 spreading and restitution of auxiliary totals.” Environmetrics 24.2
 (2013): 120-131.
+
+Turner, Rolf, “Package ‘deldir’.” (2020).
 
 Warton, D. I., and L. C. Shepherd. “Poisson point process models solve
 the pseudo-absence problem for presence-only data in ecology.” The
