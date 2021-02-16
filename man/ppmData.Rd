@@ -10,6 +10,7 @@ ppmData(
   window = NULL,
   covariates = NULL,
   coord = c("X", "Y"),
+  speciesIdx = "SpeciesID",
   mc.cores = parallel::detectCores() - 1,
   quasirandom.samples = NULL
 )
@@ -33,6 +34,9 @@ point process (best use a Raster stack or Raster brick).}
 
 \item{coord}{is the name of site coordinates. The default is c('X','Y').}
 
+\item{speciesIdx}{is the name of the species ID in the presences dataset.
+The default is "SpeciesID".}
+
 \item{mc.cores}{The number of cores to use in the processing. default is
 parallel::detectCores()-1}
 
@@ -45,8 +49,8 @@ slower the quasirandom quadrature scheme will be.}
 }
 \description{
 This package is a way to efficiently generate a quasirandom set
-of background points for presence-only modelling of single or multiple
-respones. The package was set up to model muliple species presence-only
+of background points for presence-only modeling of single or multiple
+responses. The package was set up to model multiple species presence-only
 datasets, but could be used for an point process spatial modelling.
 Quasirandom points are a nice alternative to pseudorandom samples, this is
 because we can generate a quasirandom sample across and areal region
@@ -61,19 +65,19 @@ the \link[deldir]{deldir} function.
 The approach uses quasi-random sampling to generate a quadrature
 scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 Foster et al, 2017). The weights each quasi-random point in the quadrature
-scheme is calculated using a dirichlet tesselation (Turner 2020). To improve
-comptational efficiency \link[deldir]{deldir} funcion for a large number of
+scheme is calculated using a dirichlet tessellation (Turner 2020). To improve
+computational efficiency \link[deldir]{deldir} funcion for a large number of
 of quadrature points, we set up an approach which breaks up the problem into
 manageable sub-windows. We do this by keeping each deldir call to less that
-5000 points (which appears to be the point where the algorithm slowes
-noticibly). To avoid edge effect (large areas on the edges of sub-areas),
+5000 points (which appears to be the point where the algorithm slows
+noticeably). To avoid edge effect (large areas on the edges of sub-areas),
 we rotate the subregions three times, the first two use a the nearest largest
 prime number closest to total number of points (presences+quadrature points)
 divided by 5000, which allows us to rotate the windon on the x and y axis
-with an subsetable number of subwindows. We then caculate a third set of sub-
+with an subsetable number of subwindows. We then calculate a third set of sub-
 windows using a even set of squares. We then take the median weight across
 all weight calculated for each point. We then can calculate this in parallel
-for each species to make it computationlly more efficient.
+for each species to make it computationally more efficient.
 }
 \examples{
 \dontrun{
@@ -84,5 +88,6 @@ lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- stack(lst)
 window <- preds[[1]]
 presences <- snails
-bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)}
+bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
+}
 }

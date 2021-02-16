@@ -1,8 +1,8 @@
 #' @name ppmData
 #' @title Create a point process quadrature scheme for spatial modelling.
 #' @description This package is a way to efficiently generate a quasirandom set
-#' of background points for presence-only modelling of single or multiple
-#' respones. The package was set up to model muliple species presence-only
+#' of background points for presence-only modeling of single or multiple
+#' responses. The package was set up to model multiple species presence-only
 #' datasets, but could be used for an point process spatial modelling.
 #' Quasirandom points are a nice alternative to pseudorandom samples, this is
 #' because we can generate a quasirandom sample across and areal region
@@ -15,19 +15,19 @@
 #' @details The approach uses quasi-random sampling to generate a quadrature
 #' scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 #' Foster et al, 2017). The weights each quasi-random point in the quadrature
-#' scheme is calculated using a dirichlet tesselation (Turner 2020). To improve
-#' comptational efficiency \link[deldir]{deldir} funcion for a large number of
+#' scheme is calculated using a dirichlet tessellation (Turner 2020). To improve
+#' computational efficiency \link[deldir]{deldir} funcion for a large number of
 #' of quadrature points, we set up an approach which breaks up the problem into
 #' manageable sub-windows. We do this by keeping each deldir call to less that
-#' 5000 points (which appears to be the point where the algorithm slowes
-#' noticibly). To avoid edge effect (large areas on the edges of sub-areas),
+#' 5000 points (which appears to be the point where the algorithm slows
+#' noticeably). To avoid edge effect (large areas on the edges of sub-areas),
 #' we rotate the subregions three times, the first two use a the nearest largest
 #' prime number closest to total number of points (presences+quadrature points)
 #' divided by 5000, which allows us to rotate the windon on the x and y axis
-#' with an subsetable number of subwindows. We then caculate a third set of sub-
+#' with an subsetable number of subwindows. We then calculate a third set of sub-
 #' windows using a even set of squares. We then take the median weight across
 #' all weight calculated for each point. We then can calculate this in parallel
-#' for each species to make it computationlly more efficient.
+#' for each species to make it computationally more efficient.
 #' @export
 #' @param npoints The number of quadrature points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints object giving the
@@ -42,6 +42,8 @@
 #' @param covariates A raster object containing covariates for modelling the
 #' point process (best use a Raster stack or Raster brick).
 #' @param coord is the name of site coordinates. The default is c('X','Y').
+#' @param speciesIdx is the name of the species ID in the presences dataset.
+#' The default is "SpeciesID".
 #' @param mc.cores The number of cores to use in the processing. default is
 #' parallel::detectCores()-1
 #' @param quasirandom.samples This set the total number of samples to consider
@@ -59,13 +61,15 @@
 #' preds <- stack(lst)
 #' window <- preds[[1]]
 #' presences <- snails
-#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)}
+#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
+#' }
 
 ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
                     coord = c('X','Y'),
+                    speciesIdx = "SpeciesID",
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL){
 
@@ -73,7 +77,7 @@ ppmData <- function(npoints = 10000,
   #presences <- checkDuplicates(presences,coord)
 
   ####  If not window is provided provide a dummy window
-  window <- checkWindow(presences,window)
+  window <- ppmData:::checkWindow(presences,window)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -86,7 +90,7 @@ ppmData <- function(npoints = 10000,
 
   } else {
 
-  pressies <- coordMatchDim(presences,coord,3)
+  pressies <- ppmData:::coordMatchDim(presences,coord,speciesIdx)
 
   sppNames <- getSppNames(pressies)
 
@@ -251,44 +255,22 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   return(as.data.frame(randpoints))
 }
 
-coordMatchDim <- function (known.sites,coord,dimension){
+coordMatchDim <- function (known.sites,coord,speciesIdx){
 
   # check object classes
   expectClasses(known.sites,
                 c('matrix',
-                  'data.frame',
-                  'SpatialPoints',
-                  'SpatialPointsDataFrame'),
+                  'data.frame'),
                 name = 'known.sites')
 
-  if (is.matrix(known.sites) | is.data.frame(known.sites)) {
 
-    # for matrices/dataframes, make sure there are only two columns
-    if (ncol(known.sites) != dimension ) {
-      stop (sprintf('known.sites should match the number of dimensions used in quasi-random sampling.
-                    The object passed had %i columns, while the sampling dimensions are %i',NCOL(known.sites),dimension))
-    }
+  if(!any(colnames(known.sites)%in%speciesIdx))
+    stop("'speciesIdx' does not match any of the column names in your presences data.\n")
+  if(!any(colnames(known.sites)%in%coord))
+    stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
 
-    # otherwise, coerce into a data.frame and rename the columns
-    df <- data.frame(known.sites)
+  df <- known.sites[,c(coord,speciesIdx)]
 
-    } else {
-      # otherwise, for SpatialPoints* objects, just grab the coordinates
-      df <- data.frame(known.sites@coords)
-    }
-
-  # set column names
-  if (ncol(known.sites)>2) {
-####SDF please consider what you want this to do..  Do you want only 3 cols to the result?  Do you want the spp to be labeled as SpeciesID?
-####It seems that some of the rest of the code falls over if the third column is something other than SpeciesID...
-
-#    if(!is.null(colnames(known.sites)))
-#      colnames(df) <- c(coord,colnames(known.sites)[!colnames( known.sites) %in% coord])
-#    else
-      colnames(df) <- c(coord,'SpeciesID')#note that this makes some pretty uncomfortable assumptions about the number of columns...
-  } else {
-    colnames(df) <- coord
-  }
   return (df)
 }
 
@@ -310,7 +292,8 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
 getSppNames <- function(presences){
 
   sppIdx <- list()
-  sppIdx$sppNames <- unique(droplevels(presences$SpeciesID))
+  sppIdx$sppNames <- unique(presences$SpeciesID)
+  if(is.factor(sppIdx$sppNames)) sppIdx$sppNames <- droplevels(sppIdx$sppNames)
   sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
 
   return(sppIdx)
