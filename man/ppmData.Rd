@@ -12,7 +12,8 @@ ppmData(
   coord = c("X", "Y"),
   speciesIdx = "SpeciesID",
   mc.cores = parallel::detectCores() - 1,
-  quasirandom.samples = NULL
+  quasirandom.samples = NULL,
+  interpolation = "simple"
 )
 }
 \arguments{
@@ -45,14 +46,16 @@ in the BAS step (rejection sampling). The default is 10000, which means that
 10000 halton numbers are drawn and then thinned according to the inclusion
 probabilities. You will need to increase the number of samples if selecting
 a large number of quadrature points. The more quasirandomSample selected the
-slower the quasirandom quadrature scheme will be.}
+slower the quasirandom quadrature scheme will be to generate.}
+
+\item{interpolation}{The interpolation method to use when extracting covariate data. Default is "simple", can also use "bilinear".}
 }
 \description{
 This package is a way to efficiently generate a quasirandom set
-of background points for presence-only modeling of single or multiple
+of background points for presence-only modelling of single or multiple
 responses. The package was set up to model multiple species presence-only
 datasets, but could be used for an point process spatial modelling.
-Quasirandom points are a nice alternative to pseudorandom samples, this is
+Quasi-random points are a nice alternative to pseudo-random samples, this is
 because we can generate a quasirandom sample across and areal region
 (X and Y coordinates), but we can also extend the dimensions of the
 quasirandom sample to a N-dimensional hypervolume, which will allow users to
@@ -66,15 +69,15 @@ The approach uses quasi-random sampling to generate a quadrature
 scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 Foster et al, 2017). The weights each quasi-random point in the quadrature
 scheme is calculated using a dirichlet tessellation (Turner 2020). To improve
-computational efficiency \link[deldir]{deldir} funcion for a large number of
+computational efficiency \link[deldir]{deldir} function for a large number of
 of quadrature points, we set up an approach which breaks up the problem into
 manageable sub-windows. We do this by keeping each deldir call to less that
 5000 points (which appears to be the point where the algorithm slows
 noticeably). To avoid edge effect (large areas on the edges of sub-areas),
 we rotate the subregions three times, the first two use a the nearest largest
 prime number closest to total number of points (presences+quadrature points)
-divided by 5000, which allows us to rotate the windon on the x and y axis
-with an subsetable number of subwindows. We then calculate a third set of sub-
+divided by 5000, which allows us to rotate the window on the x and y axis
+with an subset of the sub-windows. We then calculate a third set of sub-
 windows using a even set of squares. We then take the median weight across
 all weight calculated for each point. We then can calculate this in parallel
 for each species to make it computationally more efficient.

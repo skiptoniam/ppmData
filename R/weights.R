@@ -1,11 +1,17 @@
 
-getWeights <- function( presences, quadrature, window, coord, mc.cores){
+getWeights <- function( presences, quadrature, quadDummy, window, coord, mc.cores){
 
-  allpts <- rbind(presences[,coord], quadrature[,coord])
-  window_ext <- convert2pts(window)
+  if(!is.null(quadDummy)) {
+    allpts.id <- rbind(presences, quadrature, quadDummy)
+    allpts <- allpts.id[,coord]
+  } else {
+    allpts <- rbind(presences[,coord], quadrature[,coord])
+  }
+  window_ext <- convert2pts(allpts)
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
+  allpts$dataset <- allpts.id$SpeciesID
 
   ##generate some dummy points around allpts - doesn't work very well for odd shaped things.
   ptsPerArea <- 5000
@@ -14,9 +20,9 @@ getWeights <- function( presences, quadrature, window, coord, mc.cores){
   prod.primmy[upper.tri(prod.primmy)] <- Inf
   diag( prod.primmy) <- Inf
 
-  tmp <- apply( prod.primmy, 1, function(xx) which.min( abs( xx - nrow( allpts))))
+  tmp <- apply( prod.primmy, 1, function(xx) which.min( abs( xx*ptsPerArea - nrow( allpts))))
   tmp.id <- cbind( 1:nrow( prod.primmy), tmp)
-  min.id <- which.min( abs( prod.primmy[tmp.id]-nrow( allpts)))
+  min.id <- which.min( abs( prod.primmy[tmp.id]*ptsPerArea-nrow( allpts)))
   ndivisions <- primmy[tmp.id[min.id,]]
 
   #cuts on unit square in arrangement 1
@@ -24,47 +30,38 @@ getWeights <- function( presences, quadrature, window, coord, mc.cores){
   all.boxes <- getBoxes( cuts1)
 
   #voronoi areas for first rotation, set up a cluster for parallel
-  # cl <- parallel::makeCluster(mc.cores)
-  # parallel::clusterEvalQ(cl, library("deldir"))
-
-  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
   areas1 <- do.call( "rbind", tmp)
 
   #cuts on unit square in arrangement 2
   cuts2 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[2]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[1]+1), ndivisions[2:1])
-  all.boxes <- getBoxes( cuts2)
-  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
-  tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  all.boxes2 <- getBoxes( cuts2)
+  tmp <- lapply(seq_len(nrow(all.boxes2)), areasWithinBoxes, allpts=allpts, boxes=all.boxes2)
   areas2 <- do.call( "rbind", tmp)
 
   #cuts on unit square in arrangement 3 (squares)
   ndivisions <- rep( ceiling( sqrt(nrow( allpts)/ptsPerArea)), 2)
   cuts3 <- list( seq( from=window_ext[1], to=window_ext[2], length=ndivisions[1]+1), seq( from=window_ext[3], to=window_ext[4], length=ndivisions[2]+1), ndivisions)
-  all.boxes <- getBoxes( cuts3)
-  # tmp <- parallel::parLapply( cl, seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
-  tmp <- lapply(seq_len(nrow(all.boxes)), areasWithinBoxes, allpts=allpts, boxes=all.boxes)
+  all.boxes3 <- getBoxes( cuts3)
+  tmp <- lapply(seq_len(nrow(all.boxes3)), areasWithinBoxes, allpts=allpts, boxes=all.boxes3)
   areas3 <- do.call( "rbind", tmp)
 
-  #tidying
-  # parallel::stopCluster(cl)
-
   #put them both together
-  allAreas <- merge( areas1, areas2, all=T, by="id", sort=TRUE)
+  allAreas <- merge( areas1, areas2, all=TRUE, by="id", sort=TRUE)
   allAreas <- merge( allAreas, areas3, all=TRUE, by='id', sort=TRUE)
   allAreas[allAreas==-99999] <- NA
 
   # remove really extreme areas - this is quite slow.
-  # quant99 <- apply( allAreas[,-1], 1, quantile, .99, na.rm=TRUE)
-  # res <- cbind( allAreas$id, apply(allAreas[,-1], 1, function(x) median(x[x>=quant99[parent.frame()$i[]]], na.rm=TRUE)))
   res <- cbind( allAreas$id, apply(allAreas[,-1], 1, median, na.rm=TRUE))
   colnames( res) <- c("id","area")
 
   #form the return object
-  res <- merge( allpts, res, by='id', all=TRUE, sort=TRUE)
+  res <- merge(allpts, res, by='id', all=TRUE, sort=TRUE)
+
+  ## now drop the dummy sites
+  res <- res[!res$dataset=="dummy",]
 
   return( res)
-
 }
 
 areasWithinBoxes <- function(kounter, allpts, boxes){
@@ -83,7 +80,7 @@ areasWithinBoxes <- function(kounter, allpts, boxes){
       res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,],round=FALSE,digits=12, suppressMsge=TRUE)$summary$dir.area
     }
   } else {
-    res$area <- -9999
+    res$area <- -99999
   }
   return( res[subsetty,])
 }
@@ -106,19 +103,16 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, quadrature, window, coord, mc.cores){
+getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, coord, mc.cores){
 
   quadrature$SpeciesID <- "quad"
-  wts <- getWeights(presences, quadrature, window, coord, mc.cores)
-  pbxy <- rbind(presences[,coord],quadrature[,coord])
-  pbxy$OrigOrder <- seq_len(nrow(pbxy))
-  pbxy$DatasetID <- 1
-  dat <- cbind(pbxy,
-               pres=c(rep(1,nrow(presences)),
-                     rep(0,nrow(quadrature))),
-               wts=wts)
-
-  df <- getSiteID(dat,coord)
+  quadDummy$SpeciesID <- "dummy"
+  wts <- getWeights(presences, quadrature, quadDummy, window, coord, mc.cores)
+  wts$OrigOrder <- wts$id
+  wts$DatasetID <- 1
+  wts$pres <- ifelse(wts$dataset=="quad",0,1)
+  colnames(wts)[which(colnames(wts)=="area")] <- "wts"
+  df <- getSiteID(wts,coord)
   return(df)
 }
 
@@ -135,16 +129,18 @@ combineDF.fun <- function( ii, xxx, yyy, coords){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, quadrature, window, coord, mc.cores){
+getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coord, mc.cores){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,"SpeciesID"]))
   spps <- unique(presences[,"SpeciesID"])
   quadrature$SpeciesID <- "quad"
+  quadDummy$SpeciesID <- "dummy"
   quadrature$OrigOrder <- seq_len(nrow(quadrature))+max(presences$OrigOrder)
+  quadDummy$OrigOrder <- seq_len(nrow(quadDummy))+max(quadrature$OrigOrder)
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
 
-  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, window, coord, mc.cores)},.parallel = mc.cores, .verbose = FALSE)
+  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, quadDummy, window, coord, mc.cores)},.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, .parallel = mc.cores, .verbose = FALSE)
   sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)
@@ -166,22 +162,6 @@ getSiteID <- function(dat,coord){
   }
   df <- stidfn(dat,c(coord,'pres'))
   return(df)
-}
-
-#estimate the total area of all cells in extent in km^2
-estimateWindowArea <- function(window){
-  if(raster::isLonLat(window)){
-    #calculate area based on area function
-    #convert kms to ms
-    area_rast <- raster::area(window)
-    area_study <- raster::mask(area_rast,window)
-    area_of_region <- raster::cellStats(area_study,sum, na.rm=TRUE)*1e+6
-  } else {
-    # calculate area based on equal area cell resolution
-    # mode equal area should be in meters
-    area_of_region <- (raster::ncell(window[!is.na(window)])  * raster::xres(window) * raster::yres(window))
-  }
-  return(area_of_region)
 }
 
 convert2pts <- function( window) {
