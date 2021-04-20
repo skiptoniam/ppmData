@@ -1,4 +1,4 @@
-#' @name ppmData
+#' @name ppmdata
 #' @title Create a point process quadrature scheme for spatial modelling.
 #' @description This package is a way to efficiently generate a quasirandom set
 #' of background points for presence-only modelling of single or multiple
@@ -55,17 +55,17 @@
 #' @param interpolation The interpolation method to use when extracting covariate data. Default is "bilinear", can also use "simple".
 #' @examples
 #' \dontrun{
-#' library(ppmData)
+#' library(ppmdata)
 #' library(raster)
-#' path <- system.file("extdata", package = "ppmData")
+#' path <- system.file("extdata", package = "ppmdata")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' preds <- stack(lst)
 #' window <- preds[[1]]
 #' presences <- snails
-#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
+#' bkgrid <- ppmdata(npoints = 1000, presences=presences, window = window, covariates = preds)
 #' }
 
-ppmData <- function(npoints = 10000,
+ppmdata <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
@@ -99,7 +99,7 @@ ppmData <- function(npoints = 10000,
                             speciesIdx = speciesIdx)
 
   # Hold onto the species names from the speciesIdx column
-  sppNames <- getSppNames(pressies)
+  sppNames <- getSppNames(pressies, speciesIdx)
 
   # create some quasirandom background points
   bckpts <- quasirandomMethod(npoints = npoints,
@@ -116,7 +116,7 @@ ppmData <- function(npoints = 10000,
   bckptsD <- bckpts$quasiDummy
 
   # Check to see if the presences are for a single species or multiple.
-  ismulti <- checkMultispecies(pressies)
+  ismulti <- checkMultispecies(pressies, speciesIdx)
 
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
@@ -147,11 +147,11 @@ ppmData <- function(npoints = 10000,
   if(!is.null(covariates)) covarNames <- names(covariates)
   coordNames <- coord
   if(ismulti){
-     datOut <- transpose_ppmData(dat, sppNames, coordNames, covarNames)
-     class(datOut) <- c("ppmData","multiple.species")
+     datOut <- transpose_ppmdata(dat, sppNames, coordNames, covarNames)
+     class(datOut) <- c("ppmdata","multiple.species")
   } else {
     datOut <- list(dat)
-    class(datOut) <- c("ppmData","single.species")
+    class(datOut) <- c("ppmdata","single.species")
   }
 
   return(datOut)
@@ -186,7 +186,7 @@ jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-4){
 
 assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord){
 
-  ismulti <- checkMultispecies(presences)
+  ismulti <- checkMultispecies(presences, speciesIdx)
 
   if(!ismulti) type <- "long"
   else type <- "wide"
@@ -256,8 +256,11 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
 
   exty <- raster::extent( window)
   study.area <- matrix( as.vector( exty)[c( 1,2,2,1, 3,3,4,4)], nrow=4, ncol=2)
+
   #this gives many many samples, unless the study region is an odd shape, which it shouldn't be (as it is just an extent at this stage)
-  samp <- MBHdesign:::quasiSamp_fromhyperRect( nSampsToConsider=quasirandom.samples, randStartType=2, designParams=list(dimension=2,study.area=study.area))
+  samp <- MBHdesign:::quasiSamp_fromhyperRect(nSampsToConsider=quasirandom.samples,
+                                              randStartType=2,
+                                              designParams=list(dimension=2,study.area=study.area))
 
   ## setup the inclusion probs.
   sampValues <- extract(window,samp[,1:2])
@@ -331,10 +334,10 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
 
 
 
-getSppNames <- function(presences){
+getSppNames <- function(presences, speciesIdx){
 
   sppIdx <- list()
-  sppIdx$sppNames <- unique(presences$SpeciesID)
+  sppIdx$sppNames <- unique(presences[,speciesIdx])
   if(is.factor(sppIdx$sppNames)) sppIdx$sppNames <- droplevels(sppIdx$sppNames)
   sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
 
@@ -358,26 +361,25 @@ checkCovariates <- function(covariates){
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
-checkDuplicates <- function(presences,coord){
-  if(is.null(presences))return(NULL)
-  dups <- duplicated(presences)
-  if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
-  dat <- presences[!dups,]
-  } else {
-  dat <- presences
-  }
-  dat <- as.data.frame(dat)
-  colnames(dat) <- c(coord,"SpeciesID")
-  dat
-}
+# checkDuplicates <- function(presences, coord, speciesIdx){
+#   if(is.null(presences))return(NULL)
+#   dups <- duplicated(presences)
+#   if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
+#   dat <- presences[!dups,]
+#   } else {
+#   dat <- presences
+#   }
+#   dat <- as.data.frame(dat)
+#   colnames(dat) <- c(coord, speciesIdx)
+#   dat
+# }
 
 ## check to see if the presences dataset is multispecies.
-checkMultispecies <- function(presences){
-  if(length(unique(presences[,"SpeciesID"]))>1) multi <- TRUE
+checkMultispecies <- function(presences, speciesIdx){
+  if(length(unique(presences[,speciesIdx]))>1) multi <- TRUE
   else multi <- FALSE
   multi
 }
-
 
 checkWindow <- function(presences,window,coord){
 
@@ -413,14 +415,14 @@ defaultWindow <- function (presences,coord) {
 }
 
 
-fastwidemat <- function(dat){
+fastwidemat <- function(dat, speciesIdx){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
-  dat[,"SpeciesID"] <- factor(dat[,"SpeciesID"])
+  dat[,speciesIdx] <- factor(dat[,speciesIdx])
 
   result <- with(dat, {
-    out <- matrix(nrow=nlevels(OrigOrder), ncol=nlevels(SpeciesID),
-                  dimnames=list(levels(OrigOrder), levels(SpeciesID)))
+    out <- matrix(nrow=nlevels(OrigOrder), ncol=nlevels(speciesIdx),
+                  dimnames=list(levels(OrigOrder), levels(speciesIdx)))
     out[cbind(OrigOrder, SpeciesID)] <- pres
     out
   })
@@ -444,7 +446,7 @@ fastwidematwts <- function(dat){
   wtsdat
 }
 
-transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
+transpose_ppmdata <- function( dat, sppNames, coordNames, covarNames){
 
   dat1 <- list()
   dat1$wts <- dat$wtsmat
@@ -454,7 +456,7 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
   dat1$y <- dat1$y[,my.ord]
   dat1$y <- as.matrix( dat1$y)
   dat1$covars <- dat$mm[idx,covarNames]
-  dat1$locations <- dat$mm[idx,coordNames] #passed to ppmData as coord argument
+  dat1$locations <- dat$mm[idx,coordNames] #passed to ppmdata as coord argument
   dat1$wts <- dat1$wts[idx,my.ord]
   dat1$z <- dat1$y / dat1$wts
   dat1$mm <- cbind(dat1$y,dat1$covars)
@@ -472,14 +474,14 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
 }
 
 
-#'@rdname print.ppmData
-#'@name print.ppmData
-#'@title Print a summary of ppmData object.
+#'@rdname print.ppmdata
+#'@name print.ppmdata
+#'@title Print a summary of ppmdata object.
 #'@param x A model object.
 #'@param \\dots Ignored
 #'@export
 
-print.ppmData <- function (x, ...){
+print.ppmdata <- function (x, ...){
 
     if(class(x)[2]%in%"single.species"){
 

@@ -15,16 +15,16 @@ much unique information as possible (Grafston & Tille, 2013) and thus
 reducing low errors for geostatistical prediction (Diggle & Ribeiro,
 2007). The weights each quasi-random point in the quadrature scheme is
 calculated using a dirichlet tesselation (Turner 2020). To improve
-comptational efficiency  funcion for a large number of of quadrature
+computational efficiency function for a large number of of quadrature
 points, we set up an approach which breaks up the problem into
 manageable sub-windows. We do this by keeping each deldir call to less
 that 5000 points (which appears to be the point where the algorithm
-slowes noticibly). To avoid edge effect (large areas on the edges of
+slows noticeably). To avoid edge effect (large areas on the edges of
 sub-areas), we rotate the subregions three times, the first two use a
 set of prime number to closest to total number of points
 (presences+quadrature points) divided by 5000. This allows us to split
-the study region in to an subsetable number of subwindows. We then take
-the median weight across all weight calculated for each point.
+the study region in sub-windows. We then take the median weight across
+all weight calculated for each point.
 
 ### References
 
@@ -39,7 +39,7 @@ Grafstrom, Anton, and Yves Tille. “Doubly balanced spatial sampling with
 spreading and restitution of auxiliary totals.” Environmetrics 24.2
 (2013): 120-131.
 
-Turner, Rolf, “Package ‘deldir’.” (2020).
+Turner, Rolf, “Package deldir” (2020).
 
 Warton, D. I., and L. C. Shepherd. “Poisson point process models solve
 the pseudo-absence problem for presence-only data in ecology.” The
