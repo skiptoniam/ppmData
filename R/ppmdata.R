@@ -52,7 +52,7 @@
 #' probabilities. You will need to increase the number of samples if selecting
 #' a large number of quadrature points. The more quasirandomSample selected the
 #' slower the quasirandom quadrature scheme will be to generate.
-#' @param interpolation The interpolation method to use when extracting covariate data. Default is "simple", can also use "bilinear".
+#' @param interpolation The interpolation method to use when extracting covariate data. Default is "bilinear", can also use "simple".
 #' @examples
 #' \dontrun{
 #' library(ppmData)
