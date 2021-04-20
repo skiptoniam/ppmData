@@ -76,7 +76,7 @@ ppmData <- function(npoints = 10000,
                     interpolation = "simple"){
 
   ####  If not window is provided provide a dummy window
-  window <- checkWindow(presences,window)
+  window <- checkWindow(presences,window,coord)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -389,9 +389,9 @@ checkWindow <- function(presences,window,coord){
 defaultWindow <- function (presences,coord) {
   # get limits
   xlim <- range(presences[,coord[1]])
-  ylim <- range(presences[,coord[1]])
+  ylim <- range(presences[,coord[2]])
 
-  # add on 5%
+  # buffer
   xlim <- xlim + c(-1, 1) * diff(xlim) * 0.1
   ylim <- ylim + c(-1, 1) * diff(ylim) * 0.1
 

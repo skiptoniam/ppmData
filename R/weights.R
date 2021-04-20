@@ -5,6 +5,7 @@ getWeights <- function( presences, quadrature, quadDummy, window, coord, mc.core
     allpts.id <- rbind(presences, quadrature, quadDummy)
     allpts <- allpts.id[,coord]
   } else {
+    allpts.id <- rbind(presences, quadrature)
     allpts <- rbind(presences[,coord], quadrature[,coord])
   }
   window_ext <- convert2pts(allpts)
