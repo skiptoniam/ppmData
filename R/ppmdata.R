@@ -73,7 +73,7 @@ ppmData <- function(npoints = 10000,
                     speciesIdx = "SpeciesID",
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL,
-                    interpolation = "simple"){
+                    interpolation = "bilinear"){
 
   ####  If not window is provided provide a dummy window
   window <- checkWindow(presences,window,coord)
@@ -120,10 +120,16 @@ ppmData <- function(npoints = 10000,
 
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences = pressies, quadrature = bckpts$quasiPoints,
+      wts <- getMultispeciesWeights(presences = pressies,
+                                    quadrature = bckpts$quasiPoints,
                                     quadDummy = bckpts$quasiDummy,
-                                    window = window, coord = coord, mc.cores = mc.cores)
-      sitecovariates <- getCovariates(pbxy = wts,covariates,interpolation=interpolation, coord=coord)
+                                    window = window, coord = coord,
+                                    mc.cores = mc.cores)
+
+      sitecovariates <- getCovariates(pbxy = wts,
+                                      covariates,
+                                      interpolation=interpolation,
+                                      coord=coord)
 
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
@@ -443,18 +449,19 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
   dat1 <- list()
   dat1$wts <- dat$wtsmat
   my.ord <- match(sppNames$sppNames,colnames(dat1$wts))#gtools::mixedorder( colnames( dat1$wts))
-  dat1$wts <- dat1$wts[,my.ord]
-  dat1$y <- dat$mm[,colnames( dat$mm) %in% colnames( dat1$wts)]
+  idx <- complete.cases(dat$mm[,covarNames])
+  dat1$y <- dat$mm[idx,colnames( dat$mm) %in% colnames( dat1$wts)]
   dat1$y <- dat1$y[,my.ord]
   dat1$y <- as.matrix( dat1$y)
+  dat1$covars <- dat$mm[idx,covarNames]
+  dat1$locations <- dat$mm[idx,coordNames] #passed to ppmData as coord argument
+  dat1$wts <- dat1$wts[idx,my.ord]
+  dat1$z <- dat1$y / dat1$wts
+  dat1$mm <- cbind(dat1$y,dat1$covars)
   # colnames(dat1$y) <- sppNames$sppNames[my.ord]
   # colnames(dat1$wts) <- sppNames$sppNames[my.ord]
 
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
-  dat1$locations <- dat$mm[,coordNames] #passed to ppmData as coord argument
-  dat1$covars <- dat$mm[,covarNames]
-  dat1$z <- dat1$y / dat1$wts
-
   dat1$nspp <- ncol( dat1$wts)
   dat1$m <- nrow( dat1$wts)
   dat1$sppNames <- colnames( dat1$wts)
@@ -463,6 +470,7 @@ transpose_ppmData <- function( dat, sppNames, coordNames, covarNames){
 
   return( dat1)
 }
+
 
 #'@rdname print.ppmData
 #'@name print.ppmData

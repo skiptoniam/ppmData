@@ -13,7 +13,7 @@ ppmData(
   speciesIdx = "SpeciesID",
   mc.cores = parallel::detectCores() - 1,
   quasirandom.samples = NULL,
-  interpolation = "simple"
+  interpolation = "bilinear"
 )
 }
 \arguments{
