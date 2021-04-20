@@ -307,7 +307,7 @@ coordMatchDim <- function (known.sites,coord,speciesIdx){
 
 
   if(!any(colnames(known.sites)%in%speciesIdx))
-    stop("'speciesIdx' does not match any of the column names in your presences data.\n")
+    stop("'speciesIdx': ",speciesIdx," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
 
