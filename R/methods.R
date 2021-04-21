@@ -5,9 +5,22 @@
 #' @param \\dots Ignored
 #' @export
 
+# x <- ppmdata1
+
 plot.ppmData <- function(x, ...){
 
-  plot(x$window)
+  # if(x$marked){
+  #
+  #   marks <- x$presences
+  #   # mark.sites <- x$p,]
+  #   # cbind(mark.sites, marks)
+  #
+  #
+  # }
+
+  raster::plot(x$window,legend=FALSE)
+  points(x$ppmData$locations[x$ppmData$bkg,],pch='.')
+  points(x$presences,col=as.numeric(as.factor(x$presences$SpeciesID)),pch=16,cex=0.8)
 
 
 

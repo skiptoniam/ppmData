@@ -178,7 +178,13 @@ ppmData <- function(npoints = 10000,
     res$marked <- FALSE
   }
 
+  if(!is.null(presences)) res$presences <- presences
   res$window <- window
+  res$params <- list(coord = coord,
+                     speciesIdx = speciesIdx,
+                     mc.cores = mc.cores,
+                     quasirandom.samples = quasirandom.samples,
+                     interpolation = interpolation)
 
   class(res) <- c("ppmData")
 
@@ -425,7 +431,7 @@ checkWindow <- function(presences,window,coord){
   }
 
   if (is.null(window)) {
-    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'\n.")
+    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'.\n")
     window <- defaultWindow(presences,coord)
   }
   window
