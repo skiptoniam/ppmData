@@ -23,7 +23,7 @@ preds2 <- stack(X,Y,preds)
 
 #
 ppmdata <- ppmData(npoints = 10000,
-                   presences=presences,
-                   window = preds2[[1]])
+                   presences=presences)#,
+                   # window = preds2[[1]])
 
 })

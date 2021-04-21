@@ -125,8 +125,8 @@ ppmData <- function(npoints = 10000,
   if(ismulti){
       message("Developing a quadrature scheme for multiple species (marked) dataset.")
       wts <- getMultispeciesWeights(presences = pressies,
-                                    quadrature = bckpts$quasiPoints,
-                                    quadDummy = bckpts$quasiDummy,
+                                    quadrature = bckptsQ,
+                                    quadDummy = bckptsD,
                                     window = window,
                                     coord = coord,
                                     speciesIdx = speciesIdx,
@@ -140,8 +140,8 @@ ppmData <- function(npoints = 10000,
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
       wts <- getSinglespeciesWeights(presences = pressies,
-                                     quadrature = bckpts$quasiPoints,
-                                     quadDummy = bckpts$quasiDummy,
+                                     quadrature = bckptsQ,
+                                     quadDummy = bckptsD,
                                      window = window,
                                      coord = coord,
                                      speciesIdx = speciesIdx)
@@ -157,23 +157,32 @@ ppmData <- function(npoints = 10000,
 
   # Assemble data
   dat <- assembleQuadData(presences = pressies,
-                          quadrature = bckpts$quasiPoints,
+                          quadrature = bckptsQ,
                           sitecovariates = sitecovariates,
                           wts = wts,
                           coord = coord,
                           speciesIdx = speciesIdx)
 
-  if(!is.null(covariates)) covarNames <- names(covariates)
-  coordNames <- coord
-  if(ismulti){
-     datOut <- transpose_ppmdata(dat, sppNames, coordNames, covarNames)
-     class(datOut) <- c("ppmdata","multiple.species")
+  if(!is.null(covariates)){
+    covarNames <- names(covariates)
   } else {
-    datOut <- list(dat)
-    class(datOut) <- c("ppmdata","single.species")
+    covarNames <- NULL
+  }
+  coordNames <- coord
+  res <- list()
+  if(ismulti){
+     res$ppmData <- transpose_ppmdata(dat, sppNames, coordNames, covarNames)
+     res$marked <- TRUE
+  } else {
+    res$ppmData <- dat
+    res$marked <- FALSE
   }
 
-  return(datOut)
+  res$window <- window
+
+  class(res) <- c("ppmData")
+
+  return(res)
 }
 
 jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
@@ -240,14 +249,19 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx
   # Assemble a data.frame with all the bits we want.
   pamat <- fastwidemat(wts, speciesIdx)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
-  # presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
   quad_pamat[is.na(quad_pamat)]<-0
   response_ppmmat <- as.data.frame(rbind(presences_pamat,quad_pamat))
   response_ppmmat$Const <- 1
   response_ppmmat$OrigOrder <- as.integer(rownames(response_ppmmat))
-  sitecovariates$OrigOrder <- wts$OrigOrder
-  df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=FALSE)
+
+  if(!is.null(sitecovariates)){
+    sitecovariates$OrigOrder <- wts$OrigOrder
+    df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=TRUE)
+  } else {
+    df <- merge(response_ppmmat,wts[!duplicated(wts$OrigOrder),c(coord,"OrigOrder")], by="OrigOrder", sort=TRUE)
+
+  }
   wtsmat <- fastwidematwts(wts)
   ids <- wts[!duplicated(wts[,c(speciesIdx,'DatasetID')]),c(speciesIdx,'DatasetID')]
   ids <- ids[-which( ids[,speciesIdx] == 'quad'),]
@@ -411,13 +425,14 @@ checkWindow <- function(presences,window,coord){
   }
 
   if (is.null(window)) {
-    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'\n with a default resolution of 1 deg will be returned.")
+    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'\n.")
     window <- defaultWindow(presences,coord)
   }
   window
 }
 
-defaultWindow <- function (presences,coord) {
+defaultWindow <- function (presences, coord) {
+
   # get limits
   xlim <- range(presences[,coord[1]])
   ylim <- range(presences[,coord[2]])
@@ -431,8 +446,9 @@ defaultWindow <- function (presences,coord) {
   ylim[1] <- floor(ylim[1])
   ylim[2] <- ceiling(ylim[2])
 
+  reso <- round(diff(seq(ylim[1],ylim[2],length.out=20))[1],1)
   e <- extent(c(xlim,ylim))
-  sa <- raster(e,res=1, crs="+proj=longlat +datum=WGS84")
+  sa <- raster(e,res=reso, crs="+proj=longlat +datum=WGS84")
   sa[]<- 1:ncell(sa)
   return (sa)
 }
@@ -443,13 +459,6 @@ fastwidemat <- function(dat, speciesIdx){
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
   dat[,speciesIdx] <- factor(dat[,speciesIdx])
 
-  # result <- with(dat, {
-  #   out <- matrix(nrow=nlevels(OrigOrder), ncol=nlevels(speciesIdx),
-  #                 dimnames=list(levels(OrigOrder), levels(speciesIdx)))
-  #   out[cbind(OrigOrder, speciesIdx)] <- pres
-  #   out
-  # })
-  #
   out <- matrix(nrow=nlevels(dat[,"OrigOrder"]),
                 ncol=nlevels(dat[,speciesIdx]),
                 dimnames=list(levels(dat[,"OrigOrder"]),levels(dat[,speciesIdx])))
@@ -480,18 +489,30 @@ transpose_ppmdata <- function( dat, sppNames, coordNames, covarNames){
 
   dat1 <- list()
   dat1$wts <- dat$wtsmat
+
   my.ord <- match(sppNames$sppNumber,colnames(dat1$wts))#gtools::mixedorder( colnames( dat1$wts))
-  # idx <- complete.cases(dat$mm[,covarNames])
+
   dat1$y <- dat$mm[,colnames( dat$mm) %in% colnames( dat1$wts)]
   dat1$y <- dat1$y[,my.ord]
   dat1$y <- as.matrix( dat1$y)
-  dat1$covars <- dat$mm[,covarNames]
+
+  dat$mm[,colnames( dat$mm) %in% colnames( dat1$wts)] <- sppNames$sppNames[my.ord]
+
+  # deal with missing covariates
+  if(!is.null(covarNames)){
+    dat1$covars <- dat$mm[,covarNames]
+    dat1$mm <- cbind(dat1$y,dat1$covars)
+  } else {
+    dat1$mm <-dat1$y
+  }
+
   dat1$locations <- dat$mm[,coordNames] #passed to ppmdata as coord argument
   dat1$wts <- dat1$wts[,my.ord]
-  dat1$z <- dat1$y / dat1$wts
-  dat1$mm <- cbind(dat1$y,dat1$covars)
   colnames(dat1$y) <- sppNames$sppNames[my.ord]
   colnames(dat1$wts) <- sppNames$sppNames[my.ord]
+  dat1$z <- dat1$y / dat1$wts
+
+  colnames(dat1$mm) <- sppNames$sppNames[my.ord]
 
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
   dat1$nspp <- ncol( dat1$wts)
@@ -504,33 +525,6 @@ transpose_ppmdata <- function( dat, sppNames, coordNames, covarNames){
 }
 
 
-#'@rdname print.ppmdata
-#'@name print.ppmdata
-#'@title Print a summary of ppmdata object.
-#'@param x A model object.
-#'@param \\dots Ignored
-#'@export
-
-print.ppmdata <- function (x, ...){
-
-    if(class(x)[2]%in%"single.species"){
-
-      message("There are ", sum(x[[1]]$presence), " presence observations for this species")
-      message("There are ", sum(x[[1]]$presence==0), " background quadrature (integration) points")
-      message("There are a total of ", nrow(x[[1]]), " sites in the model.matrix")
-      no_nans <- nrow(x[[1]][!complete.cases(x[[1]]),])
-      if(no_nans>0)message("There are a total of ",no_nans, " NaNs in the covariates, check before modelling.")
-
-    } else {
-
-      message("There are ", x$nUniquePres, " presence observations for ", x$nspp," species")
-      message("There are ", x$nBkg, " quadrature (integration) points for each of the ", x$nspp ," species")
-      message("There are a total of ",x$m, " sites in the model.matrix")
-      no_nans <- nrow(x$covars[!complete.cases(x$covars),])
-      if(no_nans>0)message("There are a total of ",no_nans, " NaNs in the covariates, check before modelling.")
-
-      }
-}
 
 
 plapply <- function (X, FUN, ..., .parallel = 1, .seed = NULL, .verbose = TRUE) {
