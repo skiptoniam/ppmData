@@ -10,20 +10,19 @@ path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
 presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
-coords <- xyFromCell(preds,1:ncell(preds))
-X <- preds[[1]]
-Y <- preds[[1]]
-X[] <- coords[,1]
-Y[] <- coords[,2]
-names(X) <- "X"
-names(Y) <- "Y"
-preds2 <- stack(X,Y,preds)
+
 
 ## some test a-roos!
+# test with just presences
+ppmdata0 <- ppmData(npoints = npoints, presences=presences)
 
-#
-ppmdata <- ppmData(npoints = 10000,
-                   presences=presences)#,
-                   # window = preds2[[1]])
+# test with just pres & window
+ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
+
+# test with just pres, window & covars
+ppmdata2 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]], covariates = preds)
+
+# test with no npoints
+ppmdata3 <- ppmData(presences=presences, window = preds[[1]])
 
 })

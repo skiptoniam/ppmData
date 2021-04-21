@@ -14,8 +14,6 @@ npoints <- 1000
 ppmdata0 <- ppmData(npoints = npoints, presences=presences)
 
 # test with just pres & window
-# window <- raster(extent(preds))
-# window[] <- 0
 ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
 
 # test with just pres, window & covars

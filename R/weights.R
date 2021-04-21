@@ -107,7 +107,7 @@ primest <- function(n){
 getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx){
 
   quadrature[[speciesIdx]] <- "quad"
-  quadDummy[[speciesIdx]] <- "dummy"
+  if(!is.null(quadDummy))quadDummy[[speciesIdx]] <- "dummy"
   wts <- getWeights(presences, quadrature, quadDummy, window, coord, speciesIdx)
   wts$OrigOrder <- wts$id
   wts$DatasetID <- 1
