@@ -1,4 +1,4 @@
-#' @name ppmdata
+#' @name ppmData
 #' @title Create a point process quadrature scheme for spatial modelling.
 #' @description This package is a way to efficiently generate a quasirandom set
 #' of background points for presence-only modelling of single or multiple
@@ -33,7 +33,7 @@
 #' @param presences a matrix, dataframe or SpatialPoints object giving the
 #' coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude,
-#' Y is latitude and SpeciesID is factor which assoicates each occurence to a
+#' Y is latitude and SpeciesID is factor which associated each occurrence to a
 #' species. If presences parameter is NULL then ppmDat will return the
 #' quadrature scheme without presences.
 #' @param window a raster object giving the area over which to generate
@@ -65,7 +65,7 @@
 #' bkgrid <- ppmdata(npoints = 1000, presences=presences, window = window, covariates = preds)
 #' }
 
-ppmdata <- function(npoints = 10000,
+ppmData <- function(npoints = 10000,
                     presences = NULL,
                     window = NULL,
                     covariates = NULL,
@@ -75,7 +75,11 @@ ppmdata <- function(npoints = 10000,
                     quasirandom.samples = NULL,
                     interpolation = "bilinear"){
 
-  ####  If not window is provided provide a dummy window
+  ## Make sure the column ids are characters.
+  if(!is.character(coord)) coord <- as.character(coord)
+  if(!is.character(speciesIdx)) speciesIdx <- as.character(speciesIdx)
+
+  ##  If not window is provided provide a dummy window
   window <- checkWindow(presences,window,coord)
 
   if(is.null(presences)){
@@ -110,7 +114,7 @@ ppmdata <- function(npoints = 10000,
 
   # Sometimes the points are very close together, so let's jitter if needed.
   reswindow <- raster::res(window)[1]
-  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, aBit=reswindow/2)
+  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, speciesIdx = speciesIdx, aBit=reswindow/2)
   pressies <- tmpPts$pressies
   bckptsQ <- tmpPts$bckpts
   bckptsD <- bckpts$quasiDummy
@@ -123,7 +127,9 @@ ppmdata <- function(npoints = 10000,
       wts <- getMultispeciesWeights(presences = pressies,
                                     quadrature = bckpts$quasiPoints,
                                     quadDummy = bckpts$quasiDummy,
-                                    window = window, coord = coord,
+                                    window = window,
+                                    coord = coord,
+                                    speciesIdx = speciesIdx,
                                     mc.cores = mc.cores)
 
       sitecovariates <- getCovariates(pbxy = wts,
@@ -133,16 +139,29 @@ ppmdata <- function(npoints = 10000,
 
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      wts <- getSinglespeciesWeights(presences = pressies, quadrature = bckpts$quasiPoints,
-                                     quadDummy = bckpts$quasiDummy, window = window,
-                                     coord = coord, mc.cores = mc.cores)
-      sitecovariates <- getCovariates(pbxy = wts, covariates = covariates, interpolation=interpolation, coord=coord)
+      wts <- getSinglespeciesWeights(presences = pressies,
+                                     quadrature = bckpts$quasiPoints,
+                                     quadDummy = bckpts$quasiDummy,
+                                     window = window,
+                                     coord = coord,
+                                     speciesIdx = speciesIdx)
+      # extract the covariate data
+      sitecovariates <- getCovariates(pbxy = wts,
+                                      covariates = covariates,
+                                      interpolation=interpolation,
+                                      coord=coord)
     }
 
 
   }
 
-  dat <- assembleQuadData(pressies, bckpts$quasiPoints, sitecovariates, wts, coord)
+  # Assemble data
+  dat <- assembleQuadData(presences = pressies,
+                          quadrature = bckpts$quasiPoints,
+                          sitecovariates = sitecovariates,
+                          wts = wts,
+                          coord = coord,
+                          speciesIdx = speciesIdx)
 
   if(!is.null(covariates)) covarNames <- names(covariates)
   coordNames <- coord
@@ -157,11 +176,11 @@ ppmdata <- function(npoints = 10000,
   return(datOut)
 }
 
-jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-4){
+jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
-  for( jj in as.character( unique( pressies$SpeciesID))){ #I think that we have made the assumption that this is called SpeciesID...?
-    sppJ <- which( pressies$SpeciesID==jj)
+  for( jj in as.character( unique( pressies[,speciesIdx]))){ #I think that we have made the assumption that this is called SpeciesID...?
+    sppJ <- which(  pressies[,speciesIdx]==jj)
     dupes <- which( duplicated( pressies[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
     if( length( dupes)>0){
       pressies[sppJ[dupes],coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
@@ -184,7 +203,7 @@ jitterIfNeeded <- function( pressies, bckpts, coord, aBit=1e-4){
   return( list( pressies=pressies, bckpts=bckpts))
 }
 
-assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord){
+assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, speciesIdx){
 
   ismulti <- checkMultispecies(presences, speciesIdx)
 
@@ -192,10 +211,14 @@ assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord){
   else type <- "wide"
 
   final_dat <- switch(type,
-                      long=longdat(wts, sitecovariates, coord),
-                      wide=widedat(presences, quadrature,
-                                   sitecovariates,
-                                   wts, coord))
+                      long=longdat(wts = wts,
+                                   sitecovariates = sitecovariates,
+                                   coord = coord),
+                      wide=widedat(presence = presences,
+                                   quadrature = quadrature,
+                                   sitecovariates = sitecovariates, wts = wts,
+                                   coord = coord,
+                                   speciesIdx = speciesIdx))
 
   return(final_dat)
 
@@ -212,10 +235,10 @@ longdat <- function(wts, sitecovariates=NULL, coord){
   return(dat2)
 }
 
-widedat <- function(presence, quadrature, sitecovariates, wts, coord){
+widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- fastwidemat(wts)
+  pamat <- fastwidemat(wts, speciesIdx)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
   # presences_pamat[presences_pamat==0]<-NA
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
@@ -226,10 +249,10 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord){
   sitecovariates$OrigOrder <- wts$OrigOrder
   df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=FALSE)
   wtsmat <- fastwidematwts(wts)
-  ids <- wts[!duplicated(wts[,c('SpeciesID','DatasetID')]),c('SpeciesID','DatasetID')]
-  ids <- ids[-which(ids$SpeciesID=='quad'),]
+  ids <- wts[!duplicated(wts[,c(speciesIdx,'DatasetID')]),c(speciesIdx,'DatasetID')]
+  ids <- ids[-which( ids[,speciesIdx] == 'quad'),]
   idx_rows <- df$OrigOrder
-  idx_cols <- match(colnames(quad_pamat),ids$SpeciesID)
+  idx_cols <- match(colnames(quad_pamat), ids[,speciesIdx] )
   wtsmat <- wtsmat[idx_rows,idx_cols]
   colnames(wtsmat) <- colnames(quad_pamat)
   return(list(mm=df,wtsmat=wtsmat))
@@ -420,14 +443,21 @@ fastwidemat <- function(dat, speciesIdx){
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
   dat[,speciesIdx] <- factor(dat[,speciesIdx])
 
-  result <- with(dat, {
-    out <- matrix(nrow=nlevels(OrigOrder), ncol=nlevels(speciesIdx),
-                  dimnames=list(levels(OrigOrder), levels(speciesIdx)))
-    out[cbind(OrigOrder, SpeciesID)] <- pres
-    out
-  })
+  # result <- with(dat, {
+  #   out <- matrix(nrow=nlevels(OrigOrder), ncol=nlevels(speciesIdx),
+  #                 dimnames=list(levels(OrigOrder), levels(speciesIdx)))
+  #   out[cbind(OrigOrder, speciesIdx)] <- pres
+  #   out
+  # })
+  #
+  out <- matrix(nrow=nlevels(dat[,"OrigOrder"]),
+                ncol=nlevels(dat[,speciesIdx]),
+                dimnames=list(levels(dat[,"OrigOrder"]),levels(dat[,speciesIdx])))
 
-  return(result)
+  out[cbind(dat[,"OrigOrder"], dat[,speciesIdx])] <- dat[,"pres"]
+  # out
+
+  return(out)
 }
 
 
@@ -450,18 +480,18 @@ transpose_ppmdata <- function( dat, sppNames, coordNames, covarNames){
 
   dat1 <- list()
   dat1$wts <- dat$wtsmat
-  my.ord <- match(sppNames$sppNames,colnames(dat1$wts))#gtools::mixedorder( colnames( dat1$wts))
-  idx <- complete.cases(dat$mm[,covarNames])
-  dat1$y <- dat$mm[idx,colnames( dat$mm) %in% colnames( dat1$wts)]
+  my.ord <- match(sppNames$sppNumber,colnames(dat1$wts))#gtools::mixedorder( colnames( dat1$wts))
+  # idx <- complete.cases(dat$mm[,covarNames])
+  dat1$y <- dat$mm[,colnames( dat$mm) %in% colnames( dat1$wts)]
   dat1$y <- dat1$y[,my.ord]
   dat1$y <- as.matrix( dat1$y)
-  dat1$covars <- dat$mm[idx,covarNames]
-  dat1$locations <- dat$mm[idx,coordNames] #passed to ppmdata as coord argument
-  dat1$wts <- dat1$wts[idx,my.ord]
+  dat1$covars <- dat$mm[,covarNames]
+  dat1$locations <- dat$mm[,coordNames] #passed to ppmdata as coord argument
+  dat1$wts <- dat1$wts[,my.ord]
   dat1$z <- dat1$y / dat1$wts
   dat1$mm <- cbind(dat1$y,dat1$covars)
-  # colnames(dat1$y) <- sppNames$sppNames[my.ord]
-  # colnames(dat1$wts) <- sppNames$sppNames[my.ord]
+  colnames(dat1$y) <- sppNames$sppNames[my.ord]
+  colnames(dat1$wts) <- sppNames$sppNames[my.ord]
 
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
   dat1$nspp <- ncol( dat1$wts)

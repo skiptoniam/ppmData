@@ -1,5 +1,5 @@
 
-getWeights <- function( presences, quadrature, quadDummy, window, coord, mc.cores){
+getWeights <- function( presences, quadrature, quadDummy, window, coord, speciesIdx){
 
   if(!is.null(quadDummy)) {
     allpts.id <- rbind(presences, quadrature, quadDummy)
@@ -12,7 +12,7 @@ getWeights <- function( presences, quadrature, quadDummy, window, coord, mc.core
   window_ext[c(1,3)] <- window_ext[c(1,3)] - 1e-10
   window_ext[c(2,4)] <- window_ext[c(2,4)] + 1e-10
   allpts$id <- 1:nrow( allpts)
-  allpts$dataset <- allpts.id$SpeciesID
+  allpts$dataset <- allpts.id[,speciesIdx]
 
   ##generate some dummy points around allpts - doesn't work very well for odd shaped things.
   ptsPerArea <- 5000
@@ -104,11 +104,11 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, coord, mc.cores){
+getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx){
 
-  quadrature$SpeciesID <- "quad"
-  quadDummy$SpeciesID <- "dummy"
-  wts <- getWeights(presences, quadrature, quadDummy, window, coord, mc.cores)
+  quadrature[[speciesIdx]] <- "quad"
+  quadDummy[[speciesIdx]] <- "dummy"
+  wts <- getWeights(presences, quadrature, quadDummy, window, coord, speciesIdx)
   wts$OrigOrder <- wts$id
   wts$DatasetID <- 1
   wts$pres <- ifelse(wts$dataset=="quad",0,1)
@@ -118,33 +118,33 @@ getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, co
 }
 
 
-combineDF.fun <- function( ii, xxx, yyy, coords){
+combineDF.fun <- function( ii, xxx, yyy, coords, speciesIdx){
   ####  Assumes that the colnames of xxx are a subset of those from yyy
   ####  This is not a totally memory efficient implementation: data on all species is passed to all species...
   xxx <- xxx[[ii]]
   newdf <- as.data.frame( matrix( NA, nrow=nrow( xxx) + nrow( yyy), ncol=length( coords) + 2))
-  colnames( newdf) <- c(coords,"SpeciesID","OrigOrder")
+  colnames( newdf) <- c(coords,speciesIdx,"OrigOrder")
   newdf[1:nrow( xxx), ] <- xxx[,colnames( newdf)]
   newdf[nrow( xxx) + 1:nrow( yyy), ] <- yyy[,colnames( newdf)]
 
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coord, mc.cores){
+getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx, mc.cores){
 
   presences$OrigOrder <- seq_len(nrow(presences))
-  nspp <- length(unique(presences[,"SpeciesID"]))
-  spps <- unique(presences[,"SpeciesID"])
-  quadrature$SpeciesID <- "quad"
-  quadrature$OrigOrder <- seq_len(nrow(quadrature))+max(presences$OrigOrder)
+  nspp <- length(unique(presences[,speciesIdx]))
+  spps <- unique(presences[,speciesIdx])
+  quadrature[[speciesIdx]] <- "quad"
+  quadrature[["OrigOrder"]] <- seq_len(nrow(quadrature))+max(presences[["OrigOrder"]])
   if(!is.null(quadDummy)){
-    quadDummy$SpeciesID <- "dummy"
-    quadDummy$OrigOrder <- seq_len(nrow(quadDummy))+max(quadrature$OrigOrder)
+    quadDummy[[speciesIdx]] <- "dummy"
+    quadDummy[["OrigOrder"]] <- seq_len(nrow(quadDummy))+max(quadrature[["OrigOrder"]])
   }
-  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences$SpeciesID==spps[ii],])
+  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences[,speciesIdx]==spps[ii],])
 
-  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, quadDummy, window, coord, mc.cores)},.parallel = mc.cores, .verbose = FALSE)
-  sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, .parallel = mc.cores, .verbose = FALSE)
+  sppBckWtsList <- lapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, quadDummy, window, coord, speciesIdx)})
+  sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, speciesIdx = speciesIdx, .parallel = mc.cores, .verbose = FALSE)
   sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)
   sppWtsList <- plapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],
@@ -167,7 +167,7 @@ getSiteID <- function(dat,coord){
   return(df)
 }
 
-convert2pts <- function( window) {
+convert2pts <- function(window) {
   #convert raster to extreme points (of bounding rectangle)
   #example only, *should* work for raster.  But what data type have we got?
   tmp <- sp::coordinates( window)
