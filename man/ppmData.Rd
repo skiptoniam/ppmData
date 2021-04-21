@@ -5,10 +5,10 @@
 \title{Create a point process quadrature scheme for spatial modelling.}
 \usage{
 ppmData(
-  npoints = 10000,
   presences = NULL,
   window = NULL,
   covariates = NULL,
+  npoints = NULL,
   coord = c("X", "Y"),
   speciesIdx = "SpeciesID",
   mc.cores = parallel::detectCores() - 1,
@@ -17,8 +17,6 @@ ppmData(
 )
 }
 \arguments{
-\item{npoints}{The number of quadrature points to generate.}
-
 \item{presences}{a matrix, dataframe or SpatialPoints object giving the
 coordinates of each species' presence in (should be a matrix of nsites * 3)
 with the three columns being c("X","Y","SpeciesID"), where X is longitude,
@@ -32,6 +30,8 @@ If ignored, a rectangle defining the extent of \code{presences} will be used.}
 
 \item{covariates}{A raster object containing covariates for modelling the
 point process (best use a Raster stack or Raster brick).}
+
+\item{npoints}{The number of quadrature points to generate.}
 
 \item{coord}{is the name of site coordinates. The default is c('X','Y').}
 
@@ -84,7 +84,7 @@ for each species to make it computationally more efficient.
 }
 \examples{
 \dontrun{
-library(ppmdata)
+library(ppmData)
 library(raster)
 path <- system.file("extdata", package = "ppmdata")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)

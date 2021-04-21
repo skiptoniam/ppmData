@@ -29,7 +29,6 @@
 #' all weight calculated for each point. We then can calculate this in parallel
 #' for each species to make it computationally more efficient.
 #' @export
-#' @param npoints The number of quadrature points to generate.
 #' @param presences a matrix, dataframe or SpatialPoints object giving the
 #' coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude,
@@ -41,6 +40,7 @@
 #' If ignored, a rectangle defining the extent of \code{presences} will be used.
 #' @param covariates A raster object containing covariates for modelling the
 #' point process (best use a Raster stack or Raster brick).
+#' @param npoints The number of quadrature points to generate.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
 #' @param speciesIdx is the name of the species ID in the presences dataset.
 #' The default is "SpeciesID".
@@ -55,7 +55,7 @@
 #' @param interpolation The interpolation method to use when extracting covariate data. Default is "bilinear", can also use "simple".
 #' @examples
 #' \dontrun{
-#' library(ppmdata)
+#' library(ppmData)
 #' library(raster)
 #' path <- system.file("extdata", package = "ppmdata")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
@@ -65,15 +65,27 @@
 #' bkgrid <- ppmdata(npoints = 1000, presences=presences, window = window, covariates = preds)
 #' }
 
-ppmData <- function(npoints = 10000,
-                    presences = NULL,
+ppmData <- function(presences = NULL,
                     window = NULL,
                     covariates = NULL,
+                    npoints = NULL,
                     coord = c('X','Y'),
                     speciesIdx = "SpeciesID",
                     mc.cores = parallel::detectCores()-1,
                     quasirandom.samples = NULL,
                     interpolation = "bilinear"){
+
+  # if npoints in NULL setup a default amount.
+  if(is.null(npoints)){
+    ## linear scaling of quad points compared to max n presences.
+    ## count bump this up more is so desired.
+    # xx <- seq(0,10000,100)
+    # plot(xx,(10 * ceiling(2 * sqrt(xx)/10))^2)
+
+    npmx <- max(table(presences$SpeciesID))
+    nquad <- rep(pmax(32, 10 * ceiling(2 * sqrt(npmx)/10)),2)
+    npoints <- prod(nquad)
+  }
 
   ## Make sure the column ids are characters.
   if(!is.character(coord)) coord <- as.character(coord)

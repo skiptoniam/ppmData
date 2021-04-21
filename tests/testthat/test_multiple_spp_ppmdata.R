@@ -21,4 +21,7 @@ ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
 # test with just pres, window & covars
 ppmdata2 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]], covariates = preds)
 
+# test with no npoints
+ppmdata3 <- ppmData(presences=presences, window = preds[[1]])
+
 })
