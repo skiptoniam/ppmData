@@ -15,13 +15,13 @@
 #' @details The approach uses quasi-random sampling to generate a quadrature
 #' scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 #' Foster et al, 2017). The weights each quasi-random point in the quadrature
-#' scheme is calculated using a dirichlet tessellation (Turner 2020). To improve
-#' computational efficiency \link[deldir]{deldir} function for a large number of
-#' of quadrature points, we set up an approach which breaks up the problem into
+#' scheme is calculated using a Dirichlet tessellation (Turner 2020). To improve
+#' computational efficiency of the \link[deldir]{deldir} function for a large
+#' number of quadrature points, we set up an approach which breaks up the problem into
 #' manageable sub-windows. We do this by keeping each deldir call to less that
-#' 5000 points (which appears to be the point where the algorithm slows
-#' noticeably). To avoid edge effect (large areas on the edges of sub-areas),
-#' we rotate the subregions three times, the first two use a the nearest largest
+#' approximately 5000 points (which appears to be the point where the algorithm
+#' slows noticeably). To avoid edge effect (large areas on the edges of sub-areas),
+#' we rotate the sub-regions three times, the first two use a the nearest largest
 #' prime number closest to total number of points (presences+quadrature points)
 #' divided by 5000, which allows us to rotate the window on the x and y axis
 #' with an subset of the sub-windows. We then calculate a third set of sub-
@@ -37,11 +37,23 @@
 #' quadrature scheme without presences.
 #' @param window a raster object giving the area over which to generate
 #' background points. NA cells are ignored and masked out of returned data.
-#' If ignored, a rectangle defining the extent of \code{presences} will be used.
+#' If NULL, a rectangle bounding the extent of \code{presences} will be used as
+#' the default window.
 #' @param covariates A raster object containing covariates for modelling the
-#' point process (best use a Raster stack or Raster brick).
-#' @param npoints The number of quadrature points to generate.
+#' point process (best use a Raster stack or Raster brick). This should match
+#' the resolution and extent of the window provided. If NULL, only the
+#' coordinates of the presences and quadrature points are returned.
+#' @param npoints The number of quadrature points to generate. If NULL, the
+#' number of quadrature points is calculated based on a linear scaling. In
+#' reality, the number of quadrature points needed to approximate the
+#' log-likelihood function will depend on the data and likelihood function
+#' being approximated. Typically, more quadrature the better the estimate,
+#' but there is a trade off between computational efficiency and accuracy.
+#' See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
+#' on the location and number of quadrature points required to converge a
+#' ppm likelihood.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
+#' This should match the name of the coordinates in the presences dataset.
 #' @param speciesIdx is the name of the species ID in the presences dataset.
 #' The default is "SpeciesID".
 #' @param mc.cores The number of cores to use in the processing. default is
@@ -50,9 +62,12 @@
 #' in the BAS step (rejection sampling). The default is 10000, which means that
 #' 10000 halton numbers are drawn and then thinned according to the inclusion
 #' probabilities. You will need to increase the number of samples if selecting
-#' a large number of quadrature points. The more quasirandomSample selected the
+#' a large number of quadrature points. The more quasirandomSamples selected the
 #' slower the quasirandom quadrature scheme will be to generate.
-#' @param interpolation The interpolation method to use when extracting covariate data. Default is "bilinear", can also use "simple".
+#' @param interpolation The interpolation method to use when extracting
+#' covariate data. Default is "bilinear", can also use "simple", this is based
+#' on the raster package  \code{\link[raster]{extract}}.
+#' @param quiet If TRUE, do not print messages. Default is FALSE.
 #' @examples
 #' \dontrun{
 #' library(ppmData)
@@ -62,7 +77,7 @@
 #' preds <- stack(lst)
 #' window <- preds[[1]]
 #' presences <- snails
-#' bkgrid <- ppmdata(npoints = 1000, presences=presences, window = window, covariates = preds)
+#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
 #' }
 
 ppmData <- function(presences = NULL,
@@ -71,9 +86,10 @@ ppmData <- function(presences = NULL,
                     npoints = NULL,
                     coord = c('X','Y'),
                     speciesIdx = "SpeciesID",
-                    mc.cores = parallel::detectCores()-1,
+                    mc.cores = 1,
                     quasirandom.samples = NULL,
-                    interpolation = "bilinear"){
+                    interpolation = "bilinear",
+                    quiet=FALSE){
 
   # if npoints in NULL setup a default amount.
   if(is.null(npoints)){
@@ -87,14 +103,16 @@ ppmData <- function(presences = NULL,
     npoints <- prod(nquad)
   }
 
-  ## Make sure the column ids are characters.
+  ## Make sure the column ids are characters and check for missing/wrong named coord/speciesIdx vars.
   if(!is.character(coord)) coord <- as.character(coord)
+  if(all(!coord%in%colnames(presences))) stop(paste0('coord: "',coord[1],'" & "',coord[2],'" do not match any of the colnames in the presences data.frame'))
   if(!is.character(speciesIdx)) speciesIdx <- as.character(speciesIdx)
+  if(all(!speciesIdx%in%colnames(presences))) stop(paste0('speciesIdx: "',speciesIdx,'" does not match any of the colnames in the presences data.frame'))
 
   ##  If not window is provided provide a dummy window
   if(is.null(window)) default_window <- TRUE
   else default_window <- FALSE
-  window <- checkWindow(presences,window,coord)
+  window <- checkWindow(presences,window,coord,quiet)
 
   if(is.null(presences)){
    message('Generating background points in the absence of species presences')
@@ -203,6 +221,7 @@ ppmData <- function(presences = NULL,
 
   class(res) <- c("ppmData")
 
+  if(!quiet)print(res)
   return(res)
 }
 
@@ -260,7 +279,7 @@ longdat <- function(wts, sitecovariates=NULL, coord){
   if(!is.null(sitecovariates)) dat2 <- data.frame(wts[,coord],sitecovariates[,-1:-3],presence=wts$pres, weights=wts$wts)
   else dat2 <- data.frame(wts[,coord],presence=wts$pres,weights=wts$wts)
 
-  if(length(nrow(dat2[!complete.cases(dat2), ]))>0) message("Your covariate data has ", nrow(dat2[!complete.cases(dat2), ])," rows with NAs in them - check before modelling.")
+  # if(length(nrow(dat2[!complete.cases(dat2), ]))>0) message("Your covariate data has ", nrow(dat2[!complete.cases(dat2), ])," rows with NAs in them - check before modelling.")
 
   return(dat2)
 }
@@ -276,13 +295,13 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx
   response_ppmmat$Const <- 1
   response_ppmmat$OrigOrder <- as.integer(rownames(response_ppmmat))
 
-  if(!is.null(sitecovariates)){
+  # if(!is.null(sitecovariates)){
     sitecovariates$OrigOrder <- wts$OrigOrder
     df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=TRUE)
-  } else {
-    df <- merge(response_ppmmat,wts[!duplicated(wts$OrigOrder),c(coord,"OrigOrder")], by="OrigOrder", sort=TRUE)
+  # } else {
+    # df <- merge(response_ppmmat,wts[!duplicated(wts$OrigOrder),c("OrigOrder")], by="OrigOrder", sort=TRUE)
 
-  }
+  # }
   wtsmat <- fastwidematwts(wts)
   ids <- wts[!duplicated(wts[,c(speciesIdx,'DatasetID')]),c(speciesIdx,'DatasetID')]
   ids <- ids[-which( ids[,speciesIdx] == 'quad'),]
@@ -361,11 +380,7 @@ quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
 coordMatchDim <- function (known.sites,coord,speciesIdx){
 
   # check object classes
-  expectClasses(known.sites,
-                c('matrix',
-                  'data.frame'),
-                name = 'known.sites')
-
+  expectClasses(known.sites, c('matrix','data.frame'),name = 'known.sites')
 
   if(!any(colnames(known.sites)%in%speciesIdx))
     stop("'speciesIdx': ",speciesIdx," ,does not match any of the column names in your presences data.\n")
@@ -380,13 +395,17 @@ coordMatchDim <- function (known.sites,coord,speciesIdx){
 
 ## function to extract covariates for presence and background points.
 getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
-  if(is.null(covariates))return(NULL)
-  covars <- raster::extract(x = covariates,
-                            y = data.frame(X=as.numeric(pbxy[,coord[1]]),
+  if(is.null(covariates)){
+    covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
+  } else {
+    expectClasses(covariates,c("RasterLayer","RasterStack","RasterBrick"),covariates)
+    covars <- raster::extract(x = covariates,
+                              y = data.frame(X=as.numeric(pbxy[,coord[1]]),
                                            Y=as.numeric(pbxy[,coord[2]])),
-                            method=interpolation,
-                            na.rm=TRUE)
+                              method=interpolation,
+                              na.rm=TRUE)
   covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
+  }
   return(covars)
 }
 
@@ -439,14 +458,17 @@ checkMultispecies <- function(presences, speciesIdx){
   multi
 }
 
-checkWindow <- function(presences,window,coord){
+checkWindow <- function(presences, window, coord, quiet){
+
+  if(!is.null(window))
+    expectClasses(window,"RasterLayer","window")
 
   if(is.null(presences)){
     presences <- data.frame(X=runif(100,0,100),Y=runif(100,0,100))
   }
 
   if (is.null(window)) {
-    message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'.\n")
+    if(!quiet) message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'.\n")
     window <- defaultWindow(presences,coord)
   }
   window

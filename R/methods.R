@@ -84,7 +84,8 @@ print.ppmData <- function (x, ...){
     message("There are ", sum(x$ppmData$presence==0), " background quadrature (integration) points")
     message("There are a total of ", nrow(x$ppmData), " sites in the model.matrix")
     no_nans <- nrow(x$ppmData[!complete.cases(x$ppmData),])
-    if(no_nans>0)message("There are a total of ",no_nans, " NaNs in the covariates, check before modelling.")
+    if(no_nans>0)
+      message("There are a total of ",no_nans, " NaNs in the covariates, check before modelling.")
 
   } else {
 

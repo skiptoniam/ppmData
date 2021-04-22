@@ -10,7 +10,7 @@ path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- raster::stack(lst)
 presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
-
+npoints <- 1000
 
 ## some test a-roos!
 # test with just presences

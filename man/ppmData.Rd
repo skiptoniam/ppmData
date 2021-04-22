@@ -11,9 +11,10 @@ ppmData(
   npoints = NULL,
   coord = c("X", "Y"),
   speciesIdx = "SpeciesID",
-  mc.cores = parallel::detectCores() - 1,
+  mc.cores = 1,
   quasirandom.samples = NULL,
-  interpolation = "bilinear"
+  interpolation = "bilinear",
+  quiet = FALSE
 )
 }
 \arguments{
@@ -26,14 +27,26 @@ quadrature scheme without presences.}
 
 \item{window}{a raster object giving the area over which to generate
 background points. NA cells are ignored and masked out of returned data.
-If ignored, a rectangle defining the extent of \code{presences} will be used.}
+If NULL, a rectangle bounding the extent of \code{presences} will be used as
+the default window.}
 
 \item{covariates}{A raster object containing covariates for modelling the
-point process (best use a Raster stack or Raster brick).}
+point process (best use a Raster stack or Raster brick). This should match
+the resolution and extent of the window provided. If NULL, only the
+coordinates of the presences and quadrature points are returned.}
 
-\item{npoints}{The number of quadrature points to generate.}
+\item{npoints}{The number of quadrature points to generate. If NULL, the
+number of quadrature points is calculated based on a linear scaling. In
+reality, the number of quadrature points needed to approximate the
+log-likelihood function will depend on the data and likelihood function
+being approximated. Typically, more quadrature the better the estimate,
+but there is a trade off between computational efficiency and accuracy.
+See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
+on the location and number of quadrature points required to converge a
+ppm likelihood.}
 
-\item{coord}{is the name of site coordinates. The default is c('X','Y').}
+\item{coord}{is the name of site coordinates. The default is c('X','Y').
+This should match the name of the coordinates in the presences dataset.}
 
 \item{speciesIdx}{is the name of the species ID in the presences dataset.
 The default is "SpeciesID".}
@@ -45,10 +58,14 @@ parallel::detectCores()-1}
 in the BAS step (rejection sampling). The default is 10000, which means that
 10000 halton numbers are drawn and then thinned according to the inclusion
 probabilities. You will need to increase the number of samples if selecting
-a large number of quadrature points. The more quasirandomSample selected the
+a large number of quadrature points. The more quasirandomSamples selected the
 slower the quasirandom quadrature scheme will be to generate.}
 
-\item{interpolation}{The interpolation method to use when extracting covariate data. Default is "bilinear", can also use "simple".}
+\item{interpolation}{The interpolation method to use when extracting
+covariate data. Default is "bilinear", can also use "simple", this is based
+on the raster package  \code{\link[raster]{extract}}.}
+
+\item{quiet}{If TRUE, do not print messages. Default is FALSE.}
 }
 \description{
 This package is a way to efficiently generate a quasirandom set
@@ -68,13 +85,13 @@ the \link[deldir]{deldir} function.
 The approach uses quasi-random sampling to generate a quadrature
 scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 Foster et al, 2017). The weights each quasi-random point in the quadrature
-scheme is calculated using a dirichlet tessellation (Turner 2020). To improve
-computational efficiency \link[deldir]{deldir} function for a large number of
-of quadrature points, we set up an approach which breaks up the problem into
+scheme is calculated using a Dirichlet tessellation (Turner 2020). To improve
+computational efficiency of the \link[deldir]{deldir} function for a large
+number of quadrature points, we set up an approach which breaks up the problem into
 manageable sub-windows. We do this by keeping each deldir call to less that
-5000 points (which appears to be the point where the algorithm slows
-noticeably). To avoid edge effect (large areas on the edges of sub-areas),
-we rotate the subregions three times, the first two use a the nearest largest
+approximately 5000 points (which appears to be the point where the algorithm
+slows noticeably). To avoid edge effect (large areas on the edges of sub-areas),
+we rotate the sub-regions three times, the first two use a the nearest largest
 prime number closest to total number of points (presences+quadrature points)
 divided by 5000, which allows us to rotate the window on the x and y axis
 with an subset of the sub-windows. We then calculate a third set of sub-
@@ -91,6 +108,6 @@ lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- stack(lst)
 window <- preds[[1]]
 presences <- snails
-bkgrid <- ppmdata(npoints = 1000, presences=presences, window = window, covariates = preds)
+bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
 }
 }
