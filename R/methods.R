@@ -31,10 +31,10 @@ plot.ppmData <- function(x, ...){
       raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
     }
     points(quad,pch='.')
-    points(marks,col=cols[as.numeric(as.factor(marks$SpeciesID))],pch=16,cex=0.5)
+    points(marks,col=cols[as.numeric(as.factor(marks[,x$params$speciesIdx]))],pch=16,cex=0.5)
     legend(x="left",
-           legend=unique(marks$SpeciesID),
-           col=cols[1:length(unique(marks$SpeciesID))],
+           legend=unique(marks[,x$params$speciesIdx]),
+           col=cols[1:length(marks[,x$params$speciesIdx])],
            pch=16,
            cex=0.75,
            xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
@@ -59,7 +59,7 @@ plot.ppmData <- function(x, ...){
     points(quad,pch='.')
     points(pressies,col='dodgerblue',pch=16,cex=0.5)
     legend(x="bottom",
-           legend=unique(pressies$SpeciesID),
+           legend=unique(pressies[,x$params$speciesIdx]),
            col='dodgerblue',
            pch=16,
            cex=0.75,
