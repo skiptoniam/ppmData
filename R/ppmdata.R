@@ -92,6 +92,8 @@ ppmData <- function(presences = NULL,
   if(!is.character(speciesIdx)) speciesIdx <- as.character(speciesIdx)
 
   ##  If not window is provided provide a dummy window
+  if(is.null(window)) default_window <- TRUE
+  else default_window <- FALSE
   window <- checkWindow(presences,window,coord)
 
   if(is.null(presences)){
@@ -151,7 +153,7 @@ ppmData <- function(presences = NULL,
 
     } else {
       message("Developing a quadrature scheme for a single species dataset.")
-      wts <- getSinglespeciesWeights(presences = pressies,
+      wts <- getSingleSpeciesWeights(presences = pressies,
                                      quadrature = bckptsQ,
                                      quadDummy = bckptsD,
                                      window = window,
@@ -196,7 +198,8 @@ ppmData <- function(presences = NULL,
                      speciesIdx = speciesIdx,
                      mc.cores = mc.cores,
                      quasirandom.samples = quasirandom.samples,
-                     interpolation = interpolation)
+                     interpolation = interpolation,
+                     dw = default_window)
 
   class(res) <- c("ppmData")
 

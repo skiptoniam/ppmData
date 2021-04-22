@@ -5,28 +5,69 @@
 #' @param \\dots Ignored
 #' @export
 
-# x <- ppmdata1
-
 plot.ppmData <- function(x, ...){
 
-  # if(x$marked){
-  #
-  #   marks <- x$presences
-  #   # mark.sites <- x$p,]
-  #   # cbind(mark.sites, marks)
-  #
-  #
-  # }
 
-  raster::plot(x$window,legend=FALSE)
-  points(x$ppmData$locations[x$ppmData$bkg,],pch='.')
-  points(x$presences,col=as.numeric(as.factor(x$presences$SpeciesID)),pch=16,cex=0.8)
+  cols <- c("#1B9E77","#D95F02","#7570B3",
+            "#E7298A","#66A61E","#E6AB02",
+            "#A6761D","#666666")
+  cols <- rep(cols,100)
 
 
+  if(x$marked){
+
+    marks <- x$presences
+    quad <- x$ppmData$locations[x$ppmData$bkg,]
+    op <- par('mar')
+    on.exit(par(op))
+
+    par(mar=c(7,7,7,7))
+    if(x$params$dw){
+      e <- extent(x$window)
+      p <- as(e, 'SpatialPolygons')
+      raster::plot(p,main='quadrature scheme')
+    } else {
+      p <- x$window
+      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+    }
+    points(quad,pch='.')
+    points(marks,col=cols[as.numeric(as.factor(marks$SpeciesID))],pch=16,cex=0.5)
+    legend(x="left",
+           legend=unique(marks$SpeciesID),
+           col=cols[1:length(unique(marks$SpeciesID))],
+           pch=16,
+           cex=0.75,
+           xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
+           bty="n")
+
+
+  } else {
+
+    pressies <- x$presences
+    quad <- x$ppmData[x$ppmData$presence%in%0,x$params$coord]
+    op <- par('mar')
+    on.exit(par(op))
+    par(mar=c(7,7,7,7))
+    if(x$params$dw){
+      e <- extent(x$window)
+      p <- as(e, 'SpatialPolygons')
+      raster::plot(p,main='quadrature scheme')
+    } else {
+      p <- x$window
+      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+    }
+    points(quad,pch='.')
+    points(pressies,col='dodgerblue',pch=16,cex=0.5)
+    legend(x="bottom",
+           legend=unique(pressies$SpeciesID),
+           col='dodgerblue',
+           pch=16,
+           cex=0.75,
+           xpd = TRUE, horiz = TRUE, inset = c(0, -0.2),
+           bty="n")
+  }
 
 }
-
-
 
 #'@rdname print.ppmData
 #'@name print.ppmData
@@ -56,3 +97,6 @@ print.ppmData <- function (x, ...){
     }
   }
 }
+
+
+

@@ -104,7 +104,7 @@ primest <- function(n){
   p
 }
 
-getSinglespeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx){
+getSingleSpeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx){
 
   quadrature[[speciesIdx]] <- "quad"
   if(!is.null(quadDummy))quadDummy[[speciesIdx]] <- "dummy"
