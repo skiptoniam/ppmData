@@ -70,6 +70,9 @@
 #' @param quiet If TRUE, do not print messages. Default is FALSE.
 #' @importFrom graphics legend par points
 #' @importFrom methods as
+#' @importFrom stats complete.cases median runif
+#' @importFrom utils txtProgressBar
+#' @importFrom raster extract ncell raster extent extract res
 #' @examples
 #' \dontrun{
 #' library(ppmData)
