@@ -98,7 +98,7 @@ ppmData <- function(presences = NULL,
     # xx <- seq(0,10000,100)
     # plot(xx,(10 * ceiling(2 * sqrt(xx)/10))^2)
 
-    npmx <- max(table(presences$SpeciesID))
+    npmx <- max(table(presences[,speciesIdx]))
     nquad <- rep(pmax(32, 10 * ceiling(2 * sqrt(npmx)/10)),2)
     npoints <- prod(nquad)
   }

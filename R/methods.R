@@ -11,8 +11,9 @@ plot.ppmData <- function(x, ...){
   cols <- c("#1B9E77","#D95F02","#7570B3",
             "#E7298A","#66A61E","#E6AB02",
             "#A6761D","#666666")
-  cols <- rep(cols,100)
-
+  # cols <- rep(cols,100)
+  pchs <- 15:20
+  colshp <-  expand.grid(cols,pchs)
 
   if(x$marked){
 
@@ -31,11 +32,12 @@ plot.ppmData <- function(x, ...){
       raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
     }
     points(quad,pch='.')
-    points(marks,col=cols[as.numeric(as.factor(marks[,x$params$speciesIdx]))],pch=16,cex=0.5)
+    points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$speciesIdx])),1]),
+           pch=colshp[as.numeric(as.factor(marks[,x$params$speciesIdx])),2],cex=0.5)
     legend(x="left",
            legend=unique(marks[,x$params$speciesIdx]),
-           col=cols[1:length(marks[,x$params$speciesIdx])],
-           pch=16,
+           col=as.character(colshp[1:length(unique(marks[,x$params$speciesIdx])),1]),
+           pch=colshp[1:length(unique(marks[,x$params$speciesIdx])),2],
            cex=0.75,
            xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
            bty="n")
