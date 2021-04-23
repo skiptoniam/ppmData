@@ -1,9 +1,9 @@
-.Rproj.user
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
 data_files/
 old_functions/
-qrbp/
+ppmData/
 figures/
 inst/doc

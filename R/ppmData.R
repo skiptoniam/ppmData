@@ -293,8 +293,8 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx
 
   # Assemble a data.frame with all the bits we want.
   pamat <- fastwidemat(wts, speciesIdx)
-  presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
-  quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)=='quad')]
+  presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
+  quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
   quad_pamat[is.na(quad_pamat)]<-0
   response_ppmmat <- as.data.frame(rbind(presences_pamat,quad_pamat))
   response_ppmmat$Const <- 1

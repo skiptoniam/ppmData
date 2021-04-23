@@ -4,6 +4,7 @@
 #' @param x A model object.
 #' @param \\dots Ignored
 #' @export
+#' @importFrom raster extent
 
 plot.ppmData <- function(x, ...){
 
