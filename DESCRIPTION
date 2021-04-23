@@ -1,6 +1,6 @@
 Package: ppmData
 Type: Package
-Title: Quasirandom quardature scheme using dirichlet tesselation for muliple species Poisson point process models
+Title: Quasirandom quardature scheme using dirichlet tesselation for species Poisson point process models
 Version: 0.1.0
 Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@utas.edu.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
@@ -9,7 +9,7 @@ Description: This package generates a quasi-random set of quadrature scheme wher
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.1
-Imports: Rdpack, rgdal, raster, deldir, MBHdesign, parallel
+Imports: Rdpack, rgdal, raster, deldir, MBHdesign, parallel, sp
 Suggests: 
     knitr,
     testthat (>= 3.0.0),

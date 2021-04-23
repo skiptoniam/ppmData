@@ -130,11 +130,12 @@ combineDF.fun <- function( ii, xxx, yyy, coords, speciesIdx){
   return( newdf)
 }
 
-getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx, mc.cores){
+getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coord, speciesIdx, mc.cores, sppNames){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,speciesIdx]))
-  spps <- unique(presences[,speciesIdx])
+  spps <- sppNames$sppNames
+  # print(spps)
   quadrature[[speciesIdx]] <- "quad"
   quadrature[["OrigOrder"]] <- seq_len(nrow(quadrature))+max(presences[["OrigOrder"]])
   if(!is.null(quadDummy)){
@@ -143,7 +144,7 @@ getMultispeciesWeights <- function(presences, quadrature, quadDummy, window, coo
   }
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences[,speciesIdx]==spps[ii],])
 
-  sppBckWtsList <- lapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, quadDummy, window, coord, speciesIdx)})
+  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( sppdata[[ii]], quadrature, quadDummy, window, coord, speciesIdx)}, .parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, speciesIdx = speciesIdx, .parallel = mc.cores, .verbose = FALSE)
   sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)

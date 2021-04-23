@@ -3,3 +3,7 @@
 S3method(plot,ppmData)
 S3method(print,ppmData)
 export(ppmData)
+importFrom(graphics,legend)
+importFrom(graphics,par)
+importFrom(graphics,points)
+importFrom(methods,as)
