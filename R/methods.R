@@ -9,10 +9,14 @@
 plot.ppmData <- function(x, ...){
 
 
+  op <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(op))
+
   cols <- c("#1B9E77","#D95F02","#7570B3",
             "#E7298A","#66A61E","#E6AB02",
             "#A6761D","#666666")
   # cols <- rep(cols,100)
+
   pchs <- 15:20
   colshp <-  expand.grid(cols,pchs)
 
@@ -20,8 +24,6 @@ plot.ppmData <- function(x, ...){
 
     marks <- x$presences
     quad <- x$ppmData$locations[x$ppmData$bkg,]
-    op <- par('mar')
-    on.exit(par(op))
 
     par(mar=c(7,7,7,7))
     if(x$params$dw){
@@ -48,8 +50,7 @@ plot.ppmData <- function(x, ...){
 
     pressies <- x$presences
     quad <- x$ppmData[x$ppmData$presence%in%0,x$params$coord]
-    op <- par('mar')
-    on.exit(par(op))
+
     par(mar=c(7,7,7,7))
     if(x$params$dw){
       e <- extent(x$window)
