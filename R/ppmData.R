@@ -356,9 +356,9 @@ quasiRandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   study.area <- matrix( as.vector( exty)[c( 1,2,2,1, 3,3,4,4)], nrow=4, ncol=2)
 
   #this gives many many samples, unless the study region is an odd shape, which it shouldn't be (as it is just an extent at this stage)
-  samp <- MBHdesign:::quasiSamp_fromhyperRect(nSampsToConsider=quasirandom.samples,
-                                              randStartType=2,
-                                              designParams=list(dimension=2,study.area=study.area))
+  samp <- quasiSampFromHyperRect(nSampsToConsider=quasirandom.samples,
+                                 randStartType=2,
+                                 designParams=list(dimension=2,study.area=study.area))
 
   ## setup the inclusion probs.
   sampValues <- extract(window,samp[,1:2])
@@ -515,6 +515,36 @@ getSppNames <- function(presences, speciesIdx){
   return(sppIdx)
 
 }
+
+
+#'@author Scott Foster
+#'@importFrom randtoolbox halton
+#'@importFrom mgcv in.out
+#'@description Copied from MBHdesign as it wasn't an exported function.
+
+quasiSampFromHyperRect <- function (nSampsToConsider, randStartType = 2, designParams){
+  samp <- randtoolbox::halton(nSampsToConsider * 2, dim = designParams$dimension +
+                                1, init = TRUE)
+  if (randStartType == 1)
+    skips <- rep(sample(1:nSampsToConsider, size = 1, replace = TRUE),
+                 designParams$dimension + 1)
+  if (randStartType == 2)
+    skips <- sample(1:nSampsToConsider, size = designParams$dimension +
+                      1, replace = TRUE)
+  samp <- do.call("cbind", lapply(1:(designParams$dimension +
+                                       1), function(x) samp[skips[x] + 0:(nSampsToConsider -
+                                                                            1), x]))
+  myRange <- apply(designParams$study.area, -1, range)
+  for (ii in 1:designParams$dimension) samp[, ii] <- myRange[1,
+                                                             ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
+  if (designParams$dimension == 2) {
+    tmp <- mgcv::in.out(designParams$study.area, samp[,
+                                                      1:designParams$dimension])
+    samp <- samp[tmp, ]
+  }
+  return(samp)
+}
+
 
 defaultWindow <- function (presences, coord) {
 

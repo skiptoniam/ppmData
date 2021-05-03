@@ -3,3 +3,8 @@
 ^codecov\.yml$
 \dev
 ^dev$
+^README.Rmd
+^readme.md
+^.travis.yml
+
+

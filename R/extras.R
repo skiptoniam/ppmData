@@ -16,3 +16,4 @@ expectClasses <- function (x,
     notify(text)
   }
 }
+
