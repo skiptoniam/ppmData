@@ -14,6 +14,8 @@ ppmData(
   mc.cores = 1,
   quasirandom.samples = NULL,
   interpolation = "bilinear",
+  bufferNA = FALSE,
+  bufferSize = NULL,
   quiet = FALSE
 )
 }
@@ -64,6 +66,13 @@ slower the quasirandom quadrature scheme will be to generate.}
 \item{interpolation}{The interpolation method to use when extracting
 covariate data. Default is "bilinear", can also use "simple", this is based
 on the raster package  \code{\link[raster]{extract}}.}
+
+\item{bufferNA}{If extract from \code{\link[raster]{extract}} returns NA for
+point extract, do you want us to attempt to user buffer to calculate cells
+which are NA.}
+
+\item{bufferSize}{If you call 'bufferNA' what is the range of the buffer in
+meters.}
 
 \item{quiet}{If TRUE, do not print messages. Default is FALSE.}
 }

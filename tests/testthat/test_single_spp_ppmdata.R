@@ -22,6 +22,11 @@ ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
 # test with just pres, window & covars
 ppmdata2 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]], covariates = preds)
 
+# test with consistant masks.
+x <- sum(preds)
+preds2 <- mask(preds,x)
+ppmdata2a <- ppmData(npoints = npoints, presences=presences, window = preds2[[1]], covariates = preds2)
+
 # test with no npoints
 ppmdata3 <- ppmData(presences=presences, window = preds[[1]])
 

@@ -67,6 +67,11 @@
 #' @param interpolation The interpolation method to use when extracting
 #' covariate data. Default is "bilinear", can also use "simple", this is based
 #' on the raster package  \code{\link[raster]{extract}}.
+#' @param bufferNA If extract from \code{\link[raster]{extract}} returns NA for
+#' point extract, do you want us to attempt to user buffer to calculate cells
+#' which are NA.
+#' @param bufferSize If you call 'bufferNA' what is the range of the buffer in
+#' meters.
 #' @param quiet If TRUE, do not print messages. Default is FALSE.
 #' @importFrom graphics legend par points
 #' @importFrom methods as
@@ -94,6 +99,8 @@ ppmData <- function(presences = NULL,
                     mc.cores = 1,
                     quasirandom.samples = NULL,
                     interpolation = "bilinear",
+                    bufferNA = FALSE,
+                    bufferSize = NULL,
                     quiet=FALSE){
 
   # if npoints in NULL setup a default amount.
@@ -121,7 +128,7 @@ ppmData <- function(presences = NULL,
 
   if(is.null(presences)){
    if(!quiet)message('Generating background points in the absence of species presences')
-   bckpts <- quasirandomMethod(npoints = npoints,
+   bckpts <- quasiRandomMethod(npoints = npoints,
                                window = window,
                                covariates =  covariates,
                                coord =  coord,
@@ -130,7 +137,9 @@ ppmData <- function(presences = NULL,
    sitecovariates <- getCovariates(pbxy = bckpts,
                                    covariates = covariates,
                                    interpolation = interpolation,
-                                   coord = coord)
+                                   coord = coord,
+                                   bufferNA = bufferNA,
+                                   bufferSize = bufferSize)
 
   } else {
 
@@ -143,7 +152,7 @@ ppmData <- function(presences = NULL,
   sppNames <- getSppNames(pressies, speciesIdx)
 
   # create some quasirandom background points
-  bckpts <- quasirandomMethod(npoints = npoints,
+  bckpts <- quasiRandomMethod(npoints = npoints,
                               window = window,
                               covariates = covariates,
                               coord = coord,
@@ -173,7 +182,9 @@ ppmData <- function(presences = NULL,
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates,
                                       interpolation=interpolation,
-                                      coord=coord)
+                                      coord=coord,
+                                      bufferNA = bufferNA,
+                                      bufferSize = bufferSize)
 
     } else {
       if(!quiet)message("Developing a quadrature scheme for a single species dataset.")
@@ -187,7 +198,9 @@ ppmData <- function(presences = NULL,
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
                                       interpolation=interpolation,
-                                      coord=coord)
+                                      coord=coord,
+                                      bufferNA = bufferNA,
+                                      bufferSize = bufferSize)
     }
 
 
@@ -210,7 +223,7 @@ ppmData <- function(presences = NULL,
   coordNames <- coord
   res <- list()
   if(ismulti){
-     res$ppmData <- transpose_ppmdata(dat, sppNames, coordNames, covarNames)
+     res$ppmData <- transposePPMdata(dat, sppNames, coordNames, covarNames)
      res$marked <- TRUE
   } else {
     res$ppmData <- dat
@@ -267,10 +280,10 @@ assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, 
   else type <- "wide"
 
   final_dat <- switch(type,
-                      long=longdat(wts = wts,
+                      long=longData(wts = wts,
                                    sitecovariates = sitecovariates,
                                    coord = coord),
-                      wide=widedat(presence = presences,
+                      wide=wideData(presence = presences,
                                    quadrature = quadrature,
                                    sitecovariates = sitecovariates, wts = wts,
                                    coord = coord,
@@ -282,7 +295,7 @@ assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, 
 }
 
 
-longdat <- function(wts, sitecovariates=NULL, coord){
+longData <- function(wts, sitecovariates=NULL, coord){
 
   if(!is.null(sitecovariates)) dat2 <- data.frame(wts[,coord],sitecovariates[,-1:-3],presence=wts$pres, weights=wts$wts)
   else dat2 <- data.frame(wts[,coord],presence=wts$pres,weights=wts$wts)
@@ -292,10 +305,10 @@ longdat <- function(wts, sitecovariates=NULL, coord){
   return(dat2)
 }
 
-widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx, sppNames){
+wideData <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx, sppNames){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- fastwidemat(wts, speciesIdx)
+  pamat <- fastWideMatrix(wts, speciesIdx)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
   quad_pamat[is.na(quad_pamat)]<-0
@@ -310,7 +323,7 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx
     # df <- merge(response_ppmmat,wts[!duplicated(wts$OrigOrder),c("OrigOrder")], by="OrigOrder", sort=TRUE)
 
   # }
-  wtsmat <- fastwidematwts(wts, sppNames)
+  wtsmat <- fastWideMatrixWeights(wts, sppNames)
   # ids <- wts[!duplicated(wts[,c(speciesIdx,'DatasetID')]),c(speciesIdx,'DatasetID')]
   # ids <- ids[-which( ids[,speciesIdx] == 'quad'),]
   # idx_rows <- df$OrigOrder
@@ -320,7 +333,7 @@ widedat <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-quasirandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL){
+quasiRandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL){
 
   #generate a set of potential sites for quasi-random generation
   if(!is.null(covariates)){
@@ -458,18 +471,35 @@ checkWindow <- function(presences, window, coord, quiet){
 
 
 ## function to extract covariates for presence and background points.
-getCovariates <- function(pbxy, covariates=NULL, interpolation, coord){
+getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, bufferNA, bufferSize){
   if(is.null(covariates)){
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
   } else {
     expectClasses(covariates,c("RasterLayer","RasterStack","RasterBrick"),covariates)
     covars <- raster::extract(x = covariates,
+                              # y = pbxy[,"SiteID"])#,## let's try with cell numbers to see if they line up better
                               y = data.frame(X=as.numeric(pbxy[,coord[1]]),
                                            Y=as.numeric(pbxy[,coord[2]])),
                               method=interpolation,
                               na.rm=TRUE)
-  covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
-  }
+    covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
+  if(bufferNA){
+    if(any(!complete.cases(covars))){
+        message('Buffering NA cells generated during covariate extraction.')
+        missXY <- which(!complete.cases(covars))
+        missCoord <- covars[missXY,coord]
+        if(is.null(bufferSize)){
+          if(raster::isLonLat(covariates)) ltlnscale <- 100000
+          else ltlnscale <- 1
+          buff <- raster::cellStats(raster::area(covariates),mean)*ltlnscale
+        }else {
+          buff <- bufferSize
+        }
+        buffCovars <- extract(x=covariates,y=missCoord,fun=mean,na.rm=TRUE,buffer=buff)
+        covars[missXY,-1:-3] <- buffCovars
+        }
+      }
+    }
   return(covars)
 }
 
@@ -509,7 +539,7 @@ defaultWindow <- function (presences, coord) {
 }
 
 
-fastwidemat <- function(dat, speciesIdx){
+fastWideMatrix <- function(dat, speciesIdx){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
   # dat[,speciesIdx] <- factor(dat[,"wts.dataset"])
@@ -525,7 +555,7 @@ fastwidemat <- function(dat, speciesIdx){
 }
 
 
-fastwidematwts <- function(dat, sppNames){
+fastWideMatrixWeights <- function(dat, sppNames){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
   dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
@@ -541,7 +571,7 @@ fastwidematwts <- function(dat, sppNames){
   wtsdat
 }
 
-transpose_ppmdata <- function( dat, sppNames, coordNames, covarNames){
+transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
 
   dat1 <- list()
   dat1$wts <- dat$wtsmat
