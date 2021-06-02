@@ -300,8 +300,6 @@ longData <- function(wts, sitecovariates=NULL, coord){
   if(!is.null(sitecovariates)) dat2 <- data.frame(wts[,coord],sitecovariates[,-1:-3],presence=wts$pres, weights=wts$wts)
   else dat2 <- data.frame(wts[,coord],presence=wts$pres,weights=wts$wts)
 
-  # if(length(nrow(dat2[!complete.cases(dat2), ]))>0) message("Your covariate data has ", nrow(dat2[!complete.cases(dat2), ])," rows with NAs in them - check before modelling.")
-
   return(dat2)
 }
 
@@ -316,20 +314,12 @@ wideData <- function(presence, quadrature, sitecovariates, wts, coord, speciesId
   response_ppmmat$Const <- 1
   response_ppmmat$OrigOrder <- as.integer(rownames(response_ppmmat))
 
-  # if(!is.null(sitecovariates)){
-    sitecovariates$OrigOrder <- wts$OrigOrder
-    df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=TRUE)
-  # } else {
-    # df <- merge(response_ppmmat,wts[!duplicated(wts$OrigOrder),c("OrigOrder")], by="OrigOrder", sort=TRUE)
 
-  # }
+  sitecovariates$OrigOrder <- wts$OrigOrder
+  df <- merge(response_ppmmat,sitecovariates[!duplicated(sitecovariates$OrigOrder),], by = "OrigOrder", sort=TRUE)
   wtsmat <- fastWideMatrixWeights(wts, sppNames)
-  # ids <- wts[!duplicated(wts[,c(speciesIdx,'DatasetID')]),c(speciesIdx,'DatasetID')]
-  # ids <- ids[-which( ids[,speciesIdx] == 'quad'),]
-  # idx_rows <- df$OrigOrder
-  # idx_cols <- match(colnames(quad_pamat), ids[,speciesIdx] )
-  # wtsmat <- wtsmat[idx_rows,idx_cols]
-  if(!all.equal(colnames(wtsmat),colnames(quad_pamat))) message('names could be getting mixed up with factors in R')
+
+    if(!all.equal(colnames(wtsmat),colnames(quad_pamat))) message('names could be getting mixed up with factors in R')
   return(list(mm=df,wtsmat=wtsmat))
 }
 
