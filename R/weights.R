@@ -50,7 +50,7 @@ getWeights <- function( presences, quadrature, quadDummy, window, coord, species
   #put them both together
   allAreas <- merge( areas1, areas2, all=TRUE, by="id", sort=TRUE)
   allAreas <- merge( allAreas, areas3, all=TRUE, by='id', sort=TRUE)
-  allAreas[allAreas==-99999] <- NA
+  # allAreas[allAreas==-99999] <- NA
 
   # remove really extreme areas - this is quite slow.
   res <- cbind( allAreas$id, apply(allAreas[,-1], 1, median, na.rm=TRUE))
@@ -76,12 +76,12 @@ areasWithinBoxes <- function(kounter, allpts, boxes){
     coords <- allpts[subsetty,-3]
     coordsDups <- coords[!duplicated(coords),]
     if(nrow(coordsDups)==1){
-      res$area <- -99999
+      res$area <- NA
     } else {
       res$area[subsetty] <- deldir::deldir( x=allpts[subsetty,1], y=allpts[subsetty,2], rw=boxes[kounter,],round=FALSE,digits=12, suppressMsge=TRUE)$summary$dir.area
     }
   } else {
-    res$area <- -99999
+    res$area <- NA
   }
   return( res[subsetty,])
 }
