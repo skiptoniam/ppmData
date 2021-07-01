@@ -595,6 +595,8 @@ transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
 
   dat1 <- list()
   dat1$wts <- dat$wtsmat
+  ## look out fot any negative weights
+  dat1$wts[!is.na(dat1$wts)& dat1$wts<=0] <- sqrt(.Machine$double.eps)
   my.ord <- match(sppNames$sppNames,colnames(dat1$wts))#gtools::mixedorder( colnames( dat1$wts))
 
   # responses
@@ -632,8 +634,6 @@ transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
 
   return( dat1)
 }
-
-
 
 
 plapply <- function (X, FUN, ..., .parallel = 1, .seed = NULL, .verbose = TRUE) {
