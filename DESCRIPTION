@@ -9,10 +9,22 @@ Description: This package generates a set of quasi-random points for a quadratur
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.1.1
-Imports: Rdpack, rgdal, raster, deldir, randtoolbox, parallel, sp, methods, mgcv
+Imports: 
+    Rdpack,
+    rgdal,
+    raster,
+    deldir,
+    randtoolbox,
+    parallel,
+    sp,
+    methods,
+    mgcv,
+    Rcpp
 Suggests: 
     knitr,
     testthat (>= 3.0.0),
     rmarkdown
 Depends: R (>= 3.5.0)
 Config/testthat/edition: 3
+LinkingTo: 
+    Rcpp
