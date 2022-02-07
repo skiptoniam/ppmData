@@ -26,5 +26,5 @@ Suggests:
     rmarkdown
 Depends: R (>= 3.5.0)
 Config/testthat/edition: 3
-LinkingTo: 
-    Rcpp
+SystemRequirements: C++11
+NeedsCompilation: yes
