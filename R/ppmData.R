@@ -146,7 +146,8 @@ ppmData <- function(presences = NULL,
   # This should check the presences and make it returns the data in the correct format for the remaining function.
   pressies <- checkPresences(known.sites = presences,
                             coord = coord,
-                            speciesIdx = speciesIdx)
+                            speciesIdx = speciesIdx,
+			    window=window)
 
   # Hold onto the species names from the speciesIdx column
   sppNames <- getSppNames(pressies, speciesIdx)
@@ -159,8 +160,8 @@ ppmData <- function(presences = NULL,
                               quasirandom.samples = quasirandom.samples)
 
   # Sometimes the points are very close together, so let's jitter if needed.
-  reswindow <- raster::res(window)[1]
-  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, speciesIdx = speciesIdx, aBit=reswindow/2)
+  reswindow <- min( raster::res(window))
+  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, speciesIdx = speciesIdx, aBit=reswindow/2, window=window)
   pressies <- tmpPts$pressies
   bckptsQ <- tmpPts$bckpts
   bckptsD <- bckpts$quasiDummy
@@ -245,15 +246,27 @@ ppmData <- function(presences = NULL,
   return(res)
 }
 
-jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
+jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4, window){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
   for( jj in as.character( unique( pressies[,speciesIdx]))){ #I think that we have made the assumption that this is called SpeciesID...?
     sppJ <- which(  pressies[,speciesIdx]==jj)
-    dupes <- which( duplicated( pressies[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
+    pressiesJ <- pressies[sppJ,]
+    dupes <- which( duplicated( pressiesJ[,coord]))
     if( length( dupes)>0){
-      pressies[sppJ[dupes],coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
-      pressies[sppJ[dupes],coord[2]] <- jitter( pressies[sppJ[dupes],coord[2]], amount=aBit)
+      pressiesJ[dupes,coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
+      pressiesJ[dupes,coord[2]] <- jitter( pressies[sppJ[dupes],coord[2]], amount=aBit)
+      #fixing up those points that have been jittered outside of the window
+      kount <- 1
+      tmp <- raster::extract( window, pressiesJ[,coord])      
+      outOfWindow <- which( is.na( tmp))
+      while( kount < 10 & length( outOfWindow)>0){
+	pressiesJ[outOfWindow,coord[1]] <- jitter( pressies[sppJ[outOfWindow],coord[1]], amount=aBit)
+	pressiesJ[outOfWindow,coord[2]] <- jitter( pressies[sppJ[outOfWindow],coord[2]], amount=aBit)
+	tmp <- raster::extract( window, pressiesJ[,coord])      
+	outOfWindow <- which( is.na( tmp))
+	kount <- kount + 1
+      }
     }
   }
 
@@ -267,6 +280,17 @@ jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
     dupes <- dupes - npres
     bckpts[dupes,coord[1]] <- jitter( bckpts[dupes,coord[1]], amount=aBit)
     bckpts[dupes,coord[2]] <- jitter( bckpts[dupes,coord[2]], amount=aBit)
+    #fixing up those points that have been jittered outside of the window
+    kount <- 1
+    tmp <- raster::extract( window, bckpts[,coord])      
+    outOfWindow <- which( is.na( tmp))
+    while( kount < 10 & length( outOfWindow)>0){
+      bckpts[outOfWindow,coord[1]] <- jitter( bckpts[,coord[1]], amount=aBit)
+      bckpts[outOfWindow,coord[2]] <- jitter( bckpts[,coord[2]], amount=aBit)
+      tmp <- raster::extract( window, bckpts[,coord])      
+      outOfWindow <- which( is.na( tmp))
+      kount <- kount + 1
+    }
   }
 
   return( list( pressies=pressies, bckpts=bckpts))
@@ -388,9 +412,7 @@ quasiRandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   return(list(quasiPoints = randpoints, quasiDummy = randpointsDummy))
 }
 
-checkPresences <- function (known.sites,coord,speciesIdx){
-
-
+checkPresences <- function (known.sites,coord,speciesIdx,window){
   # check object classes
   expectClasses(known.sites, c('matrix','data.frame'),name = 'known.sites')
 
@@ -398,7 +420,13 @@ checkPresences <- function (known.sites,coord,speciesIdx){
     stop("'speciesIdx': ",speciesIdx," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
-
+  #check to see if the points lie within the raster (not over an NA)
+  tmpCheck <- raster::extract( window, known.sites[,coord])
+  if( !all( !is.na( tmpCheck))){
+    warning("There are presence records outside the region window.  Removing them but please check.")
+    known.sites <- known.sites[!is.na( tmpCheck),]
+  }
+  
   # try and sort out factors.
   known.sites[[speciesIdx]] <- factor(known.sites[[speciesIdx]], levels = unique(known.sites[[speciesIdx]]))
   df <- known.sites[,c(coord,speciesIdx)]
@@ -475,18 +503,27 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, bufferNA,
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   if(bufferNA){
     if(any(!complete.cases(covars))){
-        message('Buffering NA cells generated during covariate extraction.')
+        message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
         missXY <- which(!complete.cases(covars))
         missCoord <- covars[missXY,coord]
-        if(is.null(bufferSize)){
-          if(raster::isLonLat(covariates)) ltlnscale <- 100000
-          else ltlnscale <- 1
-          buff <- raster::cellStats(raster::area(covariates),mean)*ltlnscale
-        }else {
-          buff <- bufferSize
-        }
-        buffCovars <- extract(x=covariates,y=missCoord,fun=mean,na.rm=TRUE,buffer=buff)
-        covars[missXY,-1:-3] <- buffCovars
+        #details of set of neighbouring cells (to all missing values)
+        smallSet <- adjacent( covariates, raster::extract( covariates, missCoord, cellnumbers=TRUE), directions=8)[,2]
+        smallCovars <- values( covariates)[smallSet,]
+        goodNeighbours <- which( complete.cases( smallCovars))
+        smallSet <- smallSet[goodNeighbours]
+        smallCovars <- smallCovars[goodNeighbours,]
+      
+        smallLocs <- raster::coordinates( covariates)[smallSet,]
+      
+        #distances from target cells to reduced set
+        myDists <- as.matrix( pdist::pdist(X = smallLocs, Y = missCoord))
+        myNearest <- apply( myDists, 2, which.min)
+        #check that nearest is actually a neighbour
+        tmp <- which( myDists[cbind(myNearest,1:length( missXY))] < raster::res(covariates))
+        if( length( tmp) < length( missXY))
+          message("No near neighbours found for some points with NA covariates.") #hopefully will never happen.
+        #put into grid
+        covars[missXY[tmp], -(1:3)] <- smallCovars[myNearest[tmp]]
         }
       }
     }
