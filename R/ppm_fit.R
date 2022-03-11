@@ -1,3 +1,4 @@
+
 #'@param species_formula The ppm model formula.
 #'@param bias_formula Default is NULL. The idea will be to implement this in an integrated model
 #'@param ppmdata A ppmData data object
@@ -12,6 +13,7 @@
 #'ppmdata <- ppmData(npoints = 1000,presences=presences, window = preds[[1]], covariates = preds)
 #'sp_form <- presence/weights ~ poly(X,2) + poly(Y,2) + poly(max_temp_hottest_month,2) + poly(annual_mean_precip,2) + poly(annual_mean_temp,2) + poly(distance_from_main_roads,2)
 #'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata)
+#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata, method='lasso')
 
 ppm.fit <- function(species_formula = presence/weights ~ 1,
                     bias_formula = NULL,
@@ -59,6 +61,7 @@ ppm.fit <- function(species_formula = presence/weights ~ 1,
     ft <- mgcv::gam(formula = form, data = cbind(x,y), weights = wts, family = poisson())
   }
   if(method=="lasso"){
+    # ft <- ppmlasso::ppmlasso()
     ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, family = "poisson", alpha = 1) #lasso
   }
   if(method=="ridge"){
