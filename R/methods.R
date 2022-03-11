@@ -6,7 +6,7 @@
 #' @export
 #' @importFrom raster extent
 
-plot.ppmData <- function(x, ...){
+plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
 
   op <- graphics::par(no.readonly = TRUE)
@@ -29,10 +29,10 @@ plot.ppmData <- function(x, ...){
     if(x$params$dw){
       e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
-      raster::plot(p,main='quadrature scheme')
+      raster::plot(p,main=main)
     } else {
       p <- x$window
-      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main=main)
     }
     points(quad,pch='.')
     points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$speciesIdx])),1]),
@@ -55,10 +55,10 @@ plot.ppmData <- function(x, ...){
     if(x$params$dw){
       e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
-      raster::plot(p,main='quadrature scheme')
+      raster::plot(p,main=main)
     } else {
       p <- x$window
-      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main=main)
     }
     points(quad,pch='.')
     points(pressies,col='dodgerblue',pch=16,cex=0.5)
