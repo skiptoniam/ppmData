@@ -51,31 +51,26 @@ ppm.fit <- function(species_formula = presence/weights ~ 1,
     x <- model.matrix(mt,mf)
     y <- model.response(mf)
     wts <- model.weights(mf)
+    offy <- model.offset(mf)
   }
 
-  # else {
-    ## use different data structure for gam
-    # x <- ppmdata$ppmData
-    # y <- ppmdata$ppmData$presence
-    # wts <- ppmdata$ppmData$weights
-  # }
+  if(is.null(offy))
+    offy <- rep(0,length(y))
 
   if(method=="glm"){
-    ft <- glm.fit(x = x, y = y/wts, weights = wts, family = poisson())
+    ft <- glm.fit(x = x, y = y/wts, weights = wts, offset = offy, family = poisson())
   }
   if(method=="gam"){
-    ft <- mgcv::gam(formula = form, data = ppmdata$ppmData, weights = x$weights, family = poisson())
+    ft <- mgcv::gam(formula = form, data = ppmdata$ppmData, weights = x$weights, offset = offy, family = poisson())
   }
   if(method=="lasso"){
     # ft <- ppmlasso::ppmlasso() ## maybe could sub in ppmlasso
-    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, family = "poisson", alpha = 1) #lasso
+    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 1) #lasso
   }
   if(method=="ridge"){
-    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, family = "poisson", alpha = 0) #lasso
+    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 0) #lasso
   }
-  # if(method=="gibbs"){
-  #   ft <- glm.fit(x = x, y = y/wts, weights = wts, family = binomial())
-  # }
+
 
   return(ft)
 
