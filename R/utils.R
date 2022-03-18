@@ -53,3 +53,9 @@ merge.formula <- function(x, y, ...){
     environment(f) <- ey
   f
 }
+
+## Helper functions
+#'@export
+list2numeric <- function(x){
+  as.numeric(as.matrix(x))
+}
