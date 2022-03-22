@@ -54,8 +54,11 @@
 #' ppm likelihood.
 #' @param coord is the name of site coordinates. The default is c('X','Y').
 #' This should match the name of the coordinates in the presences dataset.
-#' @param speciesIdx is the name of the species ID in the presences dataset.
+#' @param species.id is the name of the species ID in the presences dataset.
 #' The default is "SpeciesID".
+#' @param quad.method The quadrature generation method. Default is "quasi" for
+#' quasi-random, "random" for pseudo-random (regular random) and "grid" for
+#' a regular grid at a set resolution (with respect to the original window resolution).
 #' @param mc.cores The number of cores to use in the processing. default is
 #' parallel::detectCores()-1
 #' @param quasirandom.samples This set the total number of samples to consider
@@ -82,7 +85,7 @@
 #' \dontrun{
 #' library(ppmData)
 #' library(raster)
-#' path <- system.file("extdata", package = "ppmdata")
+#' path <- system.file("extdata", package = "ppmData")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' preds <- stack(lst)
 #' window <- preds[[1]]
@@ -95,7 +98,8 @@ ppmData <- function(presences = NULL,
                     covariates = NULL,
                     npoints = NULL,
                     coord = c('X','Y'),
-                    speciesIdx = "SpeciesID",
+                    species.id = "SpeciesID",
+                    quad.method = c("quasi","random","grid"),
                     mc.cores = 1,
                     quasirandom.samples = NULL,
                     interpolation = "bilinear",
@@ -103,23 +107,26 @@ ppmData <- function(presences = NULL,
                     bufferSize = NULL,
                     quiet=FALSE){
 
-  # if npoints in NULL setup a default amount.
+
+  quad.method <- match.arg(quad.method)
+
+  # if npoints in NULL setup a default amount. This is taken fron spatstat
   if(is.null(npoints)){
     ## linear scaling of quad points compared to max n presences.
     ## count bump this up more is so desired.
-    # xx <- seq(0,10000,100)
-    # plot(xx,(10 * ceiling(2 * sqrt(xx)/10))^2)
+    ## xx <- seq(0,10000,100)
+    ## plot(xx,(10 * ceiling(2 * sqrt(xx)/10))^2)
 
-    npmx <- max(table(presences[,speciesIdx]))
+    npmx <- max(table(presences[,species.id]))
     nquad <- rep(pmax(32, 10 * ceiling(2 * sqrt(npmx)/10)),2)
     npoints <- prod(nquad)
   }
 
-  ## Make sure the column ids are characters and check for missing/wrong named coord/speciesIdx vars.
+  ## Make sure the column ids are characters and check for missing/wrong named coord/species.id vars.
   if(!is.character(coord)) coord <- as.character(coord)
   if(all(!coord%in%colnames(presences))) stop(paste0('coord: "',coord[1],'" & "',coord[2],'" do not match any of the colnames in the presences data.frame'))
-  if(!is.character(speciesIdx)) speciesIdx <- as.character(speciesIdx)
-  if(all(!speciesIdx%in%colnames(presences))) stop(paste0('speciesIdx: "',speciesIdx,'" does not match any of the colnames in the presences data.frame'))
+  if(!is.character(species.id)) species.id <- as.character(species.id)
+  if(all(!species.id%in%colnames(presences))) stop(paste0('species.id: "',species.id,'" does not match any of the colnames in the presences data.frame'))
 
   ##  If not window is provided provide a dummy window
   if(is.null(window)) default_window <- TRUE
@@ -128,6 +135,13 @@ ppmData <- function(presences = NULL,
 
   if(is.null(presences)){
    if(!quiet)message('Generating background points in the absence of species presences')
+
+   ## create a function which runs
+   # bkpts <- switch(quad.method,
+   #                 quasi = ,
+   #                 random = ,
+   #                 grid = )
+
    bckpts <- quasiRandomMethod(npoints = npoints,
                                window = window,
                                covariates =  covariates,
@@ -146,10 +160,10 @@ ppmData <- function(presences = NULL,
   # This should check the presences and make it returns the data in the correct format for the remaining function.
   pressies <- checkPresences(known.sites = presences,
                             coord = coord,
-                            speciesIdx = speciesIdx)
+                            species.id = species.id)
 
-  # Hold onto the species names from the speciesIdx column
-  sppNames <- getSppNames(pressies, speciesIdx)
+  # Hold onto the species names from the species.id column
+  sppNames <- getSppNames(pressies, species.id)
 
   # create some quasirandom background points
   bckpts <- quasiRandomMethod(npoints = npoints,
@@ -160,13 +174,13 @@ ppmData <- function(presences = NULL,
 
   # Sometimes the points are very close together, so let's jitter if needed.
   reswindow <- raster::res(window)[1]
-  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, speciesIdx = speciesIdx, aBit=reswindow/2)
+  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, species.id = species.id, aBit=reswindow/2)
   pressies <- tmpPts$pressies
   bckptsQ <- tmpPts$bckpts
   bckptsD <- bckpts$quasiDummy
 
   # Check to see if the presences are for a single species or multiple.
-  ismulti <- checkMultispecies(pressies, speciesIdx)
+  ismulti <- checkMultispecies(pressies, species.id)
 
   if(ismulti){
     if(!quiet)message("Developing a quadrature scheme for multiple species (marked) dataset.")
@@ -175,7 +189,7 @@ ppmData <- function(presences = NULL,
                                     quadDummy = bckptsD,
                                     window = window,
                                     coord = coord,
-                                    speciesIdx = speciesIdx,
+                                    species.id = species.id,
                                     mc.cores = mc.cores,
                                     sppNames = sppNames)
 
@@ -193,7 +207,7 @@ ppmData <- function(presences = NULL,
                                      quadDummy = bckptsD,
                                      window = window,
                                      coord = coord,
-                                     speciesIdx = speciesIdx)
+                                     species.id = species.id)
       # extract the covariate data
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
@@ -212,7 +226,7 @@ ppmData <- function(presences = NULL,
                           sitecovariates = sitecovariates,
                           wts = wts,
                           coord = coord,
-                          speciesIdx = speciesIdx,
+                          species.id = species.id,
                           sppNames = sppNames)
 
   if(!is.null(covariates)){
@@ -233,7 +247,7 @@ ppmData <- function(presences = NULL,
   if(!is.null(presences)) res$presences <- presences
   res$window <- window
   res$params <- list(coord = coord,
-                     speciesIdx = speciesIdx,
+                     species.id = species.id,
                      mc.cores = mc.cores,
                      quasirandom.samples = quasirandom.samples,
                      interpolation = interpolation,
@@ -245,11 +259,11 @@ ppmData <- function(presences = NULL,
   return(res)
 }
 
-jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
+jitterIfNeeded <- function( pressies, bckpts, coord, species.id, aBit=1e-4){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
-  for( jj in as.character( unique( pressies[,speciesIdx]))){ #I think that we have made the assumption that this is called SpeciesID...?
-    sppJ <- which(  pressies[,speciesIdx]==jj)
+  for( jj in as.character( unique( pressies[,species.id]))){ #I think that we have made the assumption that this is called SpeciesID...?
+    sppJ <- which(  pressies[,species.id]==jj)
     dupes <- which( duplicated( pressies[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
     if( length( dupes)>0){
       pressies[sppJ[dupes],coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
@@ -272,9 +286,9 @@ jitterIfNeeded <- function( pressies, bckpts, coord, speciesIdx, aBit=1e-4){
   return( list( pressies=pressies, bckpts=bckpts))
 }
 
-assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, speciesIdx, sppNames){
+assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, species.id, sppNames){
 
-  ismulti <- checkMultispecies(presences, speciesIdx)
+  ismulti <- checkMultispecies(presences, species.id)
 
   if(!ismulti) type <- "long"
   else type <- "wide"
@@ -287,7 +301,7 @@ assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, 
                                    quadrature = quadrature,
                                    sitecovariates = sitecovariates, wts = wts,
                                    coord = coord,
-                                   speciesIdx = speciesIdx,
+                                   species.id = species.id,
                                    sppNames = sppNames))
 
   return(final_dat)
@@ -303,10 +317,10 @@ longData <- function(wts, sitecovariates=NULL, coord){
   return(dat2)
 }
 
-wideData <- function(presence, quadrature, sitecovariates, wts, coord, speciesIdx, sppNames){
+wideData <- function(presence, quadrature, sitecovariates, wts, coord, species.id, sppNames){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- fastWideMatrix(wts, speciesIdx)
+  pamat <- fastWideMatrix(wts, species.id)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad','dummy'))]
   quad_pamat[is.na(quad_pamat)]<-0
@@ -323,22 +337,43 @@ wideData <- function(presence, quadrature, sitecovariates, wts, coord, speciesId
   return(list(mm=df,wtsmat=wtsmat))
 }
 
-quasiRandomMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL){
+
+quadMethod <- function(npoints, window, covariates=NULL, coord, quasirandom.samples=NULL){
+  bkpts <- switch(quad.method,
+                quasi = quasiRandomMethod(npoints,
+                                          window,
+                                          # covariates,
+                                          coord,
+                                          quasirandom.samples),
+                random = pseudoRandomQuad(npoints,
+                                          window,
+                                          coord),
+                grid = gridQuad(npoints,
+                                window,
+                                coord))
+}
+
+
+quasiRandomMethod <- function(npoints,
+                              window,
+                              # covariates=NULL,
+                              coord,
+                              quasirandom.samples=NULL){
 
   #generate a set of potential sites for quasi-random generation
-  if(!is.null(covariates)){
-    rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
-    rast_data <- raster::values(covariates)
-    na_sites <- which(!complete.cases(rast_data))
-    covariates_ext <- raster::extent(covariates)[1:4]
-    potential_sites <- cbind(rast_coord,rast_data)
-  } else {
+  # if(!is.null(covariates)){
+  #   rast_coord <- raster::xyFromCell(covariates,1:raster::ncell(covariates))
+  #   rast_data <- raster::values(covariates)
+  #   na_sites <- which(!complete.cases(rast_data))
+  #   covariates_ext <- raster::extent(covariates)[1:4]
+  #   potential_sites <- cbind(rast_coord,rast_data)
+  # } else {
     rast_coord <- raster::xyFromCell(window,1:raster::ncell(window))
     rast_data <- raster::values(window)
     na_sites <- which(!complete.cases(rast_data))
     covariates_ext <- raster::extent(window)[1:4]
     potential_sites <- rast_coord
-  }
+  # }
 
   if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints
 
@@ -388,20 +423,20 @@ quasiRandomMethod <- function(npoints, window, covariates=NULL, coord, quasirand
   return(list(quasiPoints = randpoints, quasiDummy = randpointsDummy))
 }
 
-checkPresences <- function (known.sites,coord,speciesIdx){
+checkPresences <- function (known.sites,coord,species.id){
 
 
   # check object classes
   expectClasses(known.sites, c('matrix','data.frame'),name = 'known.sites')
 
-  if(!any(colnames(known.sites)%in%speciesIdx))
-    stop("'speciesIdx': ",speciesIdx," ,does not match any of the column names in your presences data.\n")
+  if(!any(colnames(known.sites)%in%species.id))
+    stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
 
   # try and sort out factors.
-  known.sites[[speciesIdx]] <- factor(known.sites[[speciesIdx]], levels = unique(known.sites[[speciesIdx]]))
-  df <- known.sites[,c(coord,speciesIdx)]
+  known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
+  df <- known.sites[,c(coord,species.id)]
 
   return (df)
 }
@@ -423,7 +458,7 @@ checkCovariates <- function(covariates){
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
-# checkDuplicates <- function(presences, coord, speciesIdx){
+# checkDuplicates <- function(presences, coord, species.id){
 #   if(is.null(presences))return(NULL)
 #   dups <- duplicated(presences)
 #   if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
@@ -432,13 +467,13 @@ checkCovariates <- function(covariates){
 #   dat <- presences
 #   }
 #   dat <- as.data.frame(dat)
-#   colnames(dat) <- c(coord, speciesIdx)
+#   colnames(dat) <- c(coord, species.id)
 #   dat
 # }
 
 ## check to see if the presences dataset is multispecies.
-checkMultispecies <- function(presences, speciesIdx){
-  if(length(unique(presences[,speciesIdx]))>1) multi <- TRUE
+checkMultispecies <- function(presences, species.id){
+  if(length(unique(presences[,species.id]))>1) multi <- TRUE
   else multi <- FALSE
   multi
 }
@@ -495,11 +530,11 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, bufferNA,
 
 
 
-getSppNames <- function(presences, speciesIdx){
+getSppNames <- function(presences, species.id){
 
   sppIdx <- list()
-  sppIdx$sppNames <- unique(presences[,speciesIdx])
-  sppIdx$sppNames <- factor(sppIdx$sppNames, levels = unique(presences[,speciesIdx]))
+  sppIdx$sppNames <- unique(presences[,species.id])
+  sppIdx$sppNames <- factor(sppIdx$sppNames, levels = unique(presences[,species.id]))
   sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
 
   return(sppIdx)
@@ -559,10 +594,10 @@ defaultWindow <- function (presences, coord) {
 }
 
 
-fastWideMatrix <- function(dat, speciesIdx){
+fastWideMatrix <- function(dat, species.id){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
-  # dat[,speciesIdx] <- factor(dat[,"wts.dataset"])
+  # dat[,species.id] <- factor(dat[,"wts.dataset"])
 
   out <- matrix(nrow=nlevels(dat[,"OrigOrder"]),
                 ncol=nlevels(dat[,"wts.dataset"]),
