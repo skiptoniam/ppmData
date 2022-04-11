@@ -51,7 +51,7 @@ gridQuad <- function(npoints,
 
   colnames(bk_sites) <- coord
 
-  return(bk_sites)
+  return(list(quasiPoints = bk_sites, quasiDummy = NULL))
 
 }
 
