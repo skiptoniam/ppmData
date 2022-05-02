@@ -100,7 +100,7 @@ ppmData <- function(presences,
                     quad.method = c("quasi","random","grid"),
                     mc.cores = 1,
                     quasirandom.samples = NULL,
-                    interpolation = c("bilinear","simple"),
+                    interpolation = c("simple","bilinear"),
                     bufferNA = FALSE,
                     bufferSize = NULL,
                     quiet=FALSE){
@@ -123,30 +123,35 @@ ppmData <- function(presences,
   # Check for duplicate presences - will remove duplicated points per species.
   pressies <- checkDuplicates(presences = pressies,
                               coord = coord,
-                              species.id = species.id)
+                              species.id = species.id,
+                              quiet = quiet)
 
-  # if npoints in NULL setup a default amount. This is taken from spatstat
+  ## If npoints in NULL setup a default amount. This is taken from spatstat
   npoints <- checkNoPoints(npoints = npoints,
                            presences = pressies,
                            species.id = species.id)
 
-  ##  If not window is provided provide a dummy window
+  ## If not window is provided provide a dummy window
   if(is.null(window)) default_window <- TRUE
   else default_window <- FALSE
-  window <- checkWindow(pressies,window,coord,quiet)
+  window <- checkWindow(presences = pressies,
+                        window = window,
+                        coord = coord,
+                        quiet = quiet)
 
-  # Hold onto the species names from the species.id column
-  sppNames <- getSppNames(pressies, species.id)
+  ## Hold onto the species names from the species.id column
+  sppNames <- getSppNames(presences = pressies,
+                          species.id = species.id)
 
-  # create some quadrature background points
+  ## Create some quadrature points
   bckpts <- quadMethod(quad.method = quad.method,
                        npoints = npoints,
                        window = window,
                        coord =  coord,
                        quasirandom.samples = quasirandom.samples)
 
-  # Sometimes the points are very close together, so let's jitter if needed.
-  reswindow <- raster::res(window)[1]
+  ## Sometimes the points are very close together, so let's jitter if needed.
+  reswindow <- terra::res(window)[1]
   tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, species.id = species.id, aBit=reswindow/2)
   pressies <- tmpPts$pressies
   bckptsQ <- tmpPts$bckpts
@@ -175,7 +180,8 @@ ppmData <- function(presences,
 
     } else {
       if(!quiet)message("Developing a quadrature scheme for a single species dataset.")
-      wts <- getSingleSpeciesWeights(presences = pressies,
+      wts <- getSingleSpeciesWeights(method= quad.method,
+                                     presences = pressies,
                                      quadrature = bckptsQ,
                                      quadDummy = bckptsD,
                                      window = window,
@@ -313,78 +319,20 @@ wideData <- function(presence, quadrature, sitecovariates, wts, coord, species.i
 
 quadMethod <- function(quad.method, npoints, window, coord, quasirandom.samples=NULL){
   quad <- switch(quad.method,
-                quasi = quasiRandomQuad(npoints,
+                  quasi = quasiRandomQuad(npoints,
                                           window,
                                           coord,
                                           quasirandom.samples),
-                random = pseudoRandomQuad(npoints,
-                                          window,
-                                          coord),
-                grid = gridQuad(npoints,
-                                window,
-                                coord))
+                  random = pseudoRandomQuad(npoints,
+                                            window,
+                                            coord),
+                  grid = gridQuad(npoints,
+                                  window,
+                                  coord))
   return(quad)
 }
 
-#' @importFrom terra xyFromCell values ext freq extract ncell
-quasiRandomQuad <- function(npoints,
-                            window,
-                            coord,
-                            quasirandom.samples=NULL){
 
-  #generate a set of potential sites for quasi-random generation
-  rast_coord <- terra::xyFromCell(window,1:ncell(window))
-  rast_data <- terra::values(window)
-  na_sites <- which(!complete.cases(rast_data))
-  potential_sites <- rast_coord
-
-  if(is.null(quasirandom.samples)) quasirandom.samples <- 10*npoints
-
-  exty <- terra::ext(window)
-  study.area <- matrix( as.vector( exty)[c( 1,2,2,1, 3,3,4,4)], nrow=4, ncol=2)
-
-  #this gives many many samples, unless the study region is an odd shape, which it shouldn't be (as it is just an extent at this stage)
-  samp <- quasiSampFromHyperRect(nSampsToConsider=quasirandom.samples,
-                                 randStartType=2,
-                                 designParams=list(dimension=2,study.area=study.area))
-
-  ## setup the inclusion probs.
-  sampValues <- terra::extract(window,samp[,1:2])
-  NAsamps <- which(!complete.cases(sampValues))  ### these will give the
-
-  ## generate a set of buffer points using the samp
-  if(length(NAsamps) > 0){
-    totalCells <- terra::ncell(window)
-    NAcount <- terra::freq(window,value=NA)[3]
-    NonNAcount <- totalCells - NAcount
-    NAratio <- NAcount/NonNAcount
-    samplesNAcells <- samp[NAsamps,]
-    randpointsDummy <- samplesNAcells[1:(round(npoints*NAratio)),1:2]
-    colnames(randpointsDummy) <- coord
-    randpointsDummy <- as.data.frame(randpointsDummy)
-  } else {
-    randpointsDummy <- NULL
-  }
-
-  ## generate the actuall quasi random points we want to generate for the model.
-  Nsamps <- length(sampValues)
-  inclusion_probs <- rep(1/Nsamps, Nsamps)
-  inclusion_probs1 <- inclusion_probs/max(inclusion_probs)
-  inclusion_probs1[NAsamps] <- 0
-
-  #Spatially thin the sample which are NA sites in the raster window
-  samp <- samp[samp[,3]<inclusion_probs1,1:2]
-  if(nrow( samp) < npoints)
-    stop("No set of background points found for this region.  Please increase the number of possible samples.")
-  samp <- samp[1:npoints,]
-
-
-  randpoints <- as.data.frame(samp[,1:2])
-  colnames(randpoints ) <- coord
-
-
-  return(list(quasiPoints = randpoints, quasiDummy = randpointsDummy))
-}
 
 checkNoPoints <- function(npoints, presences, species.id){
 
@@ -392,10 +340,6 @@ checkNoPoints <- function(npoints, presences, species.id){
 
     ## Taken from spatstat.
     ## linear scaling of quad points compared to max n presences.
-    ## count bump this up more is so desired.
-    ## xx <- seq(0,1000,10)
-    ## plot(xx,(20 * ceiling(2 * sqrt(xx)/10))^2)
-
     npmx <- max(table(presences[,species.id]))
     nquad <- rep(pmax(32, 10 * ceiling(2 * sqrt(npmx)/10)),2)
     npoints <- prod(nquad)
@@ -441,10 +385,10 @@ checkCovariates <- function(covariates){
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
-checkDuplicates <- function(presences, coord, species.id){
+checkDuplicates <- function(presences, coord, species.id, quiet){
   if(is.null(presences))return(NULL)
   dups <- duplicated(presences)
-  if(sum(dups)>0){ message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
+  if(sum(dups)>0){ if(!quiet)message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
   dat <- presences[!dups,]
   } else {
   dat <- presences
@@ -492,9 +436,9 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, bufferNA,
         missXY <- which(!complete.cases(covars))
         missCoord <- covars[missXY,coord]
         if(is.null(bufferSize)){
-          if(raster::isLonLat(covariates)) ltlnscale <- 100000
+          if(terra::is.lonlat(covariates)) ltlnscale <- 100000
           else ltlnscale <- 1
-          buff <- raster::cellStats(raster::area(covariates),mean)*ltlnscale
+          buff <- terra::global(terra::area(covariates),fun="mean")*ltlnscale
           # buff <- terra::cellS
         }else {
           buff <- bufferSize
@@ -521,33 +465,6 @@ getSppNames <- function(presences, species.id){
 }
 
 
-#'@author Scott Foster
-#'@importFrom randtoolbox halton
-#'@importFrom mgcv in.out
-#'@description Copied from MBHdesign as it wasn't an exported function.
-
-quasiSampFromHyperRect <- function (nSampsToConsider, randStartType = 2, designParams){
-  samp <- randtoolbox::halton(nSampsToConsider * 2, dim = designParams$dimension +
-                                1, init = TRUE)
-  if (randStartType == 1)
-    skips <- rep(sample(1:nSampsToConsider, size = 1, replace = TRUE),
-                 designParams$dimension + 1)
-  if (randStartType == 2)
-    skips <- sample(1:nSampsToConsider, size = designParams$dimension +
-                      1, replace = TRUE)
-  samp <- do.call("cbind", lapply(1:(designParams$dimension +
-                                       1), function(x) samp[skips[x] + 0:(nSampsToConsider -
-                                                                            1), x]))
-  myRange <- apply(designParams$study.area, -1, range)
-  for (ii in 1:designParams$dimension) samp[, ii] <- myRange[1,
-                                                             ii] + (myRange[2, ii] - myRange[1, ii]) * samp[, ii]
-  if (designParams$dimension == 2) {
-    tmp <- mgcv::in.out(designParams$study.area, samp[,
-                                                      1:designParams$dimension])
-    samp <- samp[tmp, ]
-  }
-  return(samp)
-}
 
 
 defaultWindow <- function (presences, coord) {
