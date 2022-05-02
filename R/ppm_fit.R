@@ -1,3 +1,5 @@
+#'@title ppm.fit
+#'@description This is a wrapper function which will fit a ppm model using a range of existing ppm fitting tools.
 #'@param species_formula The ppm model formula.
 #'@param bias_formula Default is NULL. The idea will be to implement this as part of an integrated model.
 #'Currently its just a nice way to keep track of which covariates are used in species or bias variables.
@@ -10,25 +12,29 @@
 #'@references Warton, D.I. and Shepherd, L.C., 2010. Poisson point process models solve the" pseudo-absence problem" for presence-only data in ecology. The Annals of Applied Statistics, pp.1383-1402. \url{https://doi.org/10.1214/10-AOAS331}
 #'@references Renner, I.W. and Warton, D.I., 2013. Equivalence of MAXENT and Poisson point process models for species distribution modeling in ecology. Biometrics, 69(1), pp.274-281.
 #'@details Uses the Berman-Turner device to fit an approximate loglike for PPM using a weighted Poisson model.
-#'@example
+#'@export
+#'@examples
+#'\dontrun{
 #'library(ppmData)
+#'library(terra)
 #'path <- system.file("extdata", package = "ppmData")
 #'lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
-#'preds <- raster::stack(lst)
+#'preds <- rast(lst)
 #'presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 #'ppmdata <- ppmData(npoints = 1000,presences=presences, window = preds[[1]], covariates = preds)
 #'sp_form <- presence/weights ~ poly(X,2) + poly(Y,2) + poly(max_temp_hottest_month,2) + poly(annual_mean_precip,2) + poly(annual_mean_temp,2) + poly(distance_from_main_roads,2)
-#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata)
-#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata, method='gam')
-#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata, method='ppmlasso')
-#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata, method='lasso')
-#'ft.ppm <- ppm.fit(species_formula = sp_form, ppmdata=ppmdata, method='ridge')
+#'ft.ppm <- ppmFit(species_formula = sp_form, ppmdata=ppmdata, method='glm')
+#'ft.ppm <- ppmFit(species_formula = sp_form, ppmdata=ppmdata, method='gam')
+#'ft.ppm <- ppmFit(species_formula = sp_form, ppmdata=ppmdata, method='ppmlasso',control=list(n.fit=50))
+#'ft.ppm <- ppmFit(species_formula = sp_form, ppmdata=ppmdata, method='lasso')
+#'ft.ppm <- ppmFit(species_formula = sp_form, ppmdata=ppmdata, method='ridge')
+#'}
 
-ppm.fit <- function(species_formula = presence/weights ~ 1,
+ppmFit <- function(species_formula = presence/weights ~ 1,
                     bias_formula = NULL,
                     ppmdata,
-                    method=c("glm","gam","ppmlasso","lasso","ridge"),
-                    control=list()){
+                    method=c("ppmlasso","glm","gam","lasso","ridge"),
+                    control=list(n.fit=20)){
 
   # lambda will be a vector of
   method <- match.arg(method)
@@ -36,7 +42,7 @@ ppm.fit <- function(species_formula = presence/weights ~ 1,
   if(!class(ppmdata)=="ppmData")
     stop("'ppm.fit' requires a 'ppmData' object to run.")
   if(!any(c("glm","gam","ppmlasso","lasso","ridge","gibbs")%in%method))
-    stop("'ppm.fit' must used one of the follow methods\n 'glm','gam','lasso','ridge' to run.")
+    stop("'ppm.fit' must used one of the follow methods\n 'ppmlasso','glm','gam','lasso','ridge' to run.")
 
   ## merge formulas
   if(!is.null(bias_formula)){
@@ -50,7 +56,7 @@ ppm.fit <- function(species_formula = presence/weights ~ 1,
   }
 
   ## setup the model matrix/frames
-  if(any(method%in%c("gam","ppmlasso"))){
+  if(any(!method%in%c("gam","ppmlasso"))){
     ## set up the data for ppm fit
     ppp <- ppmdata$ppmData
     mf <- model.frame(form,ppp,weights=ppmdata$ppmData$weights)
@@ -71,23 +77,26 @@ ppm.fit <- function(species_formula = presence/weights ~ 1,
     colnames(dat)[which(colnames(dat)=="weights")] <- "wt"
   }
 
+  # suppress warning because of the poisson is not int warning.
   if(method=="glm"){
-    ft <- glm.fit(x = x, y = y/wts, weights = wts, offset = offy, family = poisson())
+    ft <- suppressWarnings(glm2::glm.fit2(x = x, y = y/wts, weights = wts, offset = offy, family = poisson()))
   }
   if(method=="gam"){
-    ft <- mgcv::gam(formula = form, data = ppmdata$ppmData, weights = x$weights, family = poisson())
+    ft <- suppressWarnings(mgcv::gam(formula = form, data = ppmdata$ppmData, weights = x$weights, family = poisson()))
   }
   if(method=="ppmlasso"){
-    ft <- suppressWarnings(ppmlasso::ppmlasso(formula = form, data = dat, n.fits = 20)) ## maybe could sub in ppmlasso
+    ft <- suppressWarnings(ppmlasso::ppmlasso(formula = form, data = dat, n.fits = control$n.fit)) ## maybe could sub in ppmlasso
   }
   if(method=="lasso"){
     ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 1) #lasso
   }
   if(method=="ridge"){
-    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 0) #lasso
+    ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 0) #ridge
   }
 
-  return(ft)
+  res <- list(ft)
+  class(res)<- "ppmFit"
+  return(res)
 
 }
 
