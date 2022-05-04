@@ -196,9 +196,6 @@ ppmData <- function(presences,
                                       bufferSize = bufferSize)
     }
 
-
-  # }
-
   # Assemble data
   dat <- assembleQuadData(presences = pressies,
                           quadrature = bckptsQ,

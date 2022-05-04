@@ -1,30 +1,4 @@
-#' @name lonlat_from_window
-#' @param window
-#' @param coord.name
-#' @param mask.na
-#' @export
-#' @importFrom raster xyFromCell ncell mask stack
-#' @examples
-#' xy.st <- lonlat_from_window(preds[[1]],mask.na=TRUE)
-
-lonlat_from_window <- function(window, coord.name = c("X","Y"),mask.na=FALSE){
-
-          grid.locations <- raster::xyFromCell(window,1:ncell(window))
-          X <- Y <- window
-          X[] <- grid.locations[,1]
-          Y[] <- grid.locations[,2]
-          names(X) <- coord.name[1]
-          names(Y) <- coord.name[2]
-
-          st.lonlat <- stack(X,Y)
-
-          if(mask.na){
-            st.lonlat <- mask(st.lonlat,window)
-          }
-
-          return(st.lonlat)
-
-}
+##### Formula stuff #####
 
 #'@export
 is.formula <- function(x) inherits(x, "formula")

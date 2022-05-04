@@ -34,7 +34,7 @@ ppmFit <- function(species_formula = presence/weights ~ 1,
                     bias_formula = NULL,
                     ppmdata,
                     method=c("ppmlasso","glm","gam","lasso","ridge"),
-                    control=list(n.fit=20)){
+                    control=list(n.fit=20, family="poisson")){
 
   # lambda will be a vector of
   method <- match.arg(method)
@@ -85,7 +85,7 @@ ppmFit <- function(species_formula = presence/weights ~ 1,
     ft <- suppressWarnings(mgcv::gam(formula = form, data = ppmdata$ppmData, weights = x$weights, family = poisson()))
   }
   if(method=="ppmlasso"){
-    ft <- suppressWarnings(ppmlasso::ppmlasso(formula = form, data = dat, n.fits = control$n.fit)) ## maybe could sub in ppmlasso
+    ft <- suppressWarnings(ppmlasso::ppmlasso(formula = form, data = dat, n.fits = control$n.fit, family=control$family)) ## maybe could sub in ppmlasso
   }
   if(method=="lasso"){
     ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 1) #lasso
@@ -94,7 +94,7 @@ ppmFit <- function(species_formula = presence/weights ~ 1,
     ft <- glmnet::glmnet(x=x, y=y/wts, weights = wts, offset = offy, family = "poisson", alpha = 0) #ridge
   }
 
-  res <- list(ft)
+  res <- list(ppm=ft,ppmdata=ppmdata)
   class(res)<- "ppmFit"
   return(res)
 

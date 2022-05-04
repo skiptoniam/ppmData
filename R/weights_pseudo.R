@@ -44,7 +44,7 @@ pseudoRandomQuad <- function(npoints,
    bk_sites <- background_sites
    colnames(bk_sites) <- coord
 
-  return(list(quasiPoints = bk_sites, quasiDummy = NULL))
+  return(bk_sites)
 
 }
 

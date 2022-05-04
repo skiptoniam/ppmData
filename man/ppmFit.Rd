@@ -9,7 +9,7 @@ ppmFit(
   bias_formula = NULL,
   ppmdata,
   method = c("ppmlasso", "glm", "gam", "lasso", "ridge"),
-  control = list(n.fit = 20)
+  control = list(n.fit = 20, family = "poisson")
 )
 }
 \arguments{

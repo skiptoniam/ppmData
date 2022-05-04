@@ -1,5 +1,5 @@
-# convert ppm.fit to a spatstat object
-
+# convert ppm.fit to a spatstat obje
+# take a glm/glmnet and try to do diagnostics.
 ppm.ss <- function (fit) {
   is.ai = is.numeric(fit$pt.interactions)
   pres.x = fit$x[fit$pres > 0]
