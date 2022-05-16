@@ -18,6 +18,7 @@ Imports:
     randtoolbox,
     parallel,
     sp,
+    rgeos,
     methods,
     mgcv,
     ppmlasso,
