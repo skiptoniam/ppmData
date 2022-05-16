@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <vector>
-#include "deltri.hpp"
+#include "deltri.h"
 
 
 namespace deltri {
@@ -90,7 +90,7 @@ namespace deltri {
     site v1 = site::vector(p0, p2);
     double det = site::determinant(v0, v1);
     double dist = v0.magnitude2() + v1.magnitude2();
-    double dist2 = site::dist2(v0, v1);
+    double distb = site::dist2(v0, v1);
     if (det == 0)
     {
         return false;
@@ -116,7 +116,7 @@ namespace deltri {
     site v1 = site::vector(p0, p2);
     double det = site::determinant(v0, v1);
     double dist = v0.magnitude2() + v1.magnitude2();
-    double dist2 = site::dist2(v0, v1);
+    double distb = site::dist2(v0, v1);
     if (det == 0)
         return false;
     double reldet = std::abs(dist / det);
@@ -450,7 +450,7 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
     // hull = new Uint32Array(hullSize);
     hull.resize(hull_size);
     size_t e = hull_start;
-    for (int i = 0; i < hull_size; i++) {
+    for (size_t i = 0; i < hull_size; i++) {
         hull[i] = e;
         e = hull_next[e];
     }
