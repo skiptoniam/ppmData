@@ -1,6 +1,6 @@
 #pragma once
 
-#include "deltri.hpp"
+#include "deltri.h"
 
 namespace dirtess {
 
