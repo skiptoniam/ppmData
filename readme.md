@@ -6,25 +6,16 @@ status](https://travis-ci.org/skiptoniam/ppmData.svg?branch=master)](https://tra
 The approach uses quasi-random sampling to generate a quadrature scheme
 based (e.g Berman & Turner 1992; Foster et al, 2018). Quasi-random
 sampling quadrature are form of spatially-balanced survey design or
-point stratification, that aims to reduce the frequency of placing
+point stratification that aims to reduce the frequency of placing
 samples close to each other (relative to pseudo-random or grid designs).
 A quasi-random quadrature design improves efficiency of background point
 sampling (and subsequent modelling) by reducing the amount of spatial
 auto-correlation between data implying that each sample is providing as
-much unique information as possible (Grafston & Tille, 2013) and thus
-reducing low errors for geostatistical prediction (Diggle & Ribeiro,
-2007). The weights each quasi-random point in the quadrature scheme is
-calculated using a dirichlet tesselation (Turner 2020). To improve
-computational efficiency function for a large number of of quadrature
-points, we set up an approach which breaks up the problem into
-manageable sub-windows. We do this by keeping each deldir call to less
-that 5000 points (which appears to be the point where the algorithm
-slows noticeably). To avoid edge effect (large areas on the edges of
-sub-areas), we rotate the subregions three times, the first two use a
-set of prime number to closest to total number of points
-(presences+quadrature points) divided by 5000. This allows us to split
-the study region in sub-windows. We then take the median weight across
-all weight calculated for each point.
+much unique information as possible (Grafston & Tille, 2013, Foster et
+al., 2018) and thus reducing low errors for geostatistical prediction
+(Diggle & Ribeiro, 2007). Because the quasi-random design is not on a
+regular grid we use a Dirichlet tessellation to generate polygons for
+each point. Areal weights are then derived from these polygons.
 
 ### References
 
@@ -38,8 +29,6 @@ Sampling.
 Grafstrom, Anton, and Yves Tille. “Doubly balanced spatial sampling with
 spreading and restitution of auxiliary totals.” Environmetrics 24.2
 (2013): 120-131.
-
-Turner, Rolf, “Package deldir” (2020).
 
 Warton, D. I., and L. C. Shepherd. “Poisson point process models solve
 the pseudo-absence problem for presence-only data in ecology.” The
