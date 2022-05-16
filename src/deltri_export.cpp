@@ -1,6 +1,6 @@
 #include <Rcpp.h>
 using namespace Rcpp;
-#include"deltri.h"
+#include"deltri.hpp"
 
 //[[Rcpp::export]]
 List deltri_cpp(std::vector<double> coords) {

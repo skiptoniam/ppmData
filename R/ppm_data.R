@@ -117,6 +117,7 @@ ppmData <- function(presences,
 
   # This should check the presences and make it returns the data in the correct format for the remaining function.
   pressies <- checkPresences(known.sites = presences,
+                             window = window,
                              coord = coord,
                              species.id = species.id)
 
@@ -372,7 +373,7 @@ ChechNumPoints <- function(npoints, presences, species.id){
   return(npoints)
 }
 
-checkPresences <- function (known.sites,coord,species.id){
+checkPresences <- function (,known.sites,coord,species.id){
 
   # check for null sites
   if(is.null(known.sites))
@@ -386,7 +387,7 @@ checkPresences <- function (known.sites,coord,species.id){
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
   #check to see if the points lie within the raster (not over an NA)
-  tmpCheck <- raster::extract( window, known.sites[,coord])
+  tmpCheck <- terra::ext(window, known.sites[,coord])
   if( !all( !is.na( tmpCheck))){
     warning("There are presence records outside the region window.  Removing them but please check.")
     known.sites <- known.sites[!is.na( tmpCheck),]

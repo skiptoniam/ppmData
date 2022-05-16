@@ -1,7 +1,7 @@
 #include <Rcpp.h>
 using namespace Rcpp;
-#include "deltri.h"
-#include "dirtess3.h"
+#include "deltri.hpp"
+#include "dirtess3.hpp"
 
 // define a polygon class that we'll use to catch the
 constexpr std::size_t INVALID_INDEX = (std::numeric_limits<std::size_t>::max)();

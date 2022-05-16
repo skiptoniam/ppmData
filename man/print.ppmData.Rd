@@ -7,7 +7,7 @@
 \method{print}{ppmData}(x, ...)
 }
 \arguments{
-\item{x}{A model object.}
+\item{x}{A ppmData object.}
 
 \item{\\dots}{Ignored}
 }
