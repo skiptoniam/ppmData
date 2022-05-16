@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef DELTRI_HEADER_ONLY
-#define INLINE inline
-#else
-#define INLINE
-#endif
-
 #include <limits>
 #include <vector>
 #include <ostream>
@@ -123,10 +117,10 @@ public:
     std::vector<std::size_t> hull_tri;
     std::size_t hull_start;
 
-    INLINE deltri_cpp(std::vector<double> const& in_coords);
-    INLINE std::vector<double> get_hull_sites();
-    INLINE double get_hull_area();
-    INLINE double get_triangle_area();
+    deltri_cpp(std::vector<double> const& in_coords);
+    std::vector<double> get_hull_sites();
+    double get_hull_area();
+    double get_triangle_area();
 
 private:
     std::vector<std::size_t> m_hash;
@@ -134,16 +128,16 @@ private:
     std::size_t m_hash_size;
     std::vector<std::size_t> m_edge_stack;
 
-    INLINE std::size_t legalize(std::size_t a);
-    INLINE std::size_t hash_key(double x, double y) const;
-    INLINE std::size_t add_triangle(
+    std::size_t legalize(std::size_t a);
+    std::size_t hash_key(double x, double y) const;
+    std::size_t add_triangle(
         std::size_t i0,
         std::size_t i1,
         std::size_t i2,
         std::size_t a,
         std::size_t b,
         std::size_t c);
-    INLINE void link(std::size_t a, std::size_t b);
+    void link(std::size_t a, std::size_t b);
 };
 
 } //namespace deltri

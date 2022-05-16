@@ -12,11 +12,11 @@
 
 namespace deltri {
 
-inline size_t fast_mod(const size_t i, const size_t c) {
+ size_t fast_mod(const size_t i, const size_t c) {
     return i >= c ? i % c : i;
 }
 
-inline double sum(const std::vector<double>& x) {
+ double sum(const std::vector<double>& x) {
     double sum = x[0];
     double err = 0.0;
 
@@ -29,7 +29,7 @@ inline double sum(const std::vector<double>& x) {
     return sum + err;
 }
 
-inline double dist(
+ double dist(
     const double ax,
     const double ay,
     const double bx,
@@ -39,7 +39,7 @@ inline double dist(
     return dx * dx + dy * dy;
 }
 
-inline double circumradius(const site& p1, const site& p2, const site& p3)
+ double circumradius(const site& p1, const site& p2, const site& p3)
 {
     site d = site::vector(p1, p2);
     site e = site::vector(p1, p3);
@@ -58,7 +58,7 @@ inline double circumradius(const site& p1, const site& p2, const site& p3)
     return (std::numeric_limits<double>::max)();
 }
 
-inline double circumradius(
+ double circumradius(
     const double ax,
     const double ay,
     const double bx,
@@ -84,7 +84,7 @@ inline double circumradius(
     }
 }
 
-inline bool clockwise(const site& p0, const site& p1, const site& p2)
+ bool clockwise(const site& p0, const site& p1, const site& p2)
 {
     site v0 = site::vector(p0, p1);
     site v1 = site::vector(p0, p2);
@@ -101,7 +101,7 @@ inline bool clockwise(const site& p0, const site& p1, const site& p2)
     return det < 0;
 }
 
-inline bool clockwise(double px, double py, double qx, double qy,
+ bool clockwise(double px, double py, double qx, double qy,
     double rx, double ry)
 {
     site p0(px, py);
@@ -110,7 +110,7 @@ inline bool clockwise(double px, double py, double qx, double qy,
     return clockwise(p0, p1, p2);
 }
 
-inline bool counterclockwise(const site& p0, const site& p1, const site& p2)
+ bool counterclockwise(const site& p0, const site& p1, const site& p2)
 {
     site v0 = site::vector(p0, p1);
     site v1 = site::vector(p0, p2);
@@ -125,7 +125,7 @@ inline bool counterclockwise(const site& p0, const site& p1, const site& p2)
     return det > 0;
 }
 
-inline bool counterclockwise(double px, double py, double qx, double qy,
+ bool counterclockwise(double px, double py, double qx, double qy,
     double rx, double ry)
 {
     site p0(px, py);
@@ -135,7 +135,7 @@ inline bool counterclockwise(double px, double py, double qx, double qy,
 }
 
 
-inline site circumcenter(
+ site circumcenter(
     const double ax,
     const double ay,
     const double bx,
@@ -157,7 +157,7 @@ inline site circumcenter(
     return site(x, y);
 }
 
-inline bool in_circle(
+ bool in_circle(
     const double ax,
     const double ay,
     const double bx,
@@ -184,13 +184,13 @@ inline bool in_circle(
 
 constexpr double EPSILON = std::numeric_limits<double>::epsilon();
 
-inline bool check_pts_equal(double x1, double y1, double x2, double y2) {
+ bool check_pts_equal(double x1, double y1, double x2, double y2) {
     return std::fabs(x1 - x2) <= EPSILON &&
            std::fabs(y1 - y2) <= EPSILON;
 }
 
 // monotonically increases with real angle, but doesn't need expensive trigonometry
-inline double pseudo_angle(const double dx, const double dy) {
+ double pseudo_angle(const double dx, const double dy) {
     const double p = dx / (std::abs(dx) + std::abs(dy));
     return (dy > 0.0 ? 3.0 - p : 1.0 + p) / 4.0; // [0..1)
 }
