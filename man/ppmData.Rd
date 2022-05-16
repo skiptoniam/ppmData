@@ -83,8 +83,8 @@ meters.}
 \item{quiet}{If TRUE, do not print messages. Default is FALSE.}
 }
 \description{
-ppmData is a package for setting up quadrature to implement in
-Poisson Point process models and extensions.
+ppmData is a package for setting up quadrature to implement
+spatial Poisson Point process models and extensions.
 
 This package is a way to efficiently generate a quasirandom set
 of background points for presence-only modelling of single or multiple
