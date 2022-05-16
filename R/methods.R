@@ -6,7 +6,7 @@
 #' @export
 #' @importFrom raster extent
 
-plot.ppmData <- function(x, ...){
+plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
 
   op <- graphics::par(no.readonly = TRUE)
@@ -29,18 +29,18 @@ plot.ppmData <- function(x, ...){
     if(x$params$dw){
       e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
-      raster::plot(p,main='quadrature scheme')
+      terra::plot(p,main=main)
     } else {
       p <- x$window
-      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+      terra::plot(p,axes=FALSE, legend=FALSE, main=main)
     }
     points(quad,pch='.')
-    points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$speciesIdx])),1]),
-           pch=colshp[as.numeric(as.factor(marks[,x$params$speciesIdx])),2],cex=0.5)
+    points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$species.id])),1]),
+           pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2],cex=0.5)
     legend(x="left",
-           legend=unique(marks[,x$params$speciesIdx]),
-           col=as.character(colshp[1:length(unique(marks[,x$params$speciesIdx])),1]),
-           pch=colshp[1:length(unique(marks[,x$params$speciesIdx])),2],
+           legend=unique(marks[,x$params$species.id]),
+           col=as.character(colshp[1:length(unique(marks[,x$params$species.id])),1]),
+           pch=colshp[1:length(unique(marks[,x$params$species.id])),2],
            cex=0.75,
            xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
            bty="n")
@@ -55,15 +55,15 @@ plot.ppmData <- function(x, ...){
     if(x$params$dw){
       e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
-      raster::plot(p,main='quadrature scheme')
+      terra::plot(p,main=main)
     } else {
       p <- x$window
-      raster::plot(p,axes=FALSE, box=FALSE,legend=FALSE,main='quadrature scheme')
+      terra::plot(p,axes=FALSE, legend=FALSE,main=main)
     }
     points(quad,pch='.')
     points(pressies,col='dodgerblue',pch=16,cex=0.5)
     legend(x="bottom",
-           legend=unique(pressies[,x$params$speciesIdx]),
+           legend=unique(pressies[,x$params$species.id]),
            col='dodgerblue',
            pch=16,
            cex=0.75,

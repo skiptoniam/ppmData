@@ -4,7 +4,7 @@
 \alias{plot.ppmData}
 \title{Plot a ppmData object}
 \usage{
-\method{plot}{ppmData}(x, ...)
+\method{plot}{ppmData}(x, main = "Quadrature Scheme", ...)
 }
 \arguments{
 \item{x}{A model object.}

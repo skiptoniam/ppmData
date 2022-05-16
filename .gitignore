@@ -7,3 +7,8 @@ old_functions/
 ppmData/
 figures/
 inst/doc
+dev/
+devsrc/
+todo/
+.gitignore
+
