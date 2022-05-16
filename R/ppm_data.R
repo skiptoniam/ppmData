@@ -127,7 +127,7 @@ ppmData <- function(presences,
                               quiet = quiet)
 
   ## If npoints in NULL setup a default amount. This is taken from spatstat
-  npoints <- checkNoPoints(npoints = npoints,
+  npoints <- ChechNumPoints(npoints = npoints,
                            presences = pressies,
                            species.id = species.id)
 
@@ -162,14 +162,16 @@ ppmData <- function(presences,
 
   if(ismulti){
     if(!quiet)message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(presences = pressies,
+      wts <- getMultispeciesWeights(method = method,
+                                    presences = pressies,
                                     quadrature = bckptsQ,
                                     quadDummy = bckptsD,
                                     window = window,
                                     coord = coord,
                                     speciesIdx = species.id,
                                     mc.cores = mc.cores,
-                                    sppNames = sppNames)
+                                    sppNames = sppNames,
+                                    unit=unit)
 
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates,
@@ -186,7 +188,8 @@ ppmData <- function(presences,
                                      quadDummy = bckptsD,
                                      window = window,
                                      coord = coord,
-                                     speciesIdx = species.id)
+                                     speciesIdx = species.id,
+                                     unit=unit)
       # extract the covariate data
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
@@ -331,7 +334,7 @@ quadMethod <- function(quad.method, npoints, window, coord, quasirandom.samples=
 
 
 
-checkNoPoints <- function(npoints, presences, species.id){
+ChechNumPoints <- function(npoints, presences, species.id){
 
   if(is.null(npoints)){
 
