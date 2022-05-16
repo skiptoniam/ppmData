@@ -1,10 +1,10 @@
 #' @rdname plot.ppmData
 #' @name plot.ppmData
 #' @title Plot a ppmData object
-#' @param x A ppmData object.
+#' @param x A model object.
 #' @param \\dots Ignored
 #' @export
-#' @importFrom terra ext
+#' @importFrom raster extent
 
 plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
@@ -27,7 +27,7 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
     par(mar=c(7,7,7,7))
     if(x$params$dw){
-      e <- terra::ext(x$window)
+      e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
       terra::plot(p,main=main)
     } else {
@@ -53,7 +53,7 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
     par(mar=c(7,7,7,7))
     if(x$params$dw){
-      e <- terra::ext(x$window)
+      e <- extent(x$window)
       p <- as(e, 'SpatialPolygons')
       terra::plot(p,main=main)
     } else {
@@ -76,7 +76,7 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 #'@rdname print.ppmData
 #'@name print.ppmData
 #'@title Print a summary of ppmData object.
-#'@param x A ppmData object.
+#'@param x A model object.
 #'@param \\dots Ignored
 #'@export
 

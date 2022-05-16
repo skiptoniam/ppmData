@@ -7,7 +7,7 @@
 \method{plot}{ppmData}(x, main = "Quadrature Scheme", ...)
 }
 \arguments{
-\item{x}{A ppmData object.}
+\item{x}{A model object.}
 
 \item{\\dots}{Ignored}
 }

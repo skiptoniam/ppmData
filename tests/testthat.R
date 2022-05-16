@@ -1,4 +1,4 @@
 library(testthat)
 library(ppmData)
-library(terra)
+library(raster)
 test_check("ppmData")

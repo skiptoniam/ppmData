@@ -5,16 +5,16 @@ library(ppmData)
 testthat::test_that('species mix ippm', {
 
 library(ppmData)
-library(terra)
+library(raster)
 path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
-preds <- rast(lst)
+preds <- raster::stack(lst)
 presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 npoints <- 1000
 
 ## some test a-roos!
 # test with just presences
-ppmdata0 <- ppmData(presences = presences, window = preds[[1]])
+ppmdata0 <- ppmData(npoints = npoints, presences=presences)
 
 # test with just pres & window
 ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
