@@ -109,7 +109,7 @@ quasiRandomWeights <- function(presences, quadrature, quadDummy, window, coord, 
   allpts$dataset <- allpts.id[,speciesIdx]
 
   ## Do the Dirichlet with me
-  dirareas <- getDirichlet(allpts, bbox, coord)#, returnDirtess)
+  dirareas <- getDirichlet(allpts, bbox, coord)#, clip, polyclip)#, returnDirtess)
 
   ## merge with all pts
   res <- merge(allpts, dirareas, by='id', all=TRUE, sort=TRUE)
@@ -120,19 +120,19 @@ quasiRandomWeights <- function(presences, quadrature, quadDummy, window, coord, 
   return( res)
 }
 
-getDirichlet <- function(allpts, bbox, coord){#}, return_dirtess = TRUE ){
+getDirichlet <- function(allpts, bbox, coord){#}, clip=FALSE, polyclip = NULL){#}, return_dirtess = TRUE ){
 
   res <- data.frame( id=1:nrow( allpts), area=NA)
 
   tess <- dirTess(as.matrix(allpts[,coord]), bbox = bbox)
 
+  # if(clip){
+  #   tess <- polygonise(tess,clip=TRUE, polyclip = polyclip, proj = proj)
+  # }
+
   area_wts <- getAreasDirichlet(tess, nodummy=TRUE)
 
   res$area <- area_wts
-
-  # if(return_dirtess){
-    # res <- list(res,tess)
-  # }
 
   return(res)
 }
