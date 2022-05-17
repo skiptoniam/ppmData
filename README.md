@@ -1,6 +1,8 @@
 
-[![Travis build
-status](https://travis-ci.org/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.org/skiptoniam/ppmData)
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/skiptoniam/ppmData/workflows/R-CMD-check/badge.svg)](https://github.com/skiptoniam/ppmData/actions)
+<!-- badges: end -->
 
 ## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) to run multiple species Point Processes.
 
