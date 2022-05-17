@@ -1,6 +1,7 @@
-#pragma once
+#ifndef deltri3_hh
+#define deltri3_hh
 
-#include "deltri.hpp"
+#include "deltri.h"
 
 namespace dirtess {
 
@@ -31,3 +32,4 @@ namespace dirtess {
 
 }
 
+#endif

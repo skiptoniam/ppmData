@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <vector>
-#include "deltri.hpp"
+#include "deltri.h"
 
 
 namespace deltri {

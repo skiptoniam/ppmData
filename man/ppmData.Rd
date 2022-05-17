@@ -16,6 +16,7 @@ ppmData(
   mc.cores = 1,
   quasirandom.samples = NULL,
   interpolation = c("simple", "bilinear"),
+  unit = c("geo", "m", "km", "ha"),
   bufferNA = FALSE,
   bufferSize = NULL,
   quiet = FALSE
@@ -72,6 +73,9 @@ slower the quasirandom quadrature scheme will be to generate.}
 \item{interpolation}{The interpolation method to use when extracting
 covariate data. Default is "bilinear", can also use "simple", this is based
 on the raster package  \code{\link[raster]{extract}}.}
+
+\item{unit}{The scale of the area weights, default is "geo" and returns the area based on the geographic coorinates
+alternatively meters squared "m", kilometers squared "km", or hectars "ha" can be used (this is still experimental).}
 
 \item{bufferNA}{If extract from \code{\link[raster]{extract}} returns NA for
 point extract, do you want us to attempt to user buffer to calculate cells

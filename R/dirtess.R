@@ -123,6 +123,8 @@
 #'plot a Dirichlet tessellation
 #'@param x dirTess object
 #'@param \\dots Additional plotting arguments
+#'@importFrom grDevices gray
+#'@importFrom graphics polygon points
 #'@export
 "plot.dirTess" <- function(x, ...){
 
@@ -130,10 +132,10 @@
   ylim <- range(x$coords[,2]) + abs(diff(range(x$coords[,2])))*0.1*c(-1,1)
   plot(x$coords, type="n",axes=FALSE,xlab="",ylab="",xlim=xlim,ylim=ylim,...)
   for(i in 1:x$ncoords){
-    polygon(x$polygons$poly[[i]]$poly.coords,border = gray(0.3,0.5),
-            col = sample(hcl.colors(x$ncoords,alpha = 0.5),1))
+    graphics::polygon(x$polygons$poly[[i]]$poly.coords,border = grDevices::gray(0.3,0.5),
+            col = sample(grDevices::hcl.colors(x$ncoords,alpha = 0.5),1))
   }
-  points(x$coords, pch=16, cex=.8)
+  graphics::points(x$coords, pch=16, cex=.8)
 }
 
 

@@ -87,7 +87,7 @@ pseudoRandomWeights <- function(presences,
   nquad <- nrow(quadrature)
 
   # if in geographic coordinates return area in unit of interest.
-  if(is.lonlat(window)){
+  if(terra::is.lonlat(window)){
     if(unit=="geo"){ # useful if you just want areas on the geographic scale (this is what deldir gives you)
       areas <- terra::init(window,prod(terra::res(window)))
       bck_wts <- terra::extract(areas,quadrature)
@@ -103,11 +103,11 @@ pseudoRandomWeights <- function(presences,
       areas <- terra::init(window,prod(terra::res(window)))
       areas.m <- terra::mask(areas,window)
       window_area <- terra::global(areas.m, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
+      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
     } else {
       areas <- terra::init(window,prod(terra::res(window)))
       window_area <- terra::global(areas, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
+      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
     }
   }
 

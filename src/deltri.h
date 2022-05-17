@@ -1,4 +1,5 @@
-#pragma once
+#ifndef deltri_hh
+#define deltri_hh
 
 #include <limits>
 #include <vector>
@@ -142,4 +143,5 @@ private:
 
 } //namespace deltri
 
-#undef INLINE
+#endif
+

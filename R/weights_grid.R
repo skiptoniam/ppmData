@@ -111,11 +111,11 @@ gridWeights <- function(presences,
       # areas <- terra::cellSize(window, unit=unit)
       areas.m <- terra::mask(areas,window)
       window_area <- terra::global(areas.m, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
+      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
     } else{
       areas <- terra::cellSize(window, unit=unit)
       window_area <- terra::global(areas, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
+      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
     }
   }
 

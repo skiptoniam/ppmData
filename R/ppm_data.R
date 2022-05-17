@@ -58,6 +58,8 @@
 #' @param interpolation The interpolation method to use when extracting
 #' covariate data. Default is "bilinear", can also use "simple", this is based
 #' on the raster package  \code{\link[raster]{extract}}.
+#' @param unit The scale of the area weights, default is "geo" and returns the area based on the geographic coorinates
+#' alternatively meters squared "m", kilometers squared "km", or hectars "ha" can be used (this is still experimental).
 #' @param bufferNA If extract from \code{\link[raster]{extract}} returns NA for
 #' point extract, do you want us to attempt to user buffer to calculate cells
 #' which are NA.
@@ -91,6 +93,7 @@ ppmData <- function(presences,
                     mc.cores = 1,
                     quasirandom.samples = NULL,
                     interpolation = c("simple","bilinear"),
+                    unit = c("geo","m","km","ha"),
                     bufferNA = FALSE,
                     bufferSize = NULL,
                     quiet=FALSE){
@@ -98,6 +101,7 @@ ppmData <- function(presences,
   # default methods
   quad.method <- match.arg(quad.method)
   interp.method <- match.arg(interpolation)
+  unit <- match.arg(unit)
 
   ## Make sure the column ids are characters and check for missing/wrong named coord/species.id vars.
   if(!is.character(coord)) coord <- as.character(coord)
