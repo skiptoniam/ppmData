@@ -6,6 +6,11 @@
 \usage{
 \method{plot}{dirTess}(x, ...)
 }
+\arguments{
+\item{x}{dirTess object}
+
+\item{\\dots}{Additional plotting arguments}
+}
 \description{
 plot a Dirichlet tessellation
 }

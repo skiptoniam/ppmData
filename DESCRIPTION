@@ -1,6 +1,6 @@
 Package: ppmData
 Type: Package
-Title: Quasirandom quardature scheme using dirichlet tesselation for species Poisson point process models
+Title: Quasirandom quardature scheme using dirichlet tesselation for spatial Poisson point process models
 Version: 0.1.0
 Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@unimelb.edu.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
@@ -10,20 +10,18 @@ License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.2.0
 Imports: 
-    Rdpack,
-    rgdal,
-    raster,
-    terra,
-    deldir,
-    randtoolbox,
-    parallel,
-    sp,
-    rgeos,
     methods,
     mgcv,
-    ppmlasso,
-    glmnet,
-    Rcpp
+    parallel,
+    plyr,
+    sp,
+    randtoolbox,
+    raster,
+    Rcpp,
+    Rdpack,
+    rgeos,
+    rgdal,
+    terra
 Suggests: 
     knitr,
     testthat (>= 3.0.0),
@@ -35,3 +33,5 @@ NeedsCompilation: yes
 VignetteBuilder: knitr
 LinkingTo: 
     Rcpp
+Encoding: UTF-8
+

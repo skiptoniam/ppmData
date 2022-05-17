@@ -1,17 +1,17 @@
-#' @title deltri
+#' @title delTri
 #' @description  Computes the Delaunay triangulation for large data sets. The
 #' main use of this function is to quickly calculate the Delaunay triangulation
 #' so we can calculate the duel-graph and Dirichlet tessellation to use in point
 #' process modelling, where the area of each Dirichlet tessellation is used as a
 #' areal weight in a statistical model.
-#' @param coords The coordinates of the points to triangulate.
+#' @param coords The coordinates of the points to triangulate. Needs to be a two column matrix or data.frame with longitude and latitude as columsn 1 and 2 respectively.
 #' @export
 #' @examples
 #' coordin <- matrix(runif(2000),ncol=2)
-#' tri <- deltri(coordin)
+#' tri <- delTri(coordin)
 # plot(tri)
 
-deltri <- function(coords){
+"delTri" <- function(coords){
 
   ## Do some stuff with the coordinates
   if(is.data.frame(coords)) coords.in <- as.numeric(coords)
@@ -28,59 +28,18 @@ deltri <- function(coords){
   res$convex.hull <- dt.out$convexhull
   res$convex.hull.area <- dt.out$convexhull.area
 
-  class(res) <- "deltri"
+  class(res) <- "delTri"
   return(res)
 
 }
 
+#' Printing function for delTri
+#' @param x A delTri object
+#' @param \\dots Additional print calls.
 #' @export
-print.deltri <- function(x, ...){
+"print.delTri" <- function(x, ...){
   message(paste0("Delaunay triangulation of ", nrow(x$coordinates)," sites."))
   message(paste0("There are a total of ", nrow(x$tri.mat)," unique triangles for this solution."))
-}
-
-# x <- tri
-# next_half_edge <- function(e) { #edge index starting at zero.
-#   tmp <- ifelse(e %% 3 == 2, e - 2, e + 1)
-#   return(tmp)
-# }
-#
-#
-# tri_edges <- function(x, ...) {
-#
-#   for (e in 1:length(x$triangles)) {
-#     if (e > x$halfedges[e]) {
-#       p <- x$coordinates[x$triangles[e],]
-#       q <- x$coordinates[x$triangles[next_half_edge(e)]];
-#
-#      }
-#   }
-# }
-
-#' @export
-plot.deltri <- function(x, add = FALSE, axis = FALSE, boxed = FALSE, ...){
-
-  p <- x$coordinates
-  # if (!is.matrix(p)) {
-  #   p = cbind(p, p2)
-  # }
-  xlim = range(p[, 1])
-  ylim = range(p[, 2])
-  if (!add) {
-    plot.new()
-    plot.window(xlim, ylim, ...)
-  }
-  if (boxed) {
-    box()
-  }
-  if (axis) {
-    axis(1)
-    axis(2)
-  }
-  m = rbind(tri[, -1], tri[, -2], tri[, -3])
-  segments(p[m[, 1], 1], p[m[, 1], 2], p[m[, 2], 1], p[m[,
-                                                         2], 2], ...)
-  return(invisible(list(tri = tri, p = p)))
 }
 
 

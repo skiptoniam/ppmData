@@ -8,20 +8,22 @@ gridWeights(
   presences,
   quadrature,
   window,
-  coord,
+  coord = c("X", "Y"),
   unit = c("geo", "m", "km", "ha")
 )
 }
 \arguments{
+\item{presences}{The observed presence locations}
+
 \item{quadrature}{The quadrature locations}
 
 \item{window}{A SpatRaster from terra package which will represent the extent
 and resolution of the point process model.}
 
+\item{coord}{The names of the coordinates. Default is c("X","Y").}
+
 \item{unit}{The scale of the area weights, default is kilometers squared "km"
 but meters squared "m" or hectars "ha" can be used.}
-
-\item{presence}{The observed presence locations}
 }
 \description{
 Quick way to generate psuedo-random points using the terria

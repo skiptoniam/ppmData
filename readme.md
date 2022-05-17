@@ -2,7 +2,7 @@
 [![Travis build
 status](https://travis-ci.org/skiptoniam/ppmData.svg?branch=master)](https://travis-ci.org/skiptoniam/ppmData)
 
-## ppmData is an R package that can be used to set up a quadrature scheme for multiple species point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) or for other multiple species Point Processes.
+## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) to run multiple species Point Processes.
 
 The approach uses quasi-random sampling (Grafston & Tille, 2013, Foster
 et al., 2018) to generate a quadrature scheme for numerical

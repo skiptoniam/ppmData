@@ -1,4 +1,8 @@
 #' Helper function to convert df to polygons
+#' @param df data.frame of polygon coordinates and ids.
+#' @param keys id of each polygon
+#' @param coords names of the coordinates
+#' @param proj The CRS to project the polygons in
 #' @importFrom sp Polygon Polygons SpatialPolygons CRS
 df2polygons <- function(df,keys,coords,proj) {
 
@@ -26,7 +30,6 @@ df2polygons <- function(df,keys,coords,proj) {
                         proj4string=proj)    # CRS
 }
 
-#' sometimes vectors come back as col-wise from c++ and need to be make row-wise for R.
 cpp_to_df <- function(x){
   df <- as.data.frame(matrix(x,ncol=2,byrow=TRUE))
   colnames(df) <- c("x","y")

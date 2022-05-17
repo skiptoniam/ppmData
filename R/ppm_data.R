@@ -8,24 +8,14 @@
 #' because we can generate a quasirandom sample across and areal region
 #' (X and Y coordinates). This in turn should reduce autocorrelation in
 #' quadrature scheme. The weight of each quadrature point is calculated using
-#' Dirichlet (Voronoi) Tessellation as provided from the \link[deldir]{deldir}
-#' function.
+#' Dirichlet (Voronoi) Tessellation written in c++ based on the duel-graph of a
+#' Delaunay triangulation which is constructed based on the sweep algorithm.
 #' @details The approach uses quasi-random sampling to generate a quadrature
 #' scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 #' Foster et al, 2017). The weights each quasi-random point in the quadrature
 #' scheme is calculated using a Dirichlet tessellation (Turner 2020). To improve
-#' computational efficiency of the \link[deldir]{deldir} function for a large
-#' number of quadrature points, we set up an approach which breaks up the problem into
-#' manageable sub-windows. We do this by keeping each deldir call to less that
-#' approximately 5000 points (which appears to be the point where the algorithm
-#' slows noticeably). To avoid edge effect (large areas on the edges of sub-areas),
-#' we rotate the sub-regions three times, the first two use a the nearest largest
-#' prime number closest to total number of points (presences+quadrature points)
-#' divided by 5000, which allows us to rotate the window on the x and y axis
-#' with an subset of the sub-windows. We then calculate a third set of sub-
-#' windows using a even set of squares. We then take the median weight across
-#' all weight calculated for each point. We then can calculate this in parallel
-#' for each species to make it computationally more efficient.
+#' computational efficiency we have rewritten the Delaunay triangulation and
+#' Dirichlet tessellation in c++ using the sweep algorithm of .
 #' @export
 #' @param presences a matrix, dataframe or SpatialPoints object giving the
 #' coordinates of each species' presence in (should be a matrix of nsites * 3)
@@ -117,9 +107,9 @@ ppmData <- function(presences,
 
   # This should check the presences and make it returns the data in the correct format for the remaining function.
   pressies <- checkPresences(known.sites = presences,
+                             window = window,
                              coord = coord,
                              species.id = species.id)
-
 
   # Check for duplicate presences - will remove duplicated points per species.
   pressies <- checkDuplicates(presences = pressies,
@@ -153,7 +143,10 @@ ppmData <- function(presences,
 
   ## Sometimes the points are very close together, so let's jitter if needed.
   reswindow <- terra::res(window)[1]
-  tmpPts <- jitterIfNeeded( pressies=pressies, bckpts=bckpts$quasiPoints, coord=coord, species.id = species.id, aBit=reswindow/2)
+  tmpPts <- jitterIfNeeded(pressiesJ = pressies, bckpts=bckpts$quasiPoints,
+                           window=window,coord=coord,
+                           species.id = species.id,
+                           aBit=reswindow/2)
 
   pressies <- tmpPts$pressies
   bckptsQ <- tmpPts$bckpts
@@ -164,7 +157,7 @@ ppmData <- function(presences,
 
   if(ismulti){
     if(!quiet)message("Developing a quadrature scheme for multiple species (marked) dataset.")
-      wts <- getMultispeciesWeights(method = method,
+      wts <- getMultispeciesWeights(quad.method = quad.method,
                                     presences = pressies,
                                     quadrature = bckptsQ,
                                     quadDummy = bckptsD,
@@ -184,7 +177,7 @@ ppmData <- function(presences,
 
     } else {
       if(!quiet)message("Developing a quadrature scheme for a single species dataset.")
-      wts <- getSingleSpeciesWeights(method= quad.method,
+      wts <- getSingleSpeciesWeights(quad.method= quad.method,
                                      presences = pressies,
                                      quadrature = bckptsQ,
                                      quadDummy = bckptsD,
@@ -240,34 +233,34 @@ ppmData <- function(presences,
   return(res)
 }
 
-jitterIfNeeded <- function( pressies, bckpts, coord, species.id, aBit=1e-4){
+jitterIfNeeded <- function( pressiesJ, bckpts, window, coord, species.id, aBit=1e-4){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
-  for( jj in as.character( unique( pressies[,species.id]))){ #I think that we have made the assumption that this is called SpeciesID...?
-    sppJ <- which(  pressies[,species.id]==jj)
-    dupes <- which( duplicated( pressies[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
+  for( jj in as.character( unique( pressiesJ[,species.id]))){ #I think that we have made the assumption that this is called SpeciesID...?
+    sppJ <- which(  pressiesJ[,species.id]==jj)
+    dupes <- which( duplicated( pressiesJ[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
 
     if( length( dupes)>0){
-      pressiesJ[dupes,coord[1]] <- jitter( pressies[sppJ[dupes],coord[1]], amount=aBit)
-      pressiesJ[dupes,coord[2]] <- jitter( pressies[sppJ[dupes],coord[2]], amount=aBit)
+      pressiesJ[dupes,coord[1]] <- jitter( pressiesJ[sppJ[dupes],coord[1]], amount=aBit)
+      pressiesJ[dupes,coord[2]] <- jitter( pressiesJ[sppJ[dupes],coord[2]], amount=aBit)
       #fixing up those points that have been jittered outside of the window
       kount <- 1
-      tmp <- raster::extract( window, pressiesJ[,coord])
+      tmp <- terra::extract(window, pressiesJ[,coord])
       outOfWindow <- which( is.na( tmp))
       while( kount < 10 & length( outOfWindow)>0){
-	pressiesJ[outOfWindow,coord[1]] <- jitter( pressies[sppJ[outOfWindow],coord[1]], amount=aBit)
-	pressiesJ[outOfWindow,coord[2]] <- jitter( pressies[sppJ[outOfWindow],coord[2]], amount=aBit)
-	tmp <- raster::extract( window, pressiesJ[,coord])
-	outOfWindow <- which( is.na( tmp))
-	kount <- kount + 1
+      	pressiesJ[outOfWindow,coord[1]] <- jitter( pressiesJ[sppJ[outOfWindow],coord[1]], amount=aBit)
+      	pressiesJ[outOfWindow,coord[2]] <- jitter( pressiesJ[sppJ[outOfWindow],coord[2]], amount=aBit)
+      	tmp <- terra::extract( window, pressiesJ[,coord])
+      	outOfWindow <- which( is.na( tmp))
+      	kount <- kount + 1
       }
     }
   }
 
   #background now
   #are there any points that duplicate a presence point?  If so, jitter.
-  npres <- nrow( pressies)
-  dupes <- which( duplicated( rbind( pressies[,coord], bckpts)))
+  npres <- nrow( pressiesJ)
+  dupes <- which( duplicated( rbind( pressiesJ[,coord], bckpts)))
   if( length( dupes)>0)
     dupes <- dupes[dupes>npres]
   if( length( dupes)>0){
@@ -276,18 +269,18 @@ jitterIfNeeded <- function( pressies, bckpts, coord, species.id, aBit=1e-4){
     bckpts[dupes,coord[2]] <- jitter( bckpts[dupes,coord[2]], amount=aBit)
     #fixing up those points that have been jittered outside of the window
     kount <- 1
-    tmp <- raster::extract( window, bckpts[,coord])
+    tmp <- terra::extract( window, bckpts[,coord])
     outOfWindow <- which( is.na( tmp))
     while( kount < 10 & length( outOfWindow)>0){
       bckpts[outOfWindow,coord[1]] <- jitter( bckpts[,coord[1]], amount=aBit)
       bckpts[outOfWindow,coord[2]] <- jitter( bckpts[,coord[2]], amount=aBit)
-      tmp <- raster::extract( window, bckpts[,coord])
+      tmp <- terra::extract( window, bckpts[,coord])
       outOfWindow <- which( is.na( tmp))
       kount <- kount + 1
     }
   }
 
-  return( list( pressies=pressies, bckpts=bckpts))
+  return( list( pressies=pressiesJ, bckpts=bckpts))
 }
 
 assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, species.id, sppNames){
@@ -372,7 +365,7 @@ ChechNumPoints <- function(npoints, presences, species.id){
   return(npoints)
 }
 
-checkPresences <- function (known.sites,coord,species.id){
+checkPresences <- function (known.sites, window, coord, species.id){
 
   # check for null sites
   if(is.null(known.sites))
@@ -385,12 +378,13 @@ checkPresences <- function (known.sites,coord,species.id){
     stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
+
   #check to see if the points lie within the raster (not over an NA)
-  tmpCheck <- raster::extract( window, known.sites[,coord])
-  if( !all( !is.na( tmpCheck))){
-    warning("There are presence records outside the region window.  Removing them but please check.")
-    known.sites <- known.sites[!is.na( tmpCheck),]
-  }
+  # tmpCheck <- terra::extract( window, known.sites[,coord])
+  # if( !all( !is.na( tmpCheck))){
+    # warning("There are presence records outside the region window.  Removing them but please check.")
+    # known.sites <- known.sites[!is.na( tmpCheck),]
+  # }
 
   # try and sort out factors.
   known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
@@ -515,12 +509,12 @@ defaultWindow <- function (presences, coord) {
 
   # reso <- round(diff(seq(ylim[1],ylim[2],length.out=50))[1],1)
   e <- extent(c(xlim,ylim))
-  sa <- rast(xmin=xlim[1],xmax=xlim[2],
+  sa <- terra::rast(xmin=xlim[1],xmax=xlim[2],
              ymin=ylim[1],ymax=ylim[2],
              nrows=50,ncols=50,
              crs="+proj=longlat +datum=WGS84")
   # sa <- raster(e,res=reso, crs="+proj=longlat +datum=WGS84")
-  sa[]<- 1:terra::ncell(sa)
+  terra::values(sa) <- 1#:terra::ncell(sa)
   return (sa)
 }
 

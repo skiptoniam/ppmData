@@ -94,26 +94,16 @@ Quasi-random points are a nice alternative to pseudo-random samples, this is
 because we can generate a quasirandom sample across and areal region
 (X and Y coordinates). This in turn should reduce autocorrelation in
 quadrature scheme. The weight of each quadrature point is calculated using
-Dirichlet (Voronoi) Tessellation as provided from the \link[deldir]{deldir}
-function.
+Dirichlet (Voronoi) Tessellation written in c++ based on the duel-graph of a
+Delaunay triangulation which is constructed based on the sweep algorithm.
 }
 \details{
 The approach uses quasi-random sampling to generate a quadrature
 scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 Foster et al, 2017). The weights each quasi-random point in the quadrature
 scheme is calculated using a Dirichlet tessellation (Turner 2020). To improve
-computational efficiency of the \link[deldir]{deldir} function for a large
-number of quadrature points, we set up an approach which breaks up the problem into
-manageable sub-windows. We do this by keeping each deldir call to less that
-approximately 5000 points (which appears to be the point where the algorithm
-slows noticeably). To avoid edge effect (large areas on the edges of sub-areas),
-we rotate the sub-regions three times, the first two use a the nearest largest
-prime number closest to total number of points (presences+quadrature points)
-divided by 5000, which allows us to rotate the window on the x and y axis
-with an subset of the sub-windows. We then calculate a third set of sub-
-windows using a even set of squares. We then take the median weight across
-all weight calculated for each point. We then can calculate this in parallel
-for each species to make it computationally more efficient.
+computational efficiency we have rewritten the Delaunay triangulation and
+Dirichlet tessellation in c++ using the sweep algorithm of .
 }
 \examples{
 \dontrun{

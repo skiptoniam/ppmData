@@ -19,16 +19,6 @@
 #' plot(window)
 #' points(res[,1:2],pch=".")
 
-## test on big data
-# r.list <- list.files("/home/woo457/unimelb_local/data/global/elevation/",full.names = TRUE)
-# window <- terra::rast(r.list)
-# coord = c('X','Y')
-# covariates <- terra::rast(rep(r.list,3))
-# npoints = 1000
-# res <- gridQuad(10000,window,coord)
-# plot(window)
-# points(res[,1:2],pch=".")
-
 gridQuad <- function(npoints,
                      window,
                      coord = c("X","Y")){
@@ -44,7 +34,7 @@ gridQuad <- function(npoints,
                             as.raster = TRUE,
                             values = FALSE)
 
-  bk_sites <- as.data.frame(bk_r,xy=TRUE)[,-3]
+  bk_sites <- terra::as.data.frame(bk_r,xy=TRUE)[,-3]
 
   nbk <- nrow(bk_sites)
   message(sprintf("There are %s background sites generated using 'gridQuad' this is based on %s points, there will be less quadrature points than selected as na cells are removed and the grid is kept regular.", nbk,npoints))
@@ -61,10 +51,11 @@ gridQuad <- function(npoints,
 #' is km^2, but other units can be used such as meters squared "m" or hectars
 #' "ha". There is an internal check to see if the input data is in lon/lat and
 #' if so, it returns the area of the cell in which the point lies.
-#' @param presence The observed presence locations
+#' @param presences The observed presence locations
 #' @param quadrature The quadrature locations
 #' @param window A SpatRaster from terra package which will represent the extent
 #'  and resolution of the point process model.
+#' @param coord The names of the coordinates. Default is c("X","Y").
 #' @param unit The scale of the area weights, default is kilometers squared "km"
 #' but meters squared "m" or hectars "ha" can be used.
 #' @author Skipton Woolley
@@ -86,7 +77,7 @@ gridQuad <- function(npoints,
 gridWeights <- function(presences,
                         quadrature,
                         window,
-                        coord,
+                        coord = c("X","Y"),
                         # speciesIdx,
                         unit = c("geo","m","km","ha")){
 
@@ -104,15 +95,16 @@ gridWeights <- function(presences,
   nquad <- nrow(quadrature)
 
   # if in geographic coordinates return area in unit of interest.
-  if(is.lonlat(window)){
+  if(terra::is.lonlat(window)){
     if(unit=="geo"){ # useful if you just want areas on the geographic scale (this is what deldir gives you)
       areas <- terra::init(window,prod(terra::res(window)))
-      bck_wts <- terra::extract(areas,quadrature)
+      bck_wts <- terra::extract(areas,quadrature)[,2] # drop ID
+      bck_wts_num <- list2numeric(bck_wts)
+    } else {
+      areas <- terra::cellSize(window, unit=unit)
+      bck_wts <- terra::extract(areas,quadrature)[,2]
       bck_wts_num <- list2numeric(bck_wts)
     }
-    areas <- terra::cellSize(window, unit=unit)
-    bck_wts <- terra::extract(areas,quadrature)
-    bck_wts_num <- list2numeric(bck_wts)
   }else{
     if(unit=="geo"){
       areas <- terra::init(window,prod(terra::res(window)))
@@ -120,14 +112,16 @@ gridWeights <- function(presences,
       areas.m <- terra::mask(areas,window)
       window_area <- terra::global(areas.m, "sum", na.rm=TRUE)
       bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
+    } else{
+      areas <- terra::cellSize(window, unit=unit)
+      window_area <- terra::global(areas, "sum", na.rm=TRUE)
+      bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
     }
-    areas <- terra::cellSize(window, unit=unit)
-    window_area <- terra::global(areas, "sum", na.rm=TRUE)
-    bck_wts <- rep(as.numeric(window_area)/npoints,npoints)
   }
 
   pres_wts <- rep(sqrt(.Machine$double.eps),npres)
   all_sites <- rbind(presences,quadrature)
+  colnames(all_sites) <- coord
   all_weights <- c(pres_wts,bck_wts_num)
   pres_bck <- c(rep(1,npres),rep(0,nquad))
 

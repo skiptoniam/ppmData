@@ -13,15 +13,17 @@ pseudoRandomWeights(
 )
 }
 \arguments{
+\item{presences}{The observed presence locations}
+
 \item{quadrature}{The quadrature locations}
 
 \item{window}{A SpatRaster from terra package which will represent the extent
 and resolution of the point process model.}
 
+\item{coord}{The names of the coordinates. Default is c("X","Y").}
+
 \item{unit}{The scale of the area weights, default is kilometers squared "km"
 but meters squared "m" or hectars "ha" can be used.}
-
-\item{presence}{The observed presence locations}
 }
 \description{
 Quick way to generate psuedo-random points using the terria
@@ -38,7 +40,7 @@ lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 window <- terra::rast(lst[1])
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")[,1:2]
 quadrature <- pseudoRandomQuad(1000,window)
-res <- pseudoRandomWeights(presences,quad,window,unit="geo")
+res <- pseudoRandomWeights(presences,quadrature,window,unit="geo")
 plot(window)
 points(res[res$presence==1,1:2],pch=16,cex=0.5,col='blue')
 points(res[res$presence==0,1:2],pch='.')

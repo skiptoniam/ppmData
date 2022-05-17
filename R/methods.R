@@ -1,10 +1,11 @@
 #' @rdname plot.ppmData
 #' @name plot.ppmData
 #' @title Plot a ppmData object
-#' @param x A model object.
+#' @param x A ppmData object.
+#' @param main Title of the plot, default is 'Quadrature Scheme'
 #' @param \\dots Ignored
 #' @export
-#' @importFrom raster extent
+
 
 plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 
@@ -26,14 +27,14 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
     quad <- x$ppmData$locations[x$ppmData$bkg,]
 
     par(mar=c(7,7,7,7))
-    if(x$params$dw){
-      e <- extent(x$window)
-      p <- as(e, 'SpatialPolygons')
+    # if(x$params$dw){
+
+      # p <- as(e, 'SpatialPolygons')
       terra::plot(p,main=main)
-    } else {
+    # } else {
       p <- x$window
       terra::plot(p,axes=FALSE, legend=FALSE, main=main)
-    }
+    # }
     points(quad,pch='.')
     points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$species.id])),1]),
            pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2],cex=0.5)
@@ -52,14 +53,14 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
     quad <- x$ppmData[x$ppmData$presence%in%0,x$params$coord]
 
     par(mar=c(7,7,7,7))
-    if(x$params$dw){
-      e <- extent(x$window)
-      p <- as(e, 'SpatialPolygons')
-      terra::plot(p,main=main)
-    } else {
+    # if(x$params$dw){
+      # e <- terra::ext(x$window)
+      # p <- as(e, 'SpatialPolygons')
+      # terra::plot(p,main=main)
+    # } else {
       p <- x$window
       terra::plot(p,axes=FALSE, legend=FALSE,main=main)
-    }
+    # }
     points(quad,pch='.')
     points(pressies,col='dodgerblue',pch=16,cex=0.5)
     legend(x="bottom",
@@ -76,7 +77,7 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
 #'@rdname print.ppmData
 #'@name print.ppmData
 #'@title Print a summary of ppmData object.
-#'@param x A model object.
+#'@param x A ppmData object.
 #'@param \\dots Ignored
 #'@export
 

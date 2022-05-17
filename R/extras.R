@@ -17,3 +17,6 @@ expectClasses <- function (x,
   }
 }
 
+list2numeric <- function(x){
+  as.numeric(as.matrix(x))
+}

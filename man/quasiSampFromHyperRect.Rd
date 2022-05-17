@@ -6,6 +6,13 @@
 \usage{
 quasiSampFromHyperRect(nSampsToConsider, randStartType = 2, designParams)
 }
+\arguments{
+\item{nSampsToConsider}{Number of samples to consider}
+
+\item{randStartType}{Random start type, default is 2.}
+
+\item{designParams}{A list of design parameters for the sampler.}
+}
 \description{
 Copied from MBHdesign as it wasn't an exported function.
 }

@@ -6,6 +6,15 @@
 \usage{
 df2polygons(df, keys, coords, proj)
 }
+\arguments{
+\item{df}{data.frame of polygon coordinates and ids.}
+
+\item{keys}{id of each polygon}
+
+\item{coords}{names of the coordinates}
+
+\item{proj}{The CRS to project the polygons in}
+}
 \description{
 Helper function to convert df to polygons
 }

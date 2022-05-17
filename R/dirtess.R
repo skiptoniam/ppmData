@@ -1,13 +1,13 @@
 #' @title dirtess
 #' @description Computes the Dirichlet tessellation using the dual-graph of the
 #' Delaunay triangulation. The Delaunay triangulation is calculated internally
-#' for this function, but can be called using the \link[ppmData]{deltri} function.
+#' for this function using a sweep algorithm.
 #' @param coords The coordinates of the points to triangulate.
 #' @param bbox Optional - doesn't actually do anything anymore :)
 #' @export
 #' @examples
 #' coords <- matrix(runif(2000),ncol=2)
-#' tess <- dirtess(coords)
+#' tess <- dirTess(coords)
 
 "dirTess" <- function(coords, bbox=NULL){
 
@@ -121,6 +121,8 @@
 
 
 #'plot a Dirichlet tessellation
+#'@param x dirTess object
+#'@param \\dots Additional plotting arguments
 #'@export
 "plot.dirTess" <- function(x, ...){
 
@@ -136,36 +138,40 @@
 
 
 #' Convert the Dirichlet tessellation to polygons and clip if so desired.
-#' @rdname as.polygons
-#' @export as.polygons
+#' @rdname polygonise
+#' @export polygonise
 #' @param x Dirichlet tessellation object
-#' @param bboxclip Logical. Clip to the bounding box of the coordinates used to
-#' create the tessellations.
+#' @param clip Logical Clip to the bounding box or polgon if polyclip = TRUE.
+#' @param polyclip polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon
 #' @param proj CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)
+#' @param \\dots Additional arguments for a polygonise function
 #' @importFrom sp CRS
 #' @importFrom rgeos gArea gIntersection
 #' @examples
 #' library(sp)
 #' coords <- matrix(runif(2000),ncol=2)
-#' tess <- dirtess(coords)
-#' tess.polys <- as.polygons(tess)
+#' tess <- dirTess(coords)
+#' tess.polys <- polygonise(tess)
 #' plot(tess.polys$polygons, col=hcl.colors(100))
 
-"as.polygons" <- function (x, bboxclip=TRUE, proj = sp::CRS("EPSG:4326"), ...){
-  UseMethod("as.polygons", x)
+"polygonise" <- function (x, clip=TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...){
+  UseMethod("polygonise", x)
 }
 
 #' @export
-"as.polygons.dirTess" <- function(x, bboxclip=TRUE, proj = sp::CRS("EPSG:4326"), ...){
+"polygonise.dirTess" <- function(x, clip=TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...){
 
   # convert the vector of coordinates per polygon into polygons
   bbox <- x$bbox
   res <- list()
   tes.polys <- dirichlet.polygon(x = x, proj = proj)
   res$polygons <- tes.polys
-  if(bboxclip){
-    bbox.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
-    tes.clip <- suppressWarnings(rgeos::gIntersection(tes.polys,bbox.poly,byid = TRUE))
+  if(clip){
+    clip.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
+    if(!is.null(polyclip)){
+      clip.poly <- polyclip
+    }
+    tes.clip <- suppressWarnings(rgeos::gIntersection(tes.polys,clip.poly,byid = TRUE))
     polygon.clipped.areas <- suppressWarnings(rgeos::gArea(tes.clip, byid=TRUE))
     res$polygons <- tes.clip
     res$polygons.areas <- polygon.clipped.areas
@@ -180,7 +186,7 @@
 
 "dirichlet.polygon" <- function(x, proj = sp::CRS("EPSG:4326"),...){
 
-  if(class(x)!="dirtess")
+  if(class(x)!="dirTess")
     stop("Must be a dirichlet tessellation object from 'dirTess'")
 
   poly.list <- lapply(x$polygons$poly,function(i)i$poly.coords)

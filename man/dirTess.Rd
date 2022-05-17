@@ -14,9 +14,9 @@ dirTess(coords, bbox = NULL)
 \description{
 Computes the Dirichlet tessellation using the dual-graph of the
 Delaunay triangulation. The Delaunay triangulation is calculated internally
-for this function, but can be called using the \link[ppmData]{deltri} function.
+for this function using a sweep algorithm.
 }
 \examples{
 coords <- matrix(runif(2000),ncol=2)
-tess <- dirtess(coords)
+tess <- dirTess(coords)
 }
