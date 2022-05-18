@@ -6,5 +6,7 @@
 ^README.Rmd
 ^readme.md
 ^.travis.yml
-
-
+^README\.Rmd$
+^devsrc$
+^todo$
+^\.github$
