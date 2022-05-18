@@ -11,4 +11,5 @@ dev/
 devsrc/
 todo/
 .gitignore
+.Rbuildignore
 
