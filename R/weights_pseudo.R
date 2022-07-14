@@ -31,8 +31,8 @@ pseudoRandomQuad <- function(npoints,
                                         values = FALSE,
                                         xy = TRUE)
 
-   bk_sites <- background_sites
-   colnames(bk_sites) <- coord
+  bk_sites <- data.frame(background_sites)
+  colnames(bk_sites) <- coord
 
   return(bk_sites)
 
@@ -49,6 +49,7 @@ pseudoRandomQuad <- function(npoints,
 #' @param window A SpatRaster from terra package which will represent the extent
 #'  and resolution of the point process model.
 #' @param coord The names of the coordinates. Default is c("X","Y").
+#' @param species.id character Name of the species ID column
 #' @param unit The scale of the area weights, default is kilometers squared "km"
 #' but meters squared "m" or hectars "ha" can be used.
 #' @author Skipton Woolley
@@ -71,6 +72,7 @@ pseudoRandomWeights <- function(presences,
                                 quadrature,
                                 window,
                                 coord,
+                                species.id,
                                 unit = c("geo","m","km","ha")){
 
   # work out what unit you want the areas in.
@@ -86,37 +88,33 @@ pseudoRandomWeights <- function(presences,
   npres <- nrow(presences)
   nquad <- nrow(quadrature)
 
-  # if in geographic coordinates return area in unit of interest.
-  if(terra::is.lonlat(window)){
-    if(unit=="geo"){ # useful if you just want areas on the geographic scale (this is what deldir gives you)
-      areas <- terra::init(window,prod(terra::res(window)))
-      bck_wts <- terra::extract(areas,quadrature)
-      bck_wts_num <- list2numeric(bck_wts)
-    } else{
-      areas <- terra::cellSize(window, unit=unit)
-      bck_wts <- terra::extract(areas,quadrature)[,2]
-      bck_wts_num <- list2numeric(bck_wts)
-    }
-  }else{
-    if(unit=="geo"){
-      # areas <- terra::cellSize(window, unit=unit)
-      areas <- terra::init(window,prod(terra::res(window)))
-      areas.m <- terra::mask(areas,window)
-      window_area <- terra::global(areas.m, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
-    } else {
-      areas <- terra::init(window,prod(terra::res(window)))
-      window_area <- terra::global(areas, "sum", na.rm=TRUE)
-      bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
-    }
+  ## Merge the presences and absences
+  allpts.id <- rbind(presences, quadrature)
+  allpts <- rbind(presences[,coord], quadrature[,coord])
+
+  ## Tracking of site and species ids
+  allpts$id <- seq_len(nrow(allpts))
+  allpts$dataset <- allpts.id[,species.id]
+
+  if(unit=="geo"){
+    areas <- terra::init(window,prod(terra::res(window)))
+    areas.m <- terra::mask(areas,window)
+    window_area <- terra::global(areas.m, "sum", na.rm=TRUE)
+    bck_wts <- rep(as.numeric(window_area)/nquad,nquad)
+  } else{
+    areas <- terra::cellSize(window, unit=unit)
+    bck_wts_site <- terra::extract(areas,allpts[allpts$dataset=="quad",coord],method="bilinear")[,2]
+    window_area <- as.numeric(terra::global(areas, "sum", na.rm=TRUE))
+    window_wts <- bck_wts_site/sum(bck_wts_site,na.rm = TRUE)
+    # sum(window_wts*window_area) # sanity check
+    bck_wts  <- window_wts*window_area
   }
 
   pres_wts <- rep(sqrt(.Machine$double.eps),npres)
-  all_sites <- rbind(presences,quadrature)
-  all_weights <- c(pres_wts,bck_wts_num)
-  pres_bck <- c(rep(1,npres),rep(0,nquad))
+  all_weights <- c(pres_wts,bck_wts)
+  grid.areas <- data.frame(id = seq_along(all_weights), area = all_weights)
 
-  res <- data.frame(all_sites,presence=pres_bck,weights=all_weights)
+  res <- merge(allpts, grid.areas, by='id', all=TRUE, sort=TRUE)
 
   return(res)
 
