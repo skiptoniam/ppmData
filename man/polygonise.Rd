@@ -4,16 +4,16 @@
 \alias{polygonise}
 \title{Convert the Dirichlet tessellation to polygons and clip if so desired.}
 \usage{
-polygonise(x, clip = TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...)
+polygonise(x, window = NULL, clippy = TRUE, crs = sf::st_crs("EPSG:4326"), ...)
 }
 \arguments{
 \item{x}{Dirichlet tessellation object}
 
-\item{clip}{Logical Clip to the bounding box or polgon if polyclip = TRUE.}
+\item{window}{polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon}
 
-\item{polyclip}{polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon}
+\item{clippy}{Logical Clip to the bounding box or polgon if polyclip = TRUE.}
 
-\item{proj}{CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)}
+\item{crs}{CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)}
 
 \item{\\dots}{Additional arguments for a polygonise function}
 }
@@ -21,9 +21,10 @@ polygonise(x, clip = TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...)
 Convert the Dirichlet tessellation to polygons and clip if so desired.
 }
 \examples{
-library(sp)
-coords <- matrix(runif(2000),ncol=2)
+library(sf)
+coords <- matrix(runif(20000),ncol=2)
 tess <- dirTess(coords)
 tess.polys <- polygonise(tess)
-plot(tess.polys$polygons, col=hcl.colors(100))
+plot(st_geometry(tess.polys$polygons), col=hcl.colors(100))
+points(coords,col='tomato',pch=16, cex=.3)
 }
