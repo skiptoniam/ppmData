@@ -21,6 +21,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dirtess_poly_area
+double dirtess_poly_area(NumericVector x, NumericVector y);
+RcppExport SEXP _ppmData_dirtess_poly_area(SEXP xSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(dirtess_poly_area(x, y));
+    return rcpp_result_gen;
+END_RCPP
+}
 // dirtess_cpp
 List dirtess_cpp(std::vector<double> coords);
 RcppExport SEXP _ppmData_dirtess_cpp(SEXP coordsSEXP) {
@@ -35,6 +47,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ppmData_deltri_cpp", (DL_FUNC) &_ppmData_deltri_cpp, 1},
+    {"_ppmData_dirtess_poly_area", (DL_FUNC) &_ppmData_dirtess_poly_area, 2},
     {"_ppmData_dirtess_cpp", (DL_FUNC) &_ppmData_dirtess_cpp, 1},
     {NULL, NULL, 0}
 };
