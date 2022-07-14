@@ -4,12 +4,25 @@
 \alias{plot.ppmData}
 \title{Plot a ppmData object}
 \usage{
-\method{plot}{ppmData}(x, main = "Quadrature Scheme", ...)
+\method{plot}{ppmData}(
+  x,
+  main = "Quadrature Scheme",
+  cols = c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#E6AB02", "#A6761D", "#666666"),
+  pchs = 15:20,
+  plt.legend = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{A ppmData object.}
 
 \item{main}{Title of the plot, default is 'Quadrature Scheme'}
+
+\item{cols}{Vector of colours or colour codes}
+
+\item{pchs}{Vector of point shapes}
+
+\item{plt.legend}{boolean plot the legend or not, default is TRUE.}
 
 \item{\\dots}{Ignored}
 }

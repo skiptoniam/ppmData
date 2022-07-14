@@ -20,3 +20,7 @@ expectClasses <- function (x,
 list2numeric <- function(x){
   as.numeric(as.matrix(x))
 }
+
+classTrue <- function(x,classes){
+  class(x)==classes
+}

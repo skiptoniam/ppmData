@@ -1,38 +1,27 @@
-#' Helper function to convert df to polygons
-#' @param df data.frame of polygon coordinates and ids.
-#' @param keys id of each polygon
-#' @param coords names of the coordinates
-#' @param proj The CRS to project the polygons in
-#' @importFrom sp Polygon Polygons SpatialPolygons CRS
-#' @importFrom methods is
-df2polygons <- function(df,keys,coords,proj) {
+#' Convert a terra SpatRaster* object to an sf object
 
-  ## Basic checks
-  if(!is(df,"data.frame")) stop("df needs to be a data frame")
-  if(!is(keys,"character")) stop("keys needs to be of class character")
-  if(!is(coords,"character")) stop("coords needs to be of class character")
-  if(!all(keys %in% names(df))) stop("All keys needs to be labels in data frame")
-  if(!all(coords %in% names(df))) stop("All coordinate labels needs to be labels in data frame")
-  if(!methods::is(proj,"CRS")) stop("proj needs to be of class CRS")
+#' Convert a terra SpatRaster* object to an sf object.
+#' This creates a binary mask for the raster NA vs data and then converts it to
+#' POLYGONS. For use internally to turn a rast object in to a mask for polygon
+#' clipping.
+#' @param x rast* to be converted into an object class \code{sf}
+#' @param ... further specifications, see \link{st_as_sf}
+#' @name rast_to_sf
+#' @importFrom terra ifel as.polygons
+#' @importFrom sf st_as_sf st_make_valid st_sf
+#' @export
+rast_to_sf = function(x, ...) {
+  if (!requireNamespace("sf", quietly = TRUE))
+    stop("package sf required, please install it first")
 
-  ## dfun takes a data frame with coordinates for 1 polygon, and makes one POLYGON object from it
-  ## with a UID from the polygon key
-  dfun <- function(d) {
-    sp::Polygons(list(sp::Polygon(d[coords])),
-             as.character(d[keys]))
-  }
+  ## converts it to binary layer
+  window <- terra::ifel(is.na(x),NA,1)
 
-  ## Now apply dfun to all polygons in data frame
-  df_poly <- plyr::dlply(df,keys,dfun)
+  ## create the sf mulitpolygon
+  pols <- terra::as.polygons(window)
+  sf.out <- sf::st_as_sf(pols,...)
+  sf.valid <- sf::st_make_valid(sf.out)
+  x.out <- sf::st_sf(sf.valid)
 
-  ## Frorm a SpatialPolygons object from all the returned Polygons
-  Sr <- sp::SpatialPolygons(df_poly,             # Polygons
-                        1:length(df_poly),   # plotting order
-                        proj4string=proj)    # CRS
-}
-
-cpp_to_df <- function(x){
-  df <- as.data.frame(matrix(x,ncol=2,byrow=TRUE))
-  colnames(df) <- c("x","y")
-  return(df)
+  return(x.out)
 }

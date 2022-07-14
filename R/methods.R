@@ -3,22 +3,31 @@
 #' @title Plot a ppmData object
 #' @param x A ppmData object.
 #' @param main Title of the plot, default is 'Quadrature Scheme'
+#' @param cols Vector of colours or colour codes
+#' @param pchs Vector of point shapes
+#' @param plt.legend boolean plot the legend or not, default is TRUE.
 #' @param \\dots Ignored
 #' @export
 
 
-plot.ppmData <- function(x, main='Quadrature Scheme', ...){
+plot.ppmData <- function(x,
+                         main='Quadrature Scheme',
+                         cols =  c("#1B9E77","#D95F02","#7570B3",
+                                   "#E7298A","#E6AB02",
+                                   "#A6761D","#666666"),
+                         pchs = 15:20,
+                         plt.legend=TRUE, ...){
 
 
-  op <- graphics::par(no.readonly = TRUE)
-  on.exit(graphics::par(op))
+  # op <- graphics::par(no.readonly = TRUE)
+  # on.exit(graphics::par(op))
 
-  cols <- c("#1B9E77","#D95F02","#7570B3",
-            "#E7298A","#66A61E","#E6AB02",
-            "#A6761D","#666666")
+  # cols <- c("#1B9E77","#D95F02","#7570B3",
+  #           "#E7298A","#E6AB02",
+  #           "#A6761D","#666666")
   # cols <- rep(cols,100)
 
-  pchs <- 15:20
+  # pchs <- 15:20
   colshp <-  expand.grid(cols,pchs)
 
   if(x$marked){
@@ -26,50 +35,53 @@ plot.ppmData <- function(x, main='Quadrature Scheme', ...){
     marks <- x$presences
     quad <- x$ppmData$locations[x$ppmData$bkg,]
 
-    par(mar=c(7,7,7,7))
-    # if(x$params$dw){
-
-      # p <- as(e, 'SpatialPolygons')
-      terra::plot(p,main=main)
-    # } else {
+    # par(mar=c(7,7,7,7))
+    if(x$params$dw){
+      e <- terra::ext(x$window)
+      p <- terra::as.polygons(e)
+      terra::plot(p,main=main,axes=FALSE, legend=FALSE)
+    } else {
       p <- x$window
       terra::plot(p,axes=FALSE, legend=FALSE, main=main)
-    # }
+    }
     points(quad,pch='.')
     points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$species.id])),1]),
-           pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2],cex=0.5)
-    legend(x="left",
+           pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2],cex=0.5, ...)
+    if(plt.legend){
+    legend(x="bottom",
            legend=unique(marks[,x$params$species.id]),
            col=as.character(colshp[1:length(unique(marks[,x$params$species.id])),1]),
            pch=colshp[1:length(unique(marks[,x$params$species.id])),2],
            cex=0.75,
            xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
-           bty="n")
-
+           bty="n", ...)
+    }
 
   } else {
 
     pressies <- x$presences
     quad <- x$ppmData[x$ppmData$presence%in%0,x$params$coord]
 
-    par(mar=c(7,7,7,7))
-    # if(x$params$dw){
-      # e <- terra::ext(x$window)
-      # p <- as(e, 'SpatialPolygons')
-      # terra::plot(p,main=main)
-    # } else {
+    # par(mar=c(7,7,7,7))
+    if(x$params$dw){
+    e <- terra::ext(x$window)
+    p <- terra::as.polygons(e)
+    terra::plot(p,main=main,axes=FALSE, legend=FALSE)
+    } else {
       p <- x$window
       terra::plot(p,axes=FALSE, legend=FALSE,main=main)
-    # }
+    }
     points(quad,pch='.')
-    points(pressies,col='dodgerblue',pch=16,cex=0.5)
+    points(pressies,col=cols[1],pch=16,cex=0.7, ...)
+    if(plt.legend){
     legend(x="bottom",
            legend=unique(pressies[,x$params$species.id]),
-           col='dodgerblue',
+           col=cols[1],
            pch=16,
            cex=0.75,
            xpd = TRUE, horiz = TRUE, inset = c(0, -0.2),
-           bty="n")
+           bty="n", ...)
+    }
   }
 
 }

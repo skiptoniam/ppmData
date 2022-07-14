@@ -2,7 +2,7 @@
 % Please edit documentation in R/dirtess.R
 \name{dirTess}
 \alias{dirTess}
-\title{dirtess}
+\title{dirTess}
 \usage{
 dirTess(coords, bbox = NULL)
 }

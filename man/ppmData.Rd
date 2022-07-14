@@ -12,14 +12,11 @@ ppmData(
   npoints = NULL,
   coord = c("X", "Y"),
   species.id = "SpeciesID",
-  quad.method = c("quasi", "random", "grid"),
-  mc.cores = 1,
-  quasirandom.samples = NULL,
+  quad.method = c("quasi.random", "pseudo.random", "grid"),
   interpolation = c("simple", "bilinear"),
   unit = c("geo", "m", "km", "ha"),
-  bufferNA = FALSE,
-  bufferSize = NULL,
-  quiet = FALSE
+  control = list(quasirandom.samples = NULL, buffer.NA = FALSE, buffer.size = NULL,
+    quiet = FALSE, mc.cores = 1)
 )
 }
 \arguments{
@@ -30,76 +27,63 @@ Y is latitude and SpeciesID is factor which associated each occurrence to a
 species. If presences parameter is NULL then ppmDat will return the
 quadrature scheme without presences.}
 
-\item{window}{a raster object giving the area over which to generate
+\item{window}{SpatRast a raster object giving the area over which to generate
 background points. NA cells are ignored and masked out of returned data.
 If NULL, a rectangle bounding the extent of \code{presences} will be used as
 the default window.}
 
-\item{covariates}{A raster object containing covariates for modelling the
-point process (best use a Raster stack or Raster brick). This should match
-the resolution and extent of the window provided. If NULL, only the
-coordinates of the presences and quadrature points are returned.}
+\item{covariates}{SpatRast A terra SpatRast object containing covariates for modelling
+the point process. This should match the resolution and extent of the window
+provided. If NULL, only the coordinates of the presences and quadrature
+points are returned.}
 
-\item{npoints}{The number of quadrature points to generate. If NULL, the
-number of quadrature points is calculated based on a linear scaling. In
+\item{npoints}{Integer The number of quadrature points to generate. If NULL, the
+number of quadrature points is calculated based on linear scaling. In
 reality, the number of quadrature points needed to approximate the
 log-likelihood function will depend on the data and likelihood function
-being approximated. Typically, more quadrature the better the estimate,
+being approximated. Typically, the more quadrature the better the estimate,
 but there is a trade off between computational efficiency and accuracy.
 See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
 on the location and number of quadrature points required to converge a
 ppm likelihood.}
 
-\item{coord}{is the name of site coordinates. The default is c('X','Y').
-This should match the name of the coordinates in the presences dataset.}
+\item{coord}{Character is the name of site coordinates. The default is c('X','Y').
+This should match the name of the coordinates in the presences data set.}
 
-\item{species.id}{is the name of the species ID in the presences dataset.
+\item{species.id}{Character is the colname of the species ID in the presences data set.
 The default is "SpeciesID".}
 
-\item{quad.method}{The quadrature generation method. Default is "quasi" for
-quasi-random, "random" for pseudo-random (regular random) and "grid" for
+\item{quad.method}{Character The quadrature generation method. Default is "quasi.random" for
+quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
 a regular grid at a set resolution (with respect to the original window resolution).}
 
-\item{mc.cores}{The number of cores to use in the processing. default is
-parallel::detectCores()-1}
+\item{interpolation}{Character The interpolation method to use when extracting
+covariate data at a point. Default is "bilinear", can also use "simple", this is based
+on the terra package  \code{\link[terra]{extract}}.}
 
-\item{quasirandom.samples}{This set the total number of samples to consider
-in the BAS step (rejection sampling). The default is 10000, which means that
-10000 halton numbers are drawn and then thinned according to the inclusion
-probabilities. You will need to increase the number of samples if selecting
-a large number of quadrature points. The more quasirandomSamples selected the
-slower the quasirandom quadrature scheme will be to generate.}
+\item{unit}{Character The type of area to return. The default is "geo" and
+returns the area based on the euclidean distance between geographic
+coordinates. This will default to the values of the raster and presence
+coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used (this is still experimental).}
 
-\item{interpolation}{The interpolation method to use when extracting
-covariate data. Default is "bilinear", can also use "simple", this is based
-on the raster package  \code{\link[raster]{extract}}.}
-
-\item{unit}{The scale of the area weights, default is "geo" and returns the area based on the geographic coorinates
-alternatively meters squared "m", kilometers squared "km", or hectars "ha" can be used (this is still experimental).}
-
-\item{bufferNA}{If extract from \code{\link[raster]{extract}} returns NA for
-point extract, do you want us to attempt to user buffer to calculate cells
-which are NA.}
-
-\item{bufferSize}{If you call 'bufferNA' what is the range of the buffer in
-meters.}
-
-\item{quiet}{If TRUE, do not print messages. Default is FALSE.}
+\item{control}{list A list of control parameters for using ppmData. See
+details for uses of control parameters.}
 }
 \description{
 ppmData is a package for setting up quadrature to implement
 spatial Poisson Point process models and extensions.
 
-This package is a way to efficiently generate a quasirandom set
+This package is a way to efficiently generate a quasi-random set
 of background points for presence-only modelling of single or multiple
 responses. The package was set up to model multiple species presence-only
-datasets, but could be used for an point process spatial modelling.
+datasets, but could be used for an spatial point process modelling.
 Quasi-random points are a nice alternative to pseudo-random samples, this is
-because we can generate a quasirandom sample across and areal region
+because we can generate a quasi-random sample across and areal region
 (X and Y coordinates). This in turn should reduce autocorrelation in
 quadrature scheme. The weight of each quadrature point is calculated using
-Dirichlet (Voronoi) Tessellation written in c++ based on the duel-graph of a
-Delaunay triangulation which is constructed based on the sweep algorithm.
+Dirichlet (Voronoi) Tessellation written in c++. We calculated the duel-graph
+of a Delaunay triangulation. The Delaunay triangulation is constructed based
+on a radial sweep algorithm.
 }
 \details{
 The approach uses quasi-random sampling to generate a quadrature
@@ -107,7 +91,24 @@ scheme based (e.g Berman & Turner 1992; Warton & Shepard 2010;
 Foster et al, 2017). The weights each quasi-random point in the quadrature
 scheme is calculated using a Dirichlet tessellation (Turner 2020). To improve
 computational efficiency we have rewritten the Delaunay triangulation and
-Dirichlet tessellation in c++ using the sweep algorithm of .
+Dirichlet tessellation in c++ using a sweep algorithm. The control has a
+bunch of parameters you can use to tweek the ppmData object.
+\itemize{
+ \item{quasirandom.samples}{ integer This sets the total number of samples to consider
+in the BAS step (rejection sampling). The default is 10000, which means that
+10000 halton numbers are drawn and then thinned according to the inclusion
+probabilities. You will need to increase the number of samples if selecting
+a large number of quadrature points. The more quasirandomSamples selected the
+slower the quasirandom quadrature scheme will be to generate.}
+ \item{buffer.NA}{ boolean If extract from \code{\link[terra]{extract}}
+ returns NA for point extract, do you want us to attempt to user buffer to
+ calculate cells which are NA.}
+ \item{buffer.size}{ numeric If you call 'buffer.NA' what is the range of the
+ buffer in meters.}
+ \item{mc.cores}{ integer The number of cores to use in the processing.
+ default is parallel::detectCores()-1}
+ \item{quiet}{ boolean If TRUE, do not print messages. Default is FALSE.}
+}
 }
 \examples{
 \dontrun{

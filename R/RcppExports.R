@@ -5,6 +5,10 @@ deltri_cpp <- function(coords) {
     .Call(`_ppmData_deltri_cpp`, coords)
 }
 
+dirtess_poly_area <- function(x, y) {
+    .Call(`_ppmData_dirtess_poly_area`, x, y)
+}
+
 dirtess_cpp <- function(coords) {
     .Call(`_ppmData_dirtess_cpp`, coords)
 }

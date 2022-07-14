@@ -1,4 +1,4 @@
-#' @title dirtess
+#' @title dirTess
 #' @description Computes the Dirichlet tessellation using the dual-graph of the
 #' Delaunay triangulation. The Delaunay triangulation is calculated internally
 #' for this function using a sweep algorithm.
@@ -14,7 +14,7 @@
   if(!is.matrix(coords)) stop('"coords" must be a matrix of spatial points for tessellation.')
   if(ncol(coords)!=2) stop('"coords" must be a two column matrix with longitude "x" and latitude "y".')
 
-  ## Add in a function which checks for bounding box.
+  # ## Add in a function which checks for bounding box.
   if(is.null(bbox)){
     bbox <- get_bbox(coords,buffer=0)
   }
@@ -24,7 +24,7 @@
 
   ## Create dummy points on the edges of bounding box.
   # bbox <- get_bbox(coords,buffer=0.05)
-  bbox_dummy <- get_bbox(coords,buffer = 0.05)
+  bbox_dummy <- get_bbox(coords, buffer = 0.05)
   dummycoords <- get_bbox_dummy_coords(coords,bbox_dummy,n=9)
   coords.in <- rbind(coords,dummycoords)
 
@@ -143,66 +143,108 @@
 #' @rdname polygonise
 #' @export polygonise
 #' @param x Dirichlet tessellation object
-#' @param clip Logical Clip to the bounding box or polgon if polyclip = TRUE.
-#' @param polyclip polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon
-#' @param proj CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)
+#' @param window polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon
+#' @param clippy Logical Clip to the bounding box or polgon if polyclip = TRUE.
+#' @param crs CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)
 #' @param \\dots Additional arguments for a polygonise function
-#' @importFrom sp CRS
-#' @importFrom rgeos gArea gIntersection
+#' @importFrom sf st_crs st_as_sfc st_bbox st_intersection st_area
 #' @examples
-#' library(sp)
-#' coords <- matrix(runif(2000),ncol=2)
+#' library(sf)
+#' coords <- matrix(runif(20000),ncol=2)
 #' tess <- dirTess(coords)
 #' tess.polys <- polygonise(tess)
-#' plot(tess.polys$polygons, col=hcl.colors(100))
+#' plot(st_geometry(tess.polys$polygons), col=hcl.colors(100))
+#' points(coords,col='tomato',pch=16, cex=.3)
 
-"polygonise" <- function (x, clip=TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...){
+"polygonise" <- function (x,  window=NULL, clippy=TRUE, crs = sf::st_crs("EPSG:4326"), ...){
   UseMethod("polygonise", x)
 }
 
 #' @export
-"polygonise.dirTess" <- function(x, clip=TRUE, polyclip = NULL, proj = sp::CRS("EPSG:4326"), ...){
+"polygonise.dirTess" <- function(x, window=NULL, clippy=TRUE, crs = sf::st_crs("EPSG:4326"), unit="geo", ...){
 
   # convert the vector of coordinates per polygon into polygons
   bbox <- x$bbox
   res <- list()
-  tes.polys <- dirichlet.polygon(x = x, proj = proj)
-  res$polygons <- tes.polys
-  if(clip){
-    clip.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
-    if(!is.null(polyclip)){
-      clip.poly <- polyclip
+  tes.polys <- dirichletPolygons(x = x, crs = crs)
+  # res$polygons <- tes.polys
+  if(clippy){
+    clip.poly <- sf::st_as_sfc(st_bbox(c(bbox[1], bbox[2], bbox[4], bbox[3]), crs = crs))
+    # clip.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
+    if(!is.null(window)){
+      if(classTrue(window,"SpatRaster"))
+        clip.poly <- rast_to_sf(window)
+      else if(classTrue(window,"sf"))
+        clip.poly <- window
+      else
+        stop("window needs to be a sf polygons or a terra SpatRaster object.")
     }
-    tes.clip <- suppressWarnings(rgeos::gIntersection(tes.polys,clip.poly,byid = TRUE))
-    polygon.clipped.areas <- suppressWarnings(rgeos::gArea(tes.clip, byid=TRUE))
+
+    ## get the intersection between the two polygons
+    tes.clip <- suppressWarnings(sf::st_intersection(tes.polys,clip.poly))
+
+    polygon.clipped.areas <-  switch(unit,
+                                     geo = as.numeric(geoArea(tes.clip)),
+                                     m = as.numeric(sf::st_area(tes.clip)),
+                                     km = as.numeric(sf::st_area(tes.clip))/1e6,
+                                     ha = as.numeric(sf::st_area(tes.clip))/1e4)
+    # polygon.clipped.areas <- suppressWarnings(st_area(tes.clip))
     res$polygons <- tes.clip
     res$polygons.areas <- polygon.clipped.areas
   } else {
-    res$polygons.areas <-suppressWarnings(rgeos::gArea(tes.polys, byid=TRUE))
+    polygon.clipped.areas <-  switch(unit,
+                                     geo = as.numeric(geoArea(tes.polys)),
+                                     m = as.numeric(sf::st_area(tes.polys)),
+                                     km = as.numeric(sf::st_area(tes.polys))/1e6,
+                                     ha = as.numeric(sf::st_area(tes.polys))/1e4)
+    res$polygons.areas <- polygon.clipped.areas
   }
 
   return(res)
 
 }
 
+"geoArea" <- function(x){
 
-"dirichlet.polygon" <- function(x, proj = sp::CRS("EPSG:4326"),...){
+    ## data.frame of coordinates
+    coords <- suppressWarnings(sf::st_coordinates(sf::st_cast(x,"POLYGON")))
+
+    ## ids of polygons
+    ids <- seq_along(unique(coords[,"L2"]))
+    ea <- sapply(ids,function(ii)dirtess_poly_area(coords[coords[,"L2"]==ii,"X"],coords[coords[,"L2"]==ii,"Y"]))
+
+    return(ea)
+
+}
+
+"dirichletPolygons" <- function(x, crs = sf::st_crs("EPSG:4326"),...){
 
   if(class(x)!="dirTess")
     stop("Must be a dirichlet tessellation object from 'dirTess'")
 
+  ## extract the polygon lists from cpp object
   poly.list <- lapply(x$polygons$poly,function(i)i$poly.coords)
-  poly.size <- sapply(poly.list,nrow)
 
-  id <- sapply(x$polygons$poly,function(i)i$poly.id)
-  ids <- rep(id,poly.size)
+  ## close the polygon for sf
+  poly.list2 <- lapply(poly.list,function(x)rbind(x,x[1,]))
 
-  poly.df <- do.call(rbind,poly.list)
-  poly.df <- data.frame(x=poly.df[,1],y=poly.df[,2],id=ids)
+  ## keep track of bogus polygons
+  dodgy_polys <- which(sapply(poly.list2,nrow)<4)
+  if(length(dodgy_polys)==0)
+    dodgy_polys <- -seq_len(length(poly.list2))
 
-  polys <- suppressWarnings(df2polygons(poly.df,"id",c("x","y"),proj)) ## warnings for three/four point polygons
+  ## Generate a list of polygons
+  sfpoly <- lapply(poly.list2[-dodgy_polys],function(x)sf::st_polygon(list(x)))
 
-  return(polys)
+  ## Convert them to a single sf object
+  sfc_poly <- sf::st_sfc(sfpoly)
+  sf_polys <- sf::st_sf(sfc_poly)
+
+  ## add an id
+  poly.ids <- sapply(x$polygons$poly[-dodgy_polys],function(i)i$poly.id)
+  sf_polys$id <- poly.ids
+  sf_polys <- sf::st_set_crs(sf_polys,crs)
+
+  return(sf_polys)
+
 }
-
-

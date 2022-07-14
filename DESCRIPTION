@@ -5,7 +5,7 @@ Version: 0.1.0
 Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@unimelb.edu.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skipton.woolley@unimelb.edu.au>
-Description: This package generates a set of quasi-random points for a quadrature scheme, we calculate each points weights using a dirichlet tesselation (voronoi) algorithm. The result data.frames from the function calls in this package will enable users to pass these datasets to existing single and multiple species models in order to extend them to Point Processes.
+Description: This package generates a set of quasi-random points for a quadrature scheme, we calculate each points weights using a dirichlet tesselation (voronoi) algorithm. The resulting object can be used in existing single and multiple species models in order to extend them to Point Processes.
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 7.2.0
@@ -13,15 +13,11 @@ Imports:
     methods,
     mgcv,
     parallel,
-    plyr,
-    sp,
+    sf,
     randtoolbox,
-    raster,
     Rcpp,
-    Rdpack,
-    rgeos,
-    rgdal,
-    terra
+    terra,
+    units
 Suggests: 
     knitr,
     testthat (>= 3.0.0),

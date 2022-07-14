@@ -92,7 +92,7 @@ deltri::site circumcenter_tri_id(const size_t tri_id, const deltri::deltri_cpp& 
 // Compute exterior cell rays.
 //<3 i love you <3
 
-
+//[[Rcpp::export]]
 double dirtess_poly_area(NumericVector x, NumericVector y){
   // Initialize area
   double area = 0.0;
