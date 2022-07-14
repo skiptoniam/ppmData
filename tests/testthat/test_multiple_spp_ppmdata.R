@@ -21,6 +21,7 @@ apply( ppmdata0$ppmData$wts[!ppmdata0$ppmData$bkg,], 2, function(x) sum( !is.na(
 # test with just pres & window
 ppmdata1 <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
 ppm_count <- apply( ppmdata1$ppmData$y, 2, function(x) sum( x!=0, na.rm=TRUE))
+plot(ppmdata1)
 # testthat::expect_identical(c(true_count),c(ppm_count))
 
 # test with just pres, window & covars
