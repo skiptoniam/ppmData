@@ -28,7 +28,7 @@ We note that this approach is different to a targeted background scheme
 for generating pseudo-absences. If the users intent is to reduce
 sighting biases via a targeted background scheme, we recommend that bias
 is accounted for via covariates (distance to roads) or an offset (a
-known amount of effort) (e.g Warton et al., 2013; Fithian et al, 2015).
+known amount of effort) (e.g Warton et al., 2013; Renner et al, 2015).
 
 ### References
 
