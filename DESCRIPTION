@@ -6,7 +6,7 @@ Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@unimelb.edu.a
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skipton.woolley@unimelb.edu.au>
 Description: This package generates a set of quasi-random points for a quadrature scheme, we calculate each points weights using a dirichlet tesselation (voronoi) algorithm. The resulting object can be used in existing single and multiple species models in order to extend them to Point Processes.
-License: GPL-3
+License: MIT + file LICENSE
 LazyData: TRUE
 RoxygenNote: 7.2.0
 Imports: 
@@ -29,4 +29,3 @@ VignetteBuilder: knitr
 LinkingTo: 
     Rcpp
 Encoding: UTF-8
-
