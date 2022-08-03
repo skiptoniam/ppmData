@@ -35,6 +35,24 @@ ppmdata2a <- ppmData(npoints = npoints, presences=presences, window = preds2[[1]
 ppmdata3 <- ppmData(presences=presences, window = preds[[1]])
 plot(ppmdata3)
 
+ppmdata4 <- ppmData(npoints=1000,
+                    presences=presences,
+                    window = preds[[1]],
+                    unit="m")
+
+ppmdata5 <- ppmData(npoints=1000,
+                    presences=presences,
+                    window = preds[[1]],
+                    unit="km")
+
+ppmdata6 <- ppmData(npoints=1000,
+                    presences=presences,
+                    window = preds[[1]],
+                    unit="ha")
+
+sum(ppmdata4$ppmData$weights)
+sum(ppmdata5$ppmData$weights)
+sum(ppmdata6$ppmData$weights)
 
 })
 
@@ -79,6 +97,28 @@ testthat::test_that('ppmdata single species random', {
                       quad.method = 'pseudo.random')
   plot(ppmdata3)
 
+  ppmdata4 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'pseudo.random',
+                      unit="m")
+
+  ppmdata5 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'pseudo.random',
+                      unit="ha")
+
+  ppmdata6 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'pseudo.random',
+                      unit="km")
+
+  sum(ppmdata4$ppmData$weights)
+  sum(ppmdata5$ppmData$weights)
+  sum(ppmdata6$ppmData$weights)
+
 
 })
 
@@ -121,5 +161,27 @@ testthat::test_that('ppmdata single species grid', {
   ppmdata3 <- ppmData(presences=presences, window = preds[[1]], quad.method = 'grid')
   plot(ppmdata3)
 
+  # test with no npoints
+  ppmdata4 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'grid',
+                      unit="m")
+
+  ppmdata5 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'grid',
+                      unit="ha")
+
+  ppmdata6 <- ppmData(npoints=1000,
+                      presences=presences,
+                      window = preds[[1]],
+                      quad.method = 'grid',
+                      unit="km")
+
+  sum(ppmdata4$ppmData$weights)
+  sum(ppmdata5$ppmData$weights)
+  sum(ppmdata6$ppmData$weights)
 
 })

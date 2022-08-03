@@ -146,6 +146,10 @@
 #' @param window polygon A polygon to clip the dirichlet tessellation - intersection between boundary polygons and polygon
 #' @param clippy Logical Clip to the bounding box or polgon if polyclip = TRUE.
 #' @param crs CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)
+#' @param unit Character The type of area to return. The default is "geo" and
+#' returns the area based on the euclidean distance between geographic
+#' coordinates. This will default to the values of the raster and presence
+#' coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.
 #' @param \\dots Additional arguments for a polygonise function
 #' @importFrom sf st_crs st_as_sfc st_bbox st_intersection st_area
 #' @examples
@@ -156,7 +160,7 @@
 #' plot(st_geometry(tess.polys$polygons), col=hcl.colors(100))
 #' points(coords,col='tomato',pch=16, cex=.3)
 
-"polygonise" <- function (x,  window=NULL, clippy=TRUE, crs = sf::st_crs("EPSG:4326"), ...){
+"polygonise" <- function (x,  window=NULL, clippy=TRUE, crs = sf::st_crs("EPSG:4326"), unit, ...){
   UseMethod("polygonise", x)
 }
 

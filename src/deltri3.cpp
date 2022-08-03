@@ -10,7 +10,6 @@
 #include <tuple>
 #include <vector>
 #include "deltri3.h"
-// using namespace Rcpp;
 
 namespace deltri {
 

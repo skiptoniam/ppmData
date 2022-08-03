@@ -109,7 +109,7 @@ quasiRandomWeights <- function(presences,
 getDirichlet <- function(allpts,
                          # bbox,
                          coord,
-                         unit = 'km',
+                         unit,
                          clippy = TRUE,
                          window,
                          crs = sf::st_crs("EPSG:4326")){#}, return_dirtess = TRUE ){

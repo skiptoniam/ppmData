@@ -4,7 +4,14 @@
 \alias{polygonise}
 \title{Convert the Dirichlet tessellation to polygons and clip if so desired.}
 \usage{
-polygonise(x, window = NULL, clippy = TRUE, crs = sf::st_crs("EPSG:4326"), ...)
+polygonise(
+  x,
+  window = NULL,
+  clippy = TRUE,
+  crs = sf::st_crs("EPSG:4326"),
+  unit,
+  ...
+)
 }
 \arguments{
 \item{x}{Dirichlet tessellation object}
@@ -14,6 +21,11 @@ polygonise(x, window = NULL, clippy = TRUE, crs = sf::st_crs("EPSG:4326"), ...)
 \item{clippy}{Logical Clip to the bounding box or polgon if polyclip = TRUE.}
 
 \item{crs}{CRS Projection of coordinates default is "EPSG:4326" (lon/lat wgs84)}
+
+\item{unit}{Character The type of area to return. The default is "geo" and
+returns the area based on the euclidean distance between geographic
+coordinates. This will default to the values of the raster and presence
+coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.}
 
 \item{\\dots}{Additional arguments for a polygonise function}
 }
