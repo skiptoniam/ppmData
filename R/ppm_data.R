@@ -3,7 +3,7 @@
 #' @description This package is a way to efficiently generate a quasi-random set
 #' of background points for presence-only modelling of single or multiple
 #' responses. The package was set up to model multiple species presence-only
-#' datasets, but could be used for an spatial point process modelling.
+#' data sets, but could be used for an spatial point process modelling.
 #' Quasi-random points are a nice alternative to pseudo-random samples, this is
 #' because we can generate a quasi-random sample across and areal region
 #' (X and Y coordinates). This in turn should reduce autocorrelation in
@@ -275,8 +275,7 @@ jitterIfNeeded <- function( pressiesJ, bckpts, window, coord, species.id, aBit=1
     }
   }
 
-  #background now
-  #are there any points that duplicate a presence point?  If so, jitter.
+  #Are there any points that duplicate a presence point?  If so, jitter.
   npres <- nrow( pressiesJ)
   dupes <- which( duplicated( rbind( pressiesJ[,coord], bckpts)))
   if( length( dupes)>0)
