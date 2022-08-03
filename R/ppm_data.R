@@ -100,16 +100,13 @@ ppmData <- function(presences,
                     quad.method = c("quasi.random","pseudo.random","grid"),
                     interpolation = c("simple","bilinear"),
                     unit = c("geo","m","km","ha"),
-                    control = list(quasirandom.samples = NULL,
-                                   buffer.NA = FALSE,
-                                   buffer.size = NULL,
-                                   quiet = FALSE,
-                                   mc.cores = 1)){
+                    control = list()){
 
   # default methods
   quad.method <- match.arg(quad.method)
   interp.method <- match.arg(interpolation)
   unit <- match.arg(unit)
+  control <- checkControl(control)
 
   ## Make sure the column ids are characters and check for missing/wrong named coord/species.id vars.
   if(!is.character(coord)) coord <- as.character(coord)
@@ -380,27 +377,22 @@ checkNumPoints <- function(npoints, presences, species.id){
   return(npoints)
 }
 
-checkPresences <- function(known.sites, window, coord, species.id){
+checkControl <- function(control){
 
-  # check for null sites
-  if(is.null(known.sites))
-    stop("This function requires a set of presences to run.\n")
+  if (!("quasirandom.samples" %in% names(control)))
+    control$quasirandom.samples <- NULL
+  if (!("buffer.NA" %in% names(control)))
+    control$buffer.NA <- FALSE
+  if (!("buffer.size" %in% names(control)))
+    control$buffer.size <- NULL
+  if (!("quiet" %in% names(control)))
+    control$quiet <- FALSE
+  if (!("mc.cores" %in% names(control)))
+    control$mc.cores <- 1
 
-  # check object classes
-  expectClass(known.sites, c('matrix','data.frame'))
+  return(control)
 
-  if(!any(colnames(known.sites)%in%species.id))
-    stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
-  if(!any(colnames(known.sites)%in%coord))
-    stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
-
-  # try and sort out factors.
-  known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
-  df <- known.sites[,c(coord,species.id)]
-
-  return (df)
 }
-
 
 ## Some checks, check yo self before you reck yo self. https://www.youtube.com/watch?v=bueFTrwHFEs
 ## check the covariates that go into building the quadrature scheme.
@@ -437,6 +429,28 @@ checkMultispecies <- function(presences, species.id){
   else multi <- FALSE
   multi
 }
+
+checkPresences <- function(known.sites, window, coord, species.id){
+
+  # check for null sites
+  if(is.null(known.sites))
+    stop("This function requires a set of presences to run.\n")
+
+  # check object classes
+  expectClass(known.sites, c('matrix','data.frame'))
+
+  if(!any(colnames(known.sites)%in%species.id))
+    stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
+  if(!any(colnames(known.sites)%in%coord))
+    stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
+
+  # try and sort out factors.
+  known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
+  df <- known.sites[,c(coord,species.id)]
+
+  return (df)
+}
+
 
 checkWindow <- function(presences, window, coord, quiet){
 

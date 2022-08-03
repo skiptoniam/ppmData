@@ -15,8 +15,7 @@ ppmData(
   quad.method = c("quasi.random", "pseudo.random", "grid"),
   interpolation = c("simple", "bilinear"),
   unit = c("geo", "m", "km", "ha"),
-  control = list(quasirandom.samples = NULL, buffer.NA = FALSE, buffer.size = NULL,
-    quiet = FALSE, mc.cores = 1)
+  control = list()
 )
 }
 \arguments{

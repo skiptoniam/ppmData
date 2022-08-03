@@ -32,4 +32,7 @@ ppm_count <- apply( ppmdata2$ppmData$y, 2, function(x) sum( x!=0, na.rm=TRUE))
 # test with no npoints
 ppmdata3 <- ppmData(presences=presences, window = preds[[1]])
 
+## run in parallel
+ppmdata4 <- ppmData(presences=presences, window = preds[[1]], control=list(mc.cores=2))
+
 })
