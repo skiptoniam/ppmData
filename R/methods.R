@@ -3,8 +3,9 @@
 #' @title Plot a ppmData object
 #' @param x A ppmData object.
 #' @param main Title of the plot, default is 'Quadrature Scheme'
-#' @param cols Vector of colours or colour codes
-#' @param pchs Vector of point shapes
+#' @param rcols Vector of colours or colour codes for raster
+#' @param pch.cols Vector of point shapes
+#' @param pchs Vector of pch codes
 #' @param plt.legend boolean plot the legend or not, default is TRUE.
 #' @param \\dots Ignored
 #' @export
@@ -12,7 +13,8 @@
 
 plot.ppmData <- function(x,
                          main='Quadrature Scheme',
-                         cols =  c("#1B9E77","#D95F02","#7570B3",
+                         rcols = gray(0.5,0.75),
+                         pch.cols =  c("#1B9E77","#D95F02","#7570B3",
                                    "#E7298A","#E6AB02",
                                    "#A6761D","#666666"),
                          pchs = 15:20,
@@ -22,13 +24,7 @@ plot.ppmData <- function(x,
   # op <- graphics::par(no.readonly = TRUE)
   # on.exit(graphics::par(op))
 
-  # cols <- c("#1B9E77","#D95F02","#7570B3",
-  #           "#E7298A","#E6AB02",
-  #           "#A6761D","#666666")
-  # cols <- rep(cols,100)
-
-  # pchs <- 15:20
-  colshp <-  expand.grid(cols,pchs)
+  colshp <-  expand.grid(pch.cols,pchs)
 
   if(x$marked){
 
@@ -39,14 +35,14 @@ plot.ppmData <- function(x,
     if(x$params$dw){
       e <- terra::ext(x$window)
       p <- terra::as.polygons(e)
-      terra::plot(p,main=main,axes=FALSE, legend=FALSE)
+      terra::plot(p,col=rcols,main=main,axes=FALSE, legend=FALSE)
     } else {
       p <- x$window
-      terra::plot(p,axes=FALSE, legend=FALSE, main=main)
+      terra::plot(p,col=rcols,axes=FALSE, legend=FALSE, main=main)
     }
     points(quad,pch='.')
     points(marks,col=as.character(colshp[as.numeric(as.factor(marks[,x$params$species.id])),1]),
-           pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2],cex=0.5, ...)
+           pch=colshp[as.numeric(as.factor(marks[,x$params$species.id])),2], ...)
     if(plt.legend){
     legend(x="bottom",
            legend=unique(marks[,x$params$species.id]),
@@ -54,7 +50,7 @@ plot.ppmData <- function(x,
            pch=colshp[1:length(unique(marks[,x$params$species.id])),2],
            cex=0.75,
            xpd = TRUE, horiz = FALSE, inset = c(-.2, 0),
-           bty="n", ...)
+           bty="n")
     }
 
   } else {
@@ -66,21 +62,21 @@ plot.ppmData <- function(x,
     if(x$params$dw){
     e <- terra::ext(x$window)
     p <- terra::as.polygons(e)
-    terra::plot(p,main=main,axes=FALSE, legend=FALSE)
+    terra::plot(p,col=rcols,main=main,axes=FALSE, legend=FALSE)
     } else {
       p <- x$window
-      terra::plot(p,axes=FALSE, legend=FALSE,main=main)
+      terra::plot(p,col=rcols,axes=FALSE, legend=FALSE,main=main)
     }
     points(quad,pch='.')
-    points(pressies,col=cols[1],pch=16,cex=0.7, ...)
+    points(pressies,col=pch.cols[1],pch=16, ...)
     if(plt.legend){
     legend(x="bottom",
            legend=unique(pressies[,x$params$species.id]),
-           col=cols[1],
+           col=pch.cols[1],
            pch=16,
            cex=0.75,
            xpd = TRUE, horiz = TRUE, inset = c(0, -0.2),
-           bty="n", ...)
+           bty="n")
     }
   }
 

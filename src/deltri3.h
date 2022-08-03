@@ -47,8 +47,6 @@ public:
     {
         double dist = dist2(p1, p2) / span;
 
-        // ABELL - This number should be examined to figure how how
-        // it correlates with the breakdown of calculating determinants.
         return dist < 1e-20;
     }
 
@@ -96,25 +94,15 @@ public:
     std::vector<double> const& coords;
     sites m_points;
 
-    // 'triangles' stores the indices to the 'X's of the input
-    // 'coords'.
     std::vector<std::size_t> triangles;
 
-    // 'halfedges' store indices into 'triangles'.  If halfedges[X] = Y,
-    // It says that there's an edge from X to Y where a) X and Y are
-    // both indices into triangles and b) X and Y are indices into different
-    // triangles in the array.  This allows you to get from a triangle to
-    // its adjacent triangle.  If the a triangle edge has no adjacent triangle,
-    // its half edge will be INVALID_INDEX.
     std::vector<std::size_t> halfedges;
 
     std::vector<std::size_t> hull_prev;
     std::vector<std::size_t> hull_next;
 
-    // vector for hull sites
     std::vector<std::size_t> hull;
 
-    // This contains indexes into the triangles array.
     std::vector<std::size_t> hull_tri;
     std::size_t hull_start;
 
@@ -141,7 +129,7 @@ private:
     void link(std::size_t a, std::size_t b);
 };
 
-} //namespace deltri
+}
 
 #endif
 

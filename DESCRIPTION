@@ -16,13 +16,12 @@ Imports:
     sf,
     randtoolbox,
     Rcpp,
-    terra,
     units
 Suggests: 
     knitr,
     testthat (>= 3.0.0),
     rmarkdown
-Depends: R (>= 3.5.0)
+Depends: R (>= 4.0.0), terra
 Config/testthat/edition: 3
 SystemRequirements: C++11
 NeedsCompilation: yes

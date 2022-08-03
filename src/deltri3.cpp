@@ -1,3 +1,5 @@
+// Adapted from the delaunator-cpp code from https://github.com/delfrrr/delaunator-cpp
+
 #include <Rcpp.h>
 #include <iostream>
 #include <algorithm>
@@ -7,8 +9,8 @@
 #include <stdexcept>
 #include <tuple>
 #include <vector>
-#include "deltri.h"
-
+#include "deltri3.h"
+// using namespace Rcpp;
 
 namespace deltri {
 
@@ -39,8 +41,7 @@ namespace deltri {
     return dx * dx + dy * dy;
 }
 
- double circumradius(const site& p1, const site& p2, const site& p3)
-{
+ double circumradius(const site& p1, const site& p2, const site& p3){
     site d = site::vector(p1, p2);
     site e = site::vector(p1, p3);
 
@@ -84,8 +85,7 @@ namespace deltri {
     }
 }
 
- bool clockwise(const site& p0, const site& p1, const site& p2)
-{
+ bool clockwise(const site& p0, const site& p1, const site& p2){
     site v0 = site::vector(p0, p1);
     site v1 = site::vector(p0, p2);
     double det = site::determinant(v0, v1);
@@ -102,16 +102,14 @@ namespace deltri {
 }
 
  bool clockwise(double px, double py, double qx, double qy,
-    double rx, double ry)
-{
+    double rx, double ry){
     site p0(px, py);
     site p1(qx, qy);
     site p2(rx, ry);
     return clockwise(p0, p1, p2);
 }
 
- bool counterclockwise(const site& p0, const site& p1, const site& p2)
-{
+ bool counterclockwise(const site& p0, const site& p1, const site& p2){
     site v0 = site::vector(p0, p1);
     site v1 = site::vector(p0, p2);
     double det = site::determinant(v0, v1);
@@ -126,8 +124,7 @@ namespace deltri {
 }
 
  bool counterclockwise(double px, double py, double qx, double qy,
-    double rx, double ry)
-{
+    double rx, double ry){
     site p0(px, py);
     site p1(qx, qy);
     site p2(rx, ry);
@@ -189,16 +186,14 @@ constexpr double EPSILON = std::numeric_limits<double>::epsilon();
            std::fabs(y1 - y2) <= EPSILON;
 }
 
-// monotonically increases with real angle, but doesn't need expensive trigonometry
- double pseudo_angle(const double dx, const double dy) {
+double pseudo_angle(const double dx, const double dy) {
     const double p = dx / (std::abs(dx) + std::abs(dy));
     return (dy > 0.0 ? 3.0 - p : 1.0 + p) / 4.0; // [0..1)
 }
 
 
 deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
-    : coords(in_coords), m_points(in_coords)
-{
+    : coords(in_coords), m_points(in_coords){
     std::size_t n = coords.size() >> 1;
 
     std::vector<std::size_t> ids(n);
@@ -225,7 +220,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
     std::size_t i1 = INVALID_INDEX;
     std::size_t i2 = INVALID_INDEX;
 
-    // pick a seed point close to the centroid
     double min_dist = (std::numeric_limits<double>::max)();
     for (size_t i = 0; i < m_points.size(); ++i)
     {
@@ -241,7 +235,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
 
     min_dist = (std::numeric_limits<double>::max)();
 
-    // find the point closest to the seed
     for (std::size_t i = 0; i < n; i++) {
         if (i == i0) continue;
         const double d = site::dist2(p0, m_points[i]);
@@ -255,8 +248,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
 
     double min_radius = (std::numeric_limits<double>::max)();
 
-    // find the third point which forms the smallest circumcircle
-    // with the first two
     for (std::size_t i = 0; i < n; i++) {
         if (i == i0 || i == i1) continue;
 
@@ -290,17 +281,14 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
     for (const site& p : m_points)
         dists.push_back(dist(p.x(), p.y(), m_center.x(), m_center.y()));
 
-    // sort the points by distance from the seed triangle circumcenter
-    std::sort(ids.begin(), ids.end(),
+     std::sort(ids.begin(), ids.end(),
         [&dists](std::size_t i, std::size_t j)
             { return dists[i] < dists[j]; });
 
-    // initialize a hash table for storing edges of the advancing convex hull
     m_hash_size = static_cast<std::size_t>(std::ceil(std::sqrt(n)));
     m_hash.resize(m_hash_size);
     std::fill(m_hash.begin(), m_hash.end(), INVALID_INDEX);
 
-    // initialize arrays for tracking the edges of the advancing convex hull
     hull_prev.resize(n);
     hull_next.resize(n);
     hull_tri.resize(n);
@@ -328,24 +316,20 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
     double xp = std::numeric_limits<double>::quiet_NaN();
     double yp = std::numeric_limits<double>::quiet_NaN();
 
-    // Go through points based on distance from the center.
-    for (std::size_t k = 0; k < n; k++) {
+     for (std::size_t k = 0; k < n; k++) {
         const std::size_t i = ids[k];
         const double x = coords[2 * i];
         const double y = coords[2 * i + 1];
 
-        // skip near-duplicate points
         if (k > 0 && check_pts_equal(x, y, xp, yp))
             continue;
         xp = x;
         yp = y;
 
-        // skip seed triangle points
         if (check_pts_equal(x, y, i0x, i0y) ||
             check_pts_equal(x, y, i1x, i1y) ||
             check_pts_equal(x, y, i2x, i2y)) continue;
 
-        // find a visible edge on the convex hull using edge hash
         std::size_t start = 0;
 
         size_t key = hash_key(x, y);
@@ -356,7 +340,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
                 break;
         }
 
-        // Make sure what we found is on the hull.
         assert(hull_prev[start] != start);
         assert(hull_prev[start] != INVALID_INDEX);
 
@@ -364,10 +347,7 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
         size_t e = start;
         size_t q;
 
-        // Advance until we find a place in the hull where our current point
-        // can be added.
-        while (true)
-        {
+        while (true){
             q = hull_next[e];
             if (site::equal(m_points[i], m_points[e], span) ||
                 site::equal(m_points[i], m_points[q], span))
@@ -385,10 +365,9 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
             }
         }
 
-        if (e == INVALID_INDEX)     // likely a near-duplicate point; skip it
+        if (e == INVALID_INDEX)
             continue;
 
-        // add the first triangle from the point
         std::size_t t = add_triangle(
             e,
             i,
@@ -397,15 +376,12 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
             INVALID_INDEX,
             hull_tri[e]);
 
-        hull_tri[i] = legalize(t + 2); // Legalize the triangle we just added.
+        hull_tri[i] = legalize(t + 2);
         hull_tri[e] = t;
         hull_size++;
 
-        // walk forward through the hull, adding more triangles and
-        // flipping recursively
         std::size_t next = hull_next[e];
-        while (true)
-        {
+        while (true){
             q = hull_next[next];
             if (!counterclockwise(x, y, coords[2 * next], coords[2 * next + 1],
                 coords[2 * q], coords[2 * q + 1]))
@@ -418,7 +394,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
             next = q;
         }
 
-        // walk backward from the other side, adding more triangles and flipping
         if (e == start) {
             while (true)
             {
@@ -430,13 +405,12 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
                     INVALID_INDEX, hull_tri[e], hull_tri[q]);
                 legalize(t + 2);
                 hull_tri[q] = t;
-                hull_next[e] = e; // mark as removed
+                hull_next[e] = e;
                 hull_size--;
                 e = q;
             }
         }
 
-        // update the hull indices
         hull_prev[i] = e;
         hull_start = e;
         hull_prev[next] = i;
@@ -447,7 +421,6 @@ deltri_cpp::deltri_cpp(std::vector<double> const& in_coords)
         m_hash[hash_key(coords[2 * e], coords[2 * e + 1])] = e;
     }
 
-    // hull = new Uint32Array(hullSize);
     hull.resize(hull_size);
     size_t e = hull_start;
     for (int i = 0; i < hull_size; i++) {
@@ -483,8 +456,7 @@ double deltri_cpp::get_hull_area(){
     return sum(hull_area);
 }
 
-double deltri_cpp::get_triangle_area()
-{
+double deltri_cpp::get_triangle_area(){
     std::vector<double> vals;
     for (size_t i = 0; i < triangles.size(); i += 3)
     {
@@ -505,7 +477,6 @@ std::size_t deltri_cpp::legalize(std::size_t a) {
     std::size_t ar = 0;
     m_edge_stack.clear();
 
-    // recursion eliminated with a fixed-size stack
     while (true) {
         const size_t b = halfedges[a];
 
@@ -548,8 +519,6 @@ std::size_t deltri_cpp::legalize(std::size_t a) {
 
             auto hbl = halfedges[bl];
 
-            // Edge swapped on the other side of the hull (rare).
-            // Fix the halfedge reference
             if (hbl == INVALID_INDEX) {
                 std::size_t e = hull_start;
                 do {
@@ -631,4 +600,17 @@ void deltri_cpp::link(const std::size_t a, const std::size_t b) {
     }
 }
 
-} //namespace deltri
+}
+
+//[[Rcpp::export]]
+Rcpp::List deltri_cpp(std::vector<double> coords) {
+
+  deltri::deltri_cpp del(coords);
+
+  return Rcpp::List::create(Rcpp::_["coords"] = del.coords,
+                            Rcpp::_["triangles"] = del.triangles,
+                            Rcpp::_["halfedges"] = del.halfedges,
+                            Rcpp::_["convexhull"] = del.hull,
+                            Rcpp::_["convexhull.area"] = del.get_hull_area());
+
+}

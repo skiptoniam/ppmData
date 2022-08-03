@@ -150,7 +150,7 @@
 #' @importFrom sf st_crs st_as_sfc st_bbox st_intersection st_area
 #' @examples
 #' library(sf)
-#' coords <- matrix(runif(20000),ncol=2)
+#' coords <- matrix(runif(2000),ncol=2)
 #' tess <- dirTess(coords)
 #' tess.polys <- polygonise(tess)
 #' plot(st_geometry(tess.polys$polygons), col=hcl.colors(100))

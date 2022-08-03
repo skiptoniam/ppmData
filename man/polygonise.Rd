@@ -22,7 +22,7 @@ Convert the Dirichlet tessellation to polygons and clip if so desired.
 }
 \examples{
 library(sf)
-coords <- matrix(runif(20000),ncol=2)
+coords <- matrix(runif(2000),ncol=2)
 tess <- dirTess(coords)
 tess.polys <- polygonise(tess)
 plot(st_geometry(tess.polys$polygons), col=hcl.colors(100))

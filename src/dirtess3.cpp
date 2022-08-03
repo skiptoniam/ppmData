@@ -1,6 +1,6 @@
 #include <Rcpp.h>
 using namespace Rcpp;
-#include "deltri.h"
+#include "deltri3.h"
 #include "dirtess3.h"
 
 // define a polygon class that we'll use to catch the
@@ -89,7 +89,6 @@ deltri::site circumcenter_tri_id(const size_t tri_id, const deltri::deltri_cpp& 
   return result;
 }
 
-// Compute exterior cell rays.
 //<3 i love you <3
 
 //[[Rcpp::export]]
@@ -142,9 +141,6 @@ List dirtess_poly_list(size_t e, dirtess::polygon& poly_i){
   bool onborder = false;
   int np = poly_i.size();
 
-  // pass polygon by reference
-  // dirtess_poly_i(e, del, poly_i);
-
   for(int i = 0; i < np; i++){
     tmp_x = poly_i.x(i);
     tmp_y = poly_i.y(i);
@@ -167,7 +163,7 @@ List dirtess_poly_list(size_t e, dirtess::polygon& poly_i){
 
 List dirtess_polygons(const deltri::deltri_cpp& del){//, std::vector<double> bbox){
 
-  // How many polygons - should number of points (one per coordina)
+  // How many polygons - should number of points (one per coordinate)
   int np = del.coords.size()/2;
   Rcpp::List polylist(np);
   Rcpp::List polylist_clip(np);

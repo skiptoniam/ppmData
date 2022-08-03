@@ -393,7 +393,7 @@ checkPresences <- function (known.sites, window, coord, species.id){
     stop("This function requires a set of presences to run.\n")
 
   # check object classes
-  expectClasses(known.sites, c('matrix','data.frame'),name = 'known.sites')
+  expectClass(known.sites, c('matrix','data.frame'))
 
   if(!any(colnames(known.sites)%in%species.id))
     stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
@@ -454,7 +454,7 @@ checkMultispecies <- function(presences, species.id){
 checkWindow <- function(presences, window, coord, quiet){
 
   if(!is.null(window))
-    expectClasses(window,"SpatRaster") #switching to terra (as it appears to be faster)
+    expectClass(window,"SpatRaster") #switching to terra (as it appears to be faster)
 
   if (is.null(window)) {
     if(!quiet) message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'.\n")

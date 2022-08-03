@@ -11,7 +11,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // deltri_cpp
-List deltri_cpp(std::vector<double> coords);
+Rcpp::List deltri_cpp(std::vector<double> coords);
 RcppExport SEXP _ppmData_deltri_cpp(SEXP coordsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

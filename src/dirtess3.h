@@ -1,7 +1,7 @@
 #ifndef deltri3_hh
 #define deltri3_hh
 
-#include "deltri.h"
+#include "deltri3.h"
 
 namespace dirtess {
 
