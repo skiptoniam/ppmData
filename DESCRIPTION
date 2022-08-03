@@ -1,7 +1,7 @@
 Package: ppmData
 Type: Package
 Title: Quasirandom quardature scheme using dirichlet tesselation for spatial Poisson point process models
-Version: 0.1.0
+Version: 1.0.0
 Authors@R: c(person("Skipton", "Woolley", email = "skipton.woolley@unimelb.edu.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skipton.woolley@unimelb.edu.au>
