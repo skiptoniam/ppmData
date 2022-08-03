@@ -9,6 +9,7 @@ figures/
 inst/doc
 dev/
 devsrc/
+old/
 todo/
 .gitignore
 .Rbuildignore

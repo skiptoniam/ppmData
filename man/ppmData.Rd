@@ -20,22 +20,21 @@ ppmData(
 )
 }
 \arguments{
-\item{presences}{a matrix, dataframe or SpatialPoints object giving the
+\item{presences}{a three column matrix or data.frame object giving the
 coordinates of each species' presence in (should be a matrix of nsites * 3)
 with the three columns being c("X","Y","SpeciesID"), where X is longitude,
-Y is latitude and SpeciesID is factor which associated each occurrence to a
-species. If presences parameter is NULL then ppmDat will return the
-quadrature scheme without presences.}
+Y is latitude and SpeciesID is a factor which associated each occurrence to a
+species.}
 
-\item{window}{SpatRast a raster object giving the area over which to generate
-background points. NA cells are ignored and masked out of returned data.
+\item{window}{SpatRaster a raster object giving the region where to generate
+the quadrature scheme. Windows with NA cells are ignored and masked out of returned data.
 If NULL, a rectangle bounding the extent of \code{presences} will be used as
 the default window.}
 
-\item{covariates}{SpatRast A terra SpatRast object containing covariates for modelling
-the point process. This should match the resolution and extent of the window
+\item{covariates}{SpatRaster A terra raster object containing covariates for modelling
+the point process. These layers should match the resolution and extent of the window
 provided. If NULL, only the coordinates of the presences and quadrature
-points are returned.}
+points are returned for the ppmData object.}
 
 \item{npoints}{Integer The number of quadrature points to generate. If NULL, the
 number of quadrature points is calculated based on linear scaling. In
@@ -47,24 +46,24 @@ See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
 on the location and number of quadrature points required to converge a
 ppm likelihood.}
 
-\item{coord}{Character is the name of site coordinates. The default is c('X','Y').
+\item{coord}{Character These are the users name of site coordinates. The default is c('X','Y').
 This should match the name of the coordinates in the presences data set.}
 
-\item{species.id}{Character is the colname of the species ID in the presences data set.
-The default is "SpeciesID".}
+\item{species.id}{Character This is the column name of the species ID in the presences data set.
+The default is "SpeciesID". But this should be changed to match the user's data.}
 
 \item{quad.method}{Character The quadrature generation method. Default is "quasi.random" for
 quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
 a regular grid at a set resolution (with respect to the original window resolution).}
 
 \item{interpolation}{Character The interpolation method to use when extracting
-covariate data at a point. Default is "bilinear", can also use "simple", this is based
+covariate data at a presence or quadrature location. Default is "bilinear", can also use "simple", this is based
 on the terra package  \code{\link[terra]{extract}}.}
 
 \item{unit}{Character The type of area to return. The default is "geo" and
 returns the area based on the euclidean distance between geographic
 coordinates. This will default to the values of the raster and presence
-coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used (this is still experimental).}
+coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.}
 
 \item{control}{list A list of control parameters for using ppmData. See
 details for uses of control parameters.}
@@ -119,6 +118,6 @@ lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 preds <- rast(lst)
 window <- preds[[1]]
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")
-bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
+quad <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
 }
 }

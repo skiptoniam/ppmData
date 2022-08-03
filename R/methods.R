@@ -28,7 +28,7 @@ plot.ppmData <- function(x,
 
   if(x$marked){
 
-    marks <- x$presences
+    marks <- x$presences.cleaned
     quad <- x$ppmData$locations[x$ppmData$bkg,]
 
     # par(mar=c(7,7,7,7))
@@ -55,7 +55,7 @@ plot.ppmData <- function(x,
 
   } else {
 
-    pressies <- x$presences
+    pressies <- x$presences.cleaned
     quad <- x$ppmData[x$ppmData$presence%in%0,x$params$coord]
 
     # par(mar=c(7,7,7,7))

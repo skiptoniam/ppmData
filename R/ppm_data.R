@@ -11,20 +11,19 @@
 #' Dirichlet (Voronoi) Tessellation written in c++. We calculated the duel-graph
 #' of a Delaunay triangulation. The Delaunay triangulation is constructed based
 #' on a radial sweep algorithm.
-#' @param presences a matrix, dataframe or SpatialPoints object giving the
+#' @param presences a three column matrix or data.frame object giving the
 #' coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude,
-#' Y is latitude and SpeciesID is factor which associated each occurrence to a
-#' species. If presences parameter is NULL then ppmDat will return the
-#' quadrature scheme without presences.
-#' @param window SpatRast a raster object giving the area over which to generate
-#' background points. NA cells are ignored and masked out of returned data.
+#' Y is latitude and SpeciesID is a factor which associated each occurrence to a
+#' species.
+#' @param window SpatRaster a raster object giving the region where to generate
+#' the quadrature scheme. Windows with NA cells are ignored and masked out of returned data.
 #' If NULL, a rectangle bounding the extent of \code{presences} will be used as
 #' the default window.
-#' @param covariates SpatRast A terra SpatRast object containing covariates for modelling
-#' the point process. This should match the resolution and extent of the window
+#' @param covariates SpatRaster A terra raster object containing covariates for modelling
+#' the point process. These layers should match the resolution and extent of the window
 #' provided. If NULL, only the coordinates of the presences and quadrature
-#' points are returned.
+#' points are returned for the ppmData object.
 #' @param npoints Integer The number of quadrature points to generate. If NULL, the
 #' number of quadrature points is calculated based on linear scaling. In
 #' reality, the number of quadrature points needed to approximate the
@@ -34,20 +33,20 @@
 #' See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
 #' on the location and number of quadrature points required to converge a
 #' ppm likelihood.
-#' @param coord Character is the name of site coordinates. The default is c('X','Y').
+#' @param coord Character These are the users name of site coordinates. The default is c('X','Y').
 #' This should match the name of the coordinates in the presences data set.
-#' @param species.id Character is the colname of the species ID in the presences data set.
-#' The default is "SpeciesID".
+#' @param species.id Character This is the column name of the species ID in the presences data set.
+#' The default is "SpeciesID". But this should be changed to match the user's data.
 #' @param quad.method Character The quadrature generation method. Default is "quasi.random" for
 #' quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
 #' a regular grid at a set resolution (with respect to the original window resolution).
 #' @param interpolation Character The interpolation method to use when extracting
-#' covariate data at a point. Default is "bilinear", can also use "simple", this is based
+#' covariate data at a presence or quadrature location. Default is "bilinear", can also use "simple", this is based
 #' on the terra package  \code{\link[terra]{extract}}.
 #' @param unit Character The type of area to return. The default is "geo" and
 #' returns the area based on the euclidean distance between geographic
 #' coordinates. This will default to the values of the raster and presence
-#' coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used (this is still experimental).
+#' coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.
 #' @param control list A list of control parameters for using ppmData. See
 #' details for uses of control parameters.
 #'
@@ -89,7 +88,7 @@
 #' preds <- rast(lst)
 #' window <- preds[[1]]
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
-#' bkgrid <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
+#' quad <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
 #' }
 
 ppmData <- function(presences,
@@ -168,7 +167,6 @@ ppmData <- function(presences,
 
   pressies <- tmpPts$pressies
   quadrature <- tmpPts$bckpts
-  # bckptsD <- bckpts$quasiDummy
 
   # Check to see if the presences are for a single species or multiple.
   ismulti <- checkMultispecies(presences = pressies,
@@ -233,11 +231,12 @@ ppmData <- function(presences,
      res$ppmData <- transposePPMdata(dat, sppNames, coordNames, covarNames)
      res$marked <- TRUE
   } else {
-    res$ppmData <- dat
+    res$ppmData <- cleanPPMdata(dat)
     res$marked <- FALSE
   }
 
-  if(!is.null(presences)) res$presences <- presences
+  res$presences.original <- presences
+  res$presences.cleaned <- pressies
   res$window <- window
   res$params <- list(quad.method = quad.method,
                      coord = coord,
@@ -369,10 +368,6 @@ quadMethod <- function(quad.method, npoints, window, coord, control){
   return(quad)
 }
 
-cleanPPMdata <- function(dat){
-
-}
-
 checkNumPoints <- function(npoints, presences, species.id){
 
   if(is.null(npoints)){
@@ -386,7 +381,7 @@ checkNumPoints <- function(npoints, presences, species.id){
   return(npoints)
 }
 
-checkPresences <- function (known.sites, window, coord, species.id){
+checkPresences <- function(known.sites, window, coord, species.id){
 
   # check for null sites
   if(is.null(known.sites))
@@ -399,13 +394,6 @@ checkPresences <- function (known.sites, window, coord, species.id){
     stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
-
-  #check to see if the points lie within the raster (not over an NA)
-  # tmpCheck <- terra::extract( window, known.sites[,coord])
-  # if( !all( !is.na( tmpCheck))){
-    # warning("There are presence records outside the region window.  Removing them but please check.")
-    # known.sites <- known.sites[!is.na( tmpCheck),]
-  # }
 
   # try and sort out factors.
   known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
@@ -464,14 +452,13 @@ checkWindow <- function(presences, window, coord, quiet){
 }
 
 ## A function to clean up the NAs and weights.
-## Look for NA data and weights that are == zero.
-cleanPPMdata <- function(ppmdat){
+cleanPPMdata <- function(dat){
 
-  ppmdata$ppmData <- ppmdata$ppmData[complete.cases(ppmdata$ppmData),]
-  ppmdata$ppmData <- ppmdata$ppmData[is.finite(ppmdata$ppmData$presence),]
-  ppmdata$ppmData[ppmdata$ppmData$weights==0,] <- sqrt(.Machine$double.eps)
+  dat <- dat[complete.cases(dat$weights),]
+  dat <- dat[is.finite(dat$weights),]
+  dat[dat$weights==0,] <- sqrt(.Machine$double.eps)
 
-  return(ppmdata)
+  return(dat)
 }
 
 ## function to extract covariates for presence and background points.
@@ -617,8 +604,6 @@ transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
 
   # expectation z
   dat1$z <- dat1$y / dat1$wts
-
-  # colnames(dat1$mm) <- sppNames$sppNames[my.ord]
 
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
   dat1$nspp <- ncol( dat1$wts)

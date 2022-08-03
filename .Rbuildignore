@@ -10,3 +10,5 @@
 ^devsrc$
 ^todo$
 ^\.github$
+^LICENSE\.md$
+^paper$
