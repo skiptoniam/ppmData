@@ -75,7 +75,7 @@ spatial Poisson Point process models and extensions.
 This package is a way to efficiently generate a quasi-random set
 of background points for presence-only modelling of single or multiple
 responses. The package was set up to model multiple species presence-only
-datasets, but could be used for an spatial point process modelling.
+data sets, but could be used for an spatial point process modelling.
 Quasi-random points are a nice alternative to pseudo-random samples, this is
 because we can generate a quasi-random sample across and areal region
 (X and Y coordinates). This in turn should reduce autocorrelation in

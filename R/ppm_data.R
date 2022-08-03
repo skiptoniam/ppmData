@@ -465,7 +465,6 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
   if(is.null(covariates)){
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
   } else {
-    # expectClasses(covariates,c("RasterLayer","RasterStack","RasterBrick"),covariates)
     covars <- terra::extract(x = covariates,
                              y = data.frame(X=as.numeric(pbxy[,coord[1]]),
                                            Y=as.numeric(pbxy[,coord[2]])),
@@ -481,7 +480,6 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
           if(terra::is.lonlat(covariates)) ltlnscale <- 100000
           else ltlnscale <- 1
           buff <- terra::global(terra::area(covariates),fun="mean")*ltlnscale
-          # buff <- terra::cellS
         }else {
           buff <- buffer.size
         }
@@ -522,35 +520,31 @@ defaultWindow <- function (presences, coord) {
   # buffer
   xlim <- xlim + c(-1, 1) * diff(xlim) * 0.1
   ylim <- ylim + c(-1, 1) * diff(ylim) * 0.1
-
   xlim[1] <- floor(xlim[1])
   xlim[2] <- ceiling(xlim[2])
   ylim[1] <- floor(ylim[1])
   ylim[2] <- ceiling(ylim[2])
 
-  # reso <- round(diff(seq(ylim[1],ylim[2],length.out=50))[1],1)
+  ## create a window using terra
   e <- terra::ext(c(xlim,ylim))
-  sa <- terra::rast(xmin=xlim[1],xmax=xlim[2],
+  win <- terra::rast(xmin=xlim[1],xmax=xlim[2],
              ymin=ylim[1],ymax=ylim[2],
              nrows=225,ncols=225,
              crs="+proj=longlat +datum=WGS84")
-  # sa <- raster(e,res=reso, crs="+proj=longlat +datum=WGS84")
-  terra::values(sa) <- 1#:terra::ncell(sa)
-  return (sa)
+  terra::values(win) <- 1
+  return (win)
 }
 
 
 fastWideMatrix <- function(dat, species.id){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
-  # dat[,species.id] <- factor(dat[,"wts.dataset"])
 
   out <- matrix(nrow=nlevels(dat[,"OrigOrder"]),
                 ncol=nlevels(dat[,"wts.dataset"]),
                 dimnames=list(levels(dat[,"OrigOrder"]),levels(dat[,"wts.dataset"])))
 
   out[cbind(dat[,"OrigOrder"], dat[,"wts.dataset"])] <- dat[,"pres"]
-  # out
 
   return(out)
 }
@@ -560,7 +554,7 @@ fastWideMatrixWeights <- function(dat, sppNames){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
   dat[,"DatasetID"] <- factor(dat[,"DatasetID"])
-  # [,"wts.dataset"]
+
   wtsdat <- with(dat, {
     out <- matrix(nrow=nlevels(OrigOrder),
                   ncol=nlevels(DatasetID),
@@ -603,7 +597,6 @@ transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
 
   # expectation z
   dat1$z <- dat1$y / dat1$wts
-
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
   dat1$nspp <- ncol( dat1$wts)
   dat1$m <- nrow( dat1$wts)
