@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999991 (TeX Live 2019/Debian) (preloaded format=xelatex 2022.7.7)  10 AUG 2022 19:38
+This is XeTeX, Version 3.14159265-2.6-0.999991 (TeX Live 2019/Debian) (preloaded format=xelatex 2022.7.7)  10 AUG 2022 20:16
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1170,15 +1170,15 @@ Package atveryend Info: Empty hook `AfterLastShipout' on input line 733.
 Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 733.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 733.
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: 0412FC49639C1612F53B6D0AE0FB9EB9;659.
+(rerunfilecheck)             Checksum: F833FBC371F174318C734264CDB13F51;647.
 Package logreq Info: Writing requests to 'paper.run.xml'.
 \openout1 = `paper.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
  35406 strings out of 481804
- 700837 string characters out of 5937877
- 1410355 words of memory out of 5000000
+ 700832 string characters out of 5937877
+ 1410329 words of memory out of 5000000
  51796 multiletter control sequences out of 15000+600000
  547226 words of font info for 102 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
