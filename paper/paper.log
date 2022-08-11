@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999991 (TeX Live 2019/Debian) (preloaded format=xelatex 2022.7.7)  10 AUG 2022 20:39
+This is XeTeX, Version 3.14159265-2.6-0.999991 (TeX Live 2019/Debian) (preloaded format=xelatex 2022.7.7)  11 AUG 2022 13:05
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1104,7 +1104,7 @@ LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <8> not available
 File: paper_files/figure-latex/fig1-1.pdf Graphic file (type pdf)
 <use paper_files/figure-latex/fig1-1.pdf>
 LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <9> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 400.
+(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 402.
 File: /home/woo457/lib/R/library/rticles/rmarkdown/templates/joss/resources/JOS
 S-logo.png Graphic file (type bmp)
 </home/woo457/lib/R/library/rticles/rmarkdown/templates/joss/resources/JOSS-log
@@ -1124,12 +1124,12 @@ S-logo.png Graphic file (type bmp)
 o.png>
 [4]
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <12> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 517.
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 519.
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 534.
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 536.
 
 LaTeX Font Warning: Font shape `TU/lmtt/bx/it' in size <10> not available
-(Font)              Font shape `TU/lmtt/b/sl' tried instead on input line 534.
+(Font)              Font shape `TU/lmtt/b/sl' tried instead on input line 536.
 
 File: /home/woo457/lib/R/library/rticles/rmarkdown/templates/joss/resources/JOS
 S-logo.png Graphic file (type bmp)
@@ -1139,7 +1139,7 @@ o.png>
 File: paper_files/figure-latex/unnamed-chunk-2-1.pdf Graphic file (type pdf)
 <use paper_files/figure-latex/unnamed-chunk-2-1.pdf>
 
-Underfull \hbox (badness 10000) in paragraph at lines 605--610
+Underfull \hbox (badness 10000) in paragraph at lines 607--612
 [][][] [] [][][][][][][][][] [] [][][] [] [][][][][][][][][][][][][][][][][][][
 ][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 [][][][][][][] []
@@ -1160,11 +1160,11 @@ S-logo.png Graphic file (type bmp)
 </home/woo457/lib/R/library/rticles/rmarkdown/templates/joss/resources/JOSS-log
 o.png>
 [8]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 730.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 730.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 732.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 732.
 (./paper.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 730.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 730.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 732.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 732.
 Package rerunfilecheck Info: File `paper.out' has not changed.
 (rerunfilecheck)             Checksum: 97AD80743C401DB0BED8CDC34B1D52E1;628.
 Package logreq Info: Writing requests to 'paper.run.xml'.
@@ -1174,7 +1174,7 @@ Package logreq Info: Writing requests to 'paper.run.xml'.
 Here is how much of TeX's memory you used:
  35406 strings out of 481804
  700819 string characters out of 5937877
- 1410297 words of memory out of 5000000
+ 1411297 words of memory out of 5000000
  51796 multiletter control sequences out of 15000+600000
  547226 words of font info for 102 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
