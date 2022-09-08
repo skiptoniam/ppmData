@@ -106,7 +106,6 @@ Here we demonstrate how to fit an Inhomogeneous Poisson Process Model using `glm
 ```r
 #load relevant libraries
 library(ppmData)
-library(terra) ## need this load rasters
 #read the data into R
 path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
