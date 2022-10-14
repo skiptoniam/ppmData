@@ -360,7 +360,8 @@ quadMethod <- function(quad.method, npoints, window, coord, control){
                                             coord),
                   grid = gridQuad(npoints,
                                   window,
-                                  coord))
+                                  coord,
+                                  control))
   return(quad)
 }
 
