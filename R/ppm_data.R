@@ -487,7 +487,7 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   if(buffer.NA){
     if(any(!complete.cases(covars))){
-        message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
+        if(!control$quiet)message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
         missXY <- which(!complete.cases(covars))
         missCoord <- covars[missXY,coord]
         if(is.null(buffer.size)){
