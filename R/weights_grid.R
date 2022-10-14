@@ -16,7 +16,7 @@
 #' path <- system.file("extdata", package = "ppmData")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' window <- terra::rast(lst[1])
-#' res <- gridQuad(10000,window)
+#' res <- gridQuad(10000,window,control=list(quiet=FALSE))
 #' plot(window)
 #' points(res[,1:2],pch=".")
 
