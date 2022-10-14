@@ -4,7 +4,7 @@
 \alias{pseudoRandomQuad}
 \title{psuedoRandomQuad}
 \usage{
-pseudoRandomQuad(npoints, window, coord = c("X", "Y"))
+pseudoRandomQuad(npoints, window, coord = c("X", "Y"), control)
 }
 \arguments{
 \item{npoints}{The number of background points to use. The default is 1000,
@@ -14,6 +14,8 @@ but it is generally recommended to use more when fitting a ppm.}
 and resolution of the point process model.}
 
 \item{coord}{The names of the coordinates. Default is c("X","Y").}
+
+\item{control}{A list of control options passed from ppmData}
 }
 \description{
 A relatively quick way to generate psuedo-random quadrature set

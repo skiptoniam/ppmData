@@ -187,7 +187,8 @@ ppmData <- function(presences,
                                       interpolation = interpolation,
                                       coord = coord,
                                       buffer.NA = control$buffer.NA,
-                                      buffer.size = control$buffer.size)
+                                      buffer.size = control$buffer.size,
+                                      quiet = control$quiet)
 
     } else {
       if(!control$quiet)message("Developing a quadrature scheme for a single species dataset.")
@@ -205,7 +206,8 @@ ppmData <- function(presences,
                                       interpolation = interpolation,
                                       coord = coord,
                                       buffer.NA = control$buffer.NA,
-                                      buffer.size = control$buffer.size)
+                                      buffer.size = control$buffer.size,
+                                      quiet = control$quiet)
     }
 
   # Assemble data
@@ -357,10 +359,12 @@ quadMethod <- function(quad.method, npoints, window, coord, control){
                                           control),
                   pseudo.random = pseudoRandomQuad(npoints,
                                             window,
-                                            coord),
+                                            coord,
+                                            control),
                   grid = gridQuad(npoints,
                                   window,
-                                  coord))
+                                  coord,
+                                  control))
   return(quad)
 }
 
@@ -413,8 +417,9 @@ checkCovariates <- function(covariates){
 checkDuplicates <- function(presences, coord, species.id, quiet){
   if(is.null(presences))return(NULL)
   dups <- duplicated(presences)
-  if(sum(dups)>0){ if(!quiet)message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
-  dat <- presences[!dups,]
+  if(sum(dups)>0){
+    if(!quiet)message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
+    dat <- presences[!dups,]
   } else {
   dat <- presences
   }
@@ -475,7 +480,7 @@ cleanPPMdata <- function(dat){
 }
 
 ## function to extract covariates for presence and background points.
-getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA, buffer.size){
+getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA, buffer.size, quiet){
   if(is.null(covariates)){
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
   } else {
@@ -487,7 +492,7 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   if(buffer.NA){
     if(any(!complete.cases(covars))){
-        message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
+        if(!quiet)message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
         missXY <- which(!complete.cases(covars))
         missCoord <- covars[missXY,coord]
         if(is.null(buffer.size)){

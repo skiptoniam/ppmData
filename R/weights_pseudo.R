@@ -6,6 +6,7 @@
 #' @param window A SpatRaster from terra package which will represent the extent
 #'  and resolution of the point process model.
 #' @param coord The names of the coordinates. Default is c("X","Y").
+#' @param control A list of control options passed from ppmData
 #' @export
 #' @author Skipton Woolley
 #' @examples
@@ -19,7 +20,8 @@
 #' points(res[,1:2],pch=".")
 pseudoRandomQuad <- function(npoints,
                              window,
-                             coord = c("X","Y")){
+                             coord = c("X","Y"),
+                             control){
 
   if(is.null(window)) stop("This function requires a window (terra raster) to work.")
   if(class(window)[1]!="SpatRaster") stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
