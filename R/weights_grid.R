@@ -21,7 +21,8 @@
 
 gridQuad <- function(npoints,
                      window,
-                     coord = c("X","Y")){
+                     coord = c("X","Y"),
+                     control){
 
   if(is.null(window)) stop("This function requires a window (terra raster) to work.")
   if(class(window)[1]!="SpatRaster") stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
@@ -37,7 +38,7 @@ gridQuad <- function(npoints,
   bk_sites <- terra::as.data.frame(bk_r,xy=TRUE)[,-3]
 
   nbk <- nrow(bk_sites)
-  message(sprintf("There are %s background sites generated using 'gridQuad' this is based on %s points, there will be less quadrature points than selected as na cells are removed and the grid is kept regular.", nbk,npoints))
+  if(!control$quiet)message(sprintf("There are %s background sites generated using 'gridQuad' this is based on %s points, there will be less quadrature points than selected as na cells are removed and the grid is kept regular.", nbk,npoints))
 
   bk_sites <- data.frame(bk_sites)
   colnames(bk_sites) <- coord
