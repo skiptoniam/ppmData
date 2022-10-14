@@ -15,7 +15,7 @@
 #' path <- system.file("extdata", package = "ppmData")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' window <- rast(lst[1])
-#' res <- pseudoRandomQuad(10000,window)
+#' res <- pseudoRandomQuad(10000,window,control=list(quiet=FALSE))
 #' plot(window)
 #' points(res[,1:2],pch=".")
 pseudoRandomQuad <- function(npoints,
@@ -64,7 +64,7 @@ pseudoRandomQuad <- function(npoints,
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' window <- terra::rast(lst[1])
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")[,1:2]
-#' quadrature <- pseudoRandomQuad(1000,window)
+#' quadrature <- pseudoRandomQuad(1000,window,control=list(quiet=FALSE))
 #' res <- pseudoRandomWeights(presences,quadrature,window,unit="geo")
 #' plot(window)
 #' points(res[res$presence==1,1:2],pch=16,cex=0.5,col='blue')

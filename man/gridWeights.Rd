@@ -42,7 +42,7 @@ path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 window <- terra::rast(lst[1])
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")[,1:2]
-quadrature <- gridQuad(10000,window)
+quadrature <- gridQuad(10000,window,control=list(quiet=FALSE))
 res <- gridWeights(presences,quadrature,window)
 plot(window)
 points(res[res$presence==1,1:2],pch=16,cex=0.5,col='blue')

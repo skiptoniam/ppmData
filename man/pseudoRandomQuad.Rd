@@ -27,7 +27,7 @@ library(terra)
 path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 window <- rast(lst[1])
-res <- pseudoRandomQuad(10000,window)
+res <- pseudoRandomQuad(10000,window,control=list(quiet=FALSE))
 plot(window)
 points(res[,1:2],pch=".")
 }

@@ -158,7 +158,7 @@ testthat::test_that('ppmdata single species grid', {
                        quad.method = 'grid')
 
     # test with no npoints
-  ppmdata3 <- ppmData(presences=presences, window = preds[[1]], quad.method = 'grid')
+  ppmdata3 <- ppmData(presences=presences, window = preds[[1]], quad.method = 'grid', control=list(quiet=TRUE))
   plot(ppmdata3)
 
   # test with no npoints
