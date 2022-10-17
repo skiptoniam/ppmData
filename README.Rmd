@@ -9,12 +9,14 @@ output: github_document
   
 ## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) to run multiple species Point Processes.
 
-### Summary
+## Summary
 
 The approach uses quasi-random sampling (Grafston & Tille, 2013, Foster et al., 2018) to generate a quadrature scheme for numerical approximation of a Poisson point process model (Berman & Turner 1992; Warton & Shepard 2010). Quasi-random sampling quadrature are form of spatially-balanced survey design or point stratification that aims to reduce the frequency of placing samples close to each other (relative to pseudo-random or grid designs). A quasi-random quadrature design improves efficiency of background point sampling (and subsequent modelling) by reducing the amount of spatial auto-correlation between data implying that each sample is providing as much unique information as possible (Grafston & Tille, 2013, Foster et al., 2018) and thus reducing low errors for geostatistical prediction (Diggle & Ribeiro, 2007). Because the quasi-random design is not on a regular grid we use Dirichlet tessellation to generate polygons for each point in the quadrature scheme. Areal weights are then derived from these polygons. 
 
 We note that this approach is different to a targeted background scheme for generating pseudo-absences. If the users intent is to reduce sighting biases via a targeted background scheme, we recommend that bias
 is accounted for via covariates (distance to roads) or an offset (a known amount of effort) (e.g Warton et al., 2013; Renner et al, 2015).
+
+## Using the ppmData package
 
 ### Installation
 The `ppmData` package can be installed using `devtools` or `remotes` R packages.
@@ -48,7 +50,7 @@ plot(ppmdata1)
   
 Please note that the ppmData project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
 
-### References 
+## References 
 
 Diggle, P. J., P. J. Ribeiro, *Model-based Geostatistics*. Springer Series in Statistics. Springer, 2007.
 

@@ -8,7 +8,7 @@ Status](https://codecov.io/github/skiptoniam/ppmData/coverage.svg?branch=master)
 
 ## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) to run multiple species Point Processes.
 
-### Summary
+## Summary
 
 The approach uses quasi-random sampling (Grafston & Tille, 2013, Foster
 et al., 2018) to generate a quadrature scheme for numerical
@@ -31,6 +31,8 @@ for generating pseudo-absences. If the users intent is to reduce
 sighting biases via a targeted background scheme, we recommend that bias
 is accounted for via covariates (distance to roads) or an offset (a
 known amount of effort) (e.g Warton et al., 2013; Renner et al, 2015).
+
+## Using the ppmData package
 
 ### Installation
 
@@ -66,6 +68,7 @@ a quasi-random areal sample.
 ``` r
 plot(ppmdata1)
 ```
+
 <img src="README_files/figure-gfm/fig1-1.png" style="display: block; margin: auto;" />
 
 ## Code of Conduct
@@ -75,7 +78,7 @@ Code of
 Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html).
 By contributing to this project, you agree to abide by its terms.
 
-### References
+## References
 
 Diggle, P. J., P. J. Ribeiro, *Model-based Geostatistics*. Springer
 Series in Statistics. Springer, 2007.
