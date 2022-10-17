@@ -66,9 +66,9 @@ a quasi-random areal sample.
 ``` r
 plot(ppmdata1)
 ```
-
 <img src="README_files/figure-gfm/fig1-1.png" style="display: block; margin: auto;" />
-\## Code of Conduct
+
+## Code of Conduct
 
 Please note that the ppmData project is released with a [Contributor
 Code of

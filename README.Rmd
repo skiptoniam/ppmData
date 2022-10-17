@@ -40,6 +40,7 @@ ppmdata1 <- ppmData(npoints = npoints, presences=presences,
 ```
 
 Here we plot the quadrature scheme. The red points represent the known locations of \textit{Tasmaphena sinclairi}. The black points represent the quadrature locations. Quasi-random quadrature where the integration points are generated using a quasi-random areal sample.
+
 ```{r fig1, fig.width=7, fig.height=4, fig.align='center', echo=TRUE}
 plot(ppmdata1)
 ```
