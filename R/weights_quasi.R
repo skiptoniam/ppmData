@@ -36,7 +36,6 @@ quasiRandomQuad <- function(npoints,
     stop("No set of background points found for this region.  Please increase the number of possible samples.")
   samp <- samp[1:npoints,]
 
-
   randpoints <- as.data.frame(samp[,1:2])
   colnames(randpoints ) <- coord
 

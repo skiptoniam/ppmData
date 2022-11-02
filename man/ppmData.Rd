@@ -15,6 +15,7 @@ ppmData(
   quad.method = c("quasi.random", "pseudo.random", "grid"),
   interpolation = c("simple", "bilinear"),
   unit = c("geo", "m", "km", "ha"),
+  na.rm = FALSE,
   control = list()
 )
 }
@@ -63,6 +64,8 @@ on the terra package  \code{\link[terra]{extract}}.}
 returns the area based on the euclidean distance between geographic
 coordinates. This will default to the values of the raster and presence
 coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.}
+
+\item{na.rm}{Boolean Remove NA data from covariates. Only works for single species models.}
 
 \item{control}{list A list of control parameters for using ppmData. See
 details for uses of control parameters.}

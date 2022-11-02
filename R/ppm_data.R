@@ -47,6 +47,7 @@
 #' returns the area based on the euclidean distance between geographic
 #' coordinates. This will default to the values of the raster and presence
 #' coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.
+#' @param na.rm Boolean Remove NA data from covariates. Only works for single species models.
 #' @param control list A list of control parameters for using ppmData. See
 #' details for uses of control parameters.
 #'
@@ -100,6 +101,7 @@ ppmData <- function(presences,
                     quad.method = c("quasi.random","pseudo.random","grid"),
                     interpolation = c("simple","bilinear"),
                     unit = c("geo","m","km","ha"),
+                    na.rm = FALSE,
                     control = list()){
 
   # default methods
@@ -230,7 +232,9 @@ ppmData <- function(presences,
      res$ppmData <- transposePPMdata(dat, sppNames, coordNames, covarNames)
      res$marked <- TRUE
   } else {
-    res$ppmData <- cleanPPMdata(dat)
+    res$ppmData <- cleanWeightsPPMdata(dat)
+    if(na.rm)
+      res$ppmData <- cleanCovariatesPPMdata(res$ppmData)
     res$marked <- FALSE
   }
 
@@ -470,11 +474,18 @@ checkWindow <- function(presences, window, coord, quiet){
 }
 
 ## A function to clean up the NAs and weights.
-cleanPPMdata <- function(dat){
+cleanWeightsPPMdata <- function(dat){
 
   dat <- dat[complete.cases(dat$weights),]
   dat <- dat[is.finite(dat$weights),]
   dat[dat$weights==0,] <- sqrt(.Machine$double.eps)
+
+  return(dat)
+}
+
+cleanCovariatesPPMdata <- function(dat){
+
+  dat <- dat[complete.cases(dat),]
 
   return(dat)
 }
