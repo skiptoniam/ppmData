@@ -3,6 +3,7 @@
 #' @param object A ppmData object
 #' @param \\dots Ignored
 #' @export
+#' @importFrom spatstat.geom ppp quad
 #' @examples
 #' \dontrun{
 #' library(ppmData)
@@ -22,12 +23,8 @@ as.spatstat <- function(object, ...){
   if(!isa(object,"ppmData"))
     stop("This function requires a ppmData object")
 
-  if(isa(object$window,"SpatRaster")){
-    quad.win <- spatstat.geom::as.owin(terra2im(object$window))
-  } else {
-    bb <- get_bbox(object$presences.original)
-    quad.win <- spatstat.geom::owin(bb[1:2],bb[3:4])
-  }
+  ## create the owin
+  quad.win <- as.owin(object)
 
   ## if covariates transform to spatstat image
   if(!is.null(object$covariates)){
@@ -69,3 +66,65 @@ as.spatstat <- function(object, ...){
   return(list(Q = quad.out, covariates = covariates))
 
 }
+
+#' Function to covert a spatstat quadrature
+#' @name as.ppp
+#' @param X A ppmData object
+#' @param \\dots Ignored
+#' @param fatal	Logical value specifying what to do if the data cannot be converted. See Details.
+#' @importFrom spatstat.geom as.ppp
+#' @export
+#' @examples
+#' \dontrun{
+#' library(ppmData)
+#' path <- system.file("extdata", package = "ppmData")
+#' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+#' preds <- rast(lst)
+#' window <- preds[[1]]
+#' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
+#' object <- ppmData(npoints = 10000, presences=presences, window = window, covariates = preds)
+#' X <- as.ppp(object)
+#' }
+
+as.ppp.ppmData <- function(X, ..., fatal=TRUE){
+
+  if(isa(X$window,"SpatRaster")){
+    quad.win <- spatstat.geom::as.owin(terra2im(X$window))
+  } else {
+    bb <- get_bbox(X$presences.original)
+    quad.win <- spatstat.geom::owin(bb[1:2],bb[3:4])
+  }
+
+  ## coordinate names
+  xname <- object$params$coord[1]
+  yname <- object$params$coord[2]
+
+  ## presences
+  px <- object$presences.cleaned[,xname]
+  py <- object$presences.cleaned[,yname]
+
+  ## create a spatstat quad
+  ppp.out <- spatstat.geom::ppp(px, py, window = quad.win, check = FALSE)
+
+  return(ppp.out)
+
+}
+
+#' Convert a ppmData object to an owin from the SpatStat package.
+#' @param W Window.
+#' @param ... Unused.
+#' @param fatal Unused.
+#' @importFrom spatstat.geom as.owin
+#' @export
+as.owin.ppmData <- function(W,...,fatal=TRUE){
+
+  if(isa(W$window,"SpatRaster")){
+  win <- spatstat.geom::as.owin(terra2im(object$window))
+  } else {
+  bb <- get_bbox(W$presences.original)
+  win <- spatstat.geom::owin(bb[1:2],bb[3:4])
+  }
+
+ return(win)
+}
+
