@@ -16,7 +16,8 @@ Imports:
     sf,
     randtoolbox,
     Rcpp,
-    units
+    units,
+    spatstat.geom
 Suggests: 
     knitr,
     testthat (>= 3.0.0),
