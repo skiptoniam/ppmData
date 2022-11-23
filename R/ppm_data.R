@@ -241,6 +241,7 @@ ppmData <- function(presences,
   res$presences.original <- presences
   res$presences.cleaned <- pressies
   res$window <- window
+  res$covariates <- covariates
   res$params <- list(quad.method = quad.method,
                      coord = coord,
                      species.id = species.id,
