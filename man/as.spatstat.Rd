@@ -2,7 +2,7 @@
 % Please edit documentation in R/spatstat_utils.R
 \name{as.spatstat}
 \alias{as.spatstat}
-\title{Function to covert a spatstat quadrature}
+\title{Function to covert a spatstat quadrature and spatstat data (covariates)}
 \usage{
 as.spatstat(object, ...)
 }
@@ -12,7 +12,9 @@ as.spatstat(object, ...)
 \item{\\dots}{Ignored}
 }
 \description{
-Function to covert a spatstat quadrature
+This function will convert the ppmData to a spatstat object that
+can be used in the spatstat library. This currenly only works for unmarked
+point process
 }
 \examples{
 \dontrun{
@@ -24,7 +26,10 @@ window <- preds[[1]]
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")
 object <- ppmData(npoints = 10000, presences=presences, window = window, covariates = preds)
 ss.object <- as.spatstat(object)
-ppmfit <- ppm(ss.object$Q~1+poly(min_temp_coldest_month,2)+poly(annual_mean_precip,2),data=ss.object$covariates,Poisson())
+
+## now you should be able to fit a ppm from spatstat
+ss.form <- ss.object$Q~1+poly(min_temp_coldest_month,2)+poly(annual_mean_precip,2)
+ppmfit <- ppm(ss.form,data=ss.object$covariates,Poisson())
 pred <- predict(ppmfit, covariates = ss.object$covariates,type="trend")
 }
 }

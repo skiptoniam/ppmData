@@ -5,7 +5,7 @@
 \alias{as.ppp.ppmData}
 \title{Function to covert a spatstat quadrature}
 \usage{
-as.ppp.ppmData(X, ..., fatal = TRUE)
+\method{as.ppp}{ppmData}(X, ..., fatal = TRUE)
 }
 \arguments{
 \item{X}{A ppmData object}

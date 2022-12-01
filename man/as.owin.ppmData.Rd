@@ -2,17 +2,17 @@
 % Please edit documentation in R/spatstat_utils.R
 \name{as.owin.ppmData}
 \alias{as.owin.ppmData}
-\title{Convert a ppmData pnkect to an owin from the SpatStat package.}
+\title{Convert a ppmData object to an owin from the SpatStat package.}
 \usage{
 \method{as.owin}{ppmData}(W, ..., fatal = TRUE)
 }
 \arguments{
-\item{W}{Window.}
+\item{W}{Window A ppmData object. Uses the saved window in the ppmData object.}
 
 \item{...}{Unused.}
 
 \item{fatal}{Unused.}
 }
 \description{
-Convert a ppmData pnkect to an owin from the SpatStat package.
+Convert a ppmData object to an owin from the SpatStat package.
 }

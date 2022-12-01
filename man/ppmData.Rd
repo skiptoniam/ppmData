@@ -3,7 +3,8 @@
 \docType{package}
 \name{ppmData}
 \alias{ppmData}
-\title{package file}
+\title{Develop a quadrature scheme using quasi-random sampling for spatial
+point processes.}
 \usage{
 ppmData(
   presences,
@@ -11,7 +12,7 @@ ppmData(
   covariates = NULL,
   npoints = NULL,
   coord = c("X", "Y"),
-  species.id = "SpeciesID",
+  mark.id = "SpeciesID",
   quad.method = c("quasi.random", "pseudo.random", "grid"),
   interpolation = c("simple", "bilinear"),
   unit = c("geo", "m", "km", "ha"),
@@ -49,8 +50,10 @@ ppm likelihood.}
 \item{coord}{Character These are the users name of site coordinates. The default is c('X','Y').
 This should match the name of the coordinates in the presences data set.}
 
-\item{species.id}{Character This is the column name of the species ID in the presences data set.
-The default is "SpeciesID". But this should be changed to match the user's data.}
+\item{mark.id}{Character This is the column name of the mark ID. The default
+is "SpeciesID". But this should be changed to match the user's data. If this
+column contains multiple "species" then a marked quadrature scheme will be
+created.}
 
 \item{quad.method}{Character The quadrature generation method. Default is "quasi.random" for
 quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
@@ -72,7 +75,21 @@ details for uses of control parameters.}
 }
 \description{
 ppmData is a package for setting up quadrature to implement
-spatial Poisson Point process models and extensions.
+spatial Poisson Point process models and extensions. The approach uses quasi-
+random sampling (Grafston & Tille, 2013, Foster et al., 2018) to generate a
+quadrature scheme for numerical approximation of a Poisson point process
+model (Berman & Turner 1992; Warton & Shepard 2010). Quasi-random sampling
+quadrature are form of spatially-balanced survey design or point
+stratification that aims to reduce the frequency of placing samples close to
+each other (relative to pseudo-random or grid designs). A quasi-random
+quadrature design improves efficiency of background point sampling (and
+subsequent modelling) by reducing the amount of spatial auto-correlation
+between data implying that each sample is providing as much unique
+information as possible (Grafston & Tille, 2013, Foster et al., 2018) and
+thus reducing low errors for geostatistical prediction (Diggle & Ribeiro,
+2007). Because the quasi-random design is not on a regular grid we use
+Dirichlet tessellation to generate polygons for each point in the quadrature
+scheme. Areal weights are then derived from these polygons.
 
 This package is a way to efficiently generate a quasi-random set
 of background points for presence-only modelling of single or multiple
@@ -122,4 +139,18 @@ window <- preds[[1]]
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")
 quad <- ppmData(npoints = 1000, presences=presences, window = window, covariates = preds)
 }
+}
+\references{
+Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
+
+Foster, S.D., Monk, J., Lawrence, E., Hayes, K.R., Hosack, G.R. and Przeslawski, R., 2018. Statistical considerations
+for monitoring and sampling. Field manuals for marine sampling to monitor Australian waters, pp.23-41.
+
+Grafstrom, Anton, and Yves Tille. Doubly balanced spatial sampling with spreading and restitution of auxiliary totals.
+Environmetrics 24.2 (2013): 120-131.
+
+Warton, D. I., and L. C. Shepherd. Poisson point process models solve the pseudo-absence problem for presence-only data #'in ecology. The Annals of Applied Statistics 4.3 (2010): 1383-1402.
+}
+\author{
+Skipton Woolley <skip.woolley@csiro.au> & Scott Foster <scott.foster@data61.csiro.au>
 }

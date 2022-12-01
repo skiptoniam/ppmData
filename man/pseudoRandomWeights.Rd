@@ -9,7 +9,7 @@ pseudoRandomWeights(
   quadrature,
   window,
   coord,
-  species.id,
+  mark.id,
   unit = c("geo", "m", "km", "ha")
 )
 }
@@ -23,7 +23,7 @@ and resolution of the point process model.}
 
 \item{coord}{The names of the coordinates. Default is c("X","Y").}
 
-\item{species.id}{character Name of the species ID column}
+\item{mark.id}{character Name of the species ID column}
 
 \item{unit}{The scale of the area weights, default is kilometers squared "km"
 but meters squared "m" or hectars "ha" can be used.}
