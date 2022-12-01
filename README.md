@@ -47,7 +47,8 @@ devtools::install_github('skiptoniam/ppmData')
 ### Example
 
 Here is an example using a dataset from the `ppmData` package. We setup
-a quadrature scheme for the species located within Tasmania, Australia.
+a quadrature scheme for the species *Tasmaphena sinclairi* located
+within Tasmania, Australia.
 
 ``` r
 library(ppmData)
@@ -60,16 +61,19 @@ ppmdata1 <- ppmData(npoints = npoints, presences=presences,
                     window = preds[[1]], covariates=preds)
 ```
 
-Here we plot the quadrature scheme. The red points represent the known
-locations of . The black points represent the quadrature locations.
-Quasi-random quadrature where the integration points are generated using
-a quasi-random areal sample.
+Here we plot the quadrature scheme. The green points represent the known
+locations of *Tasmaphena sinclairi*. The black points represent the
+quadrature locations. Quasi-random quadrature where the integration
+points are generated using a quasi-random areal sample.
 
 ``` r
 plot(ppmdata1)
 ```
 
 <img src="README_files/figure-gfm/fig1-1.png" style="display: block; margin: auto;" />
+Once the `ppmData` object has been set up it is quiet easy to fit a
+point process model in R. You can use something like `glm`, `gam` or
+even convert the `ppmData` object to work directly with `spatstat::ppm`.
 
 ## Code of Conduct
 
