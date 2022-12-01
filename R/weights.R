@@ -3,28 +3,28 @@ getWeights <- function(quad.method,
                         quadrature,
                         window,
                         coord,
-                        species.id,
+                        mark.id,
                         unit,
                         crs){
 
   wts <- switch(quad.method,
-                grid = gridWeights(presences, quadrature, window, coord, species.id, unit),
-                pseudo.random = pseudoRandomWeights(presences, quadrature, window, coord, species.id, unit),
-                quasi.random = quasiRandomWeights(presences, quadrature,  window, coord, species.id, unit, crs))
+                grid = gridWeights(presences, quadrature, window, coord, mark.id, unit),
+                pseudo.random = pseudoRandomWeights(presences, quadrature, window, coord, mark.id, unit),
+                quasi.random = quasiRandomWeights(presences, quadrature,  window, coord, mark.id, unit, crs))
 
   return(wts)
 }
 
-getSingleSpeciesWeights <- function(quad.method, presences, quadrature, species.id, window, coord, unit, crs){
+getSingleSpeciesWeights <- function(quad.method, presences, quadrature, mark.id, window, coord, unit, crs){
 
-  quadrature[[species.id]] <- "quad"
-  # if(!is.null(quadDummy))quadDummy[[species.id]] <- "dummy"
+  quadrature[[mark.id]] <- "quad"
+  # if(!is.null(quadDummy))quadDummy[[mark.id]] <- "dummy"
   wts <- getWeights(quad.method,
                     presences,
                     quadrature,
                     window,
                     coord,
-                    species.id,
+                    mark.id,
                     unit,
                     crs)
   wts$OrigOrder <- wts$id
@@ -36,12 +36,12 @@ getSingleSpeciesWeights <- function(quad.method, presences, quadrature, species.
 }
 
 
-combineDF.fun <- function( ii, xxx, yyy, coords, species.id){
+combineDF.fun <- function( ii, xxx, yyy, coords, mark.id){
   ####  Assumes that the colnames of xxx are a subset of those from yyy
   ####  This is not a totally memory efficient implementation: data on all species is passed to all species...
   xxx <- xxx[[ii]]
   newdf <- as.data.frame( matrix( NA, nrow=nrow( xxx) + nrow( yyy), ncol=length( coords) + 2))
-  colnames( newdf) <- c(coords,species.id,"OrigOrder")
+  colnames( newdf) <- c(coords,mark.id,"OrigOrder")
   newdf[1:nrow( xxx), ] <- xxx[,colnames( newdf)]
   newdf[nrow( xxx) + 1:nrow( yyy), ] <- yyy[,colnames( newdf)]
 
@@ -49,23 +49,23 @@ combineDF.fun <- function( ii, xxx, yyy, coords, species.id){
 }
 
 getMultispeciesWeights <- function(quad.method, presences, quadrature, # quadDummy,
-                                   window, coord, species.id, mc.cores,
+                                   window, coord, mark.id, mc.cores,
                                    sppNames, unit, crs){
 
   presences$OrigOrder <- seq_len(nrow(presences))
-  nspp <- length(unique(presences[,species.id]))
+  nspp <- length(unique(presences[,mark.id]))
   spps <- sppNames$sppNames
   # print(spps)
-  quadrature[[species.id]] <- "quad"
+  quadrature[[mark.id]] <- "quad"
   quadrature[["OrigOrder"]] <- seq_len(nrow(quadrature))+max(presences[["OrigOrder"]])
   # if(!is.null(quadDummy)){
-    # quadDummy[[species.id]] <- "dummy"
+    # quadDummy[[mark.id]] <- "dummy"
     # quadDummy[["OrigOrder"]] <- seq_len(nrow(quadDummy))+max(quadrature[["OrigOrder"]])
   # }
-  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences[,species.id]==spps[ii],])
+  sppdata <- lapply(seq_len(nspp), function(ii)presences[presences[,mark.id]==spps[ii],])
 
-  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( quad.method, sppdata[[ii]], quadrature, window, coord, species.id, unit, crs)}, .parallel = mc.cores, .verbose = FALSE)
-  sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, species.id = species.id, .parallel = mc.cores, .verbose = FALSE)
+  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( quad.method, sppdata[[ii]], quadrature, window, coord, mark.id, unit, crs)}, .parallel = mc.cores, .verbose = FALSE)
+  sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, mark.id = mark.id, .parallel = mc.cores, .verbose = FALSE)
   sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)
   sppWtsList <- plapply(seq_len(nspp), function(ii)cbind(sppBckDatList[[ii]],

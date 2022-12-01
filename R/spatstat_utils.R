@@ -1,9 +1,12 @@
-#' Function to covert a spatstat quadrature
+#' Function to covert a spatstat quadrature and spatstat data (covariates)
 #' @name as.spatstat
 #' @param object A ppmData object
 #' @param \\dots Ignored
 #' @export
 #' @importFrom spatstat.geom ppp quad
+#' @description This function will convert the ppmData to a spatstat object that
+#' can be used in the spatstat library. This currenly only works for unmarked
+#' point process
 #' @examples
 #' \dontrun{
 #' library(ppmData)
@@ -14,10 +17,12 @@
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 #' object <- ppmData(npoints = 10000, presences=presences, window = window, covariates = preds)
 #' ss.object <- as.spatstat(object)
-#' ppmfit <- ppm(ss.object$Q~1+poly(min_temp_coldest_month,2)+poly(annual_mean_precip,2),data=ss.object$covariates,Poisson())
+#'
+#' ## now you should be able to fit a ppm from spatstat
+#' ss.form <- ss.object$Q~1+poly(min_temp_coldest_month,2)+poly(annual_mean_precip,2)
+#' ppmfit <- ppm(ss.form,data=ss.object$covariates,Poisson())
 #' pred <- predict(ppmfit, covariates = ss.object$covariates,type="trend")
 #' }
-
 as.spatstat <- function(object, ...){
 
   if(!isa(object,"ppmData"))
@@ -96,12 +101,12 @@ as.ppp.ppmData <- function(X, ..., fatal=TRUE){
   }
 
   ## coordinate names
-  xname <- object$params$coord[1]
-  yname <- object$params$coord[2]
+  xname <- X$params$coord[1]
+  yname <- X$params$coord[2]
 
   ## presences
-  px <- object$presences.cleaned[,xname]
-  py <- object$presences.cleaned[,yname]
+  px <- X$presences.cleaned[,xname]
+  py <- X$presences.cleaned[,yname]
 
   ## create a spatstat quad
   ppp.out <- spatstat.geom::ppp(px, py, window = quad.win, check = FALSE)
@@ -111,7 +116,7 @@ as.ppp.ppmData <- function(X, ..., fatal=TRUE){
 }
 
 #' Convert a ppmData object to an owin from the SpatStat package.
-#' @param W Window.
+#' @param W Window A ppmData object. Uses the saved window in the ppmData object.
 #' @param ... Unused.
 #' @param fatal Unused.
 #' @importFrom spatstat.geom as.owin
@@ -119,7 +124,7 @@ as.ppp.ppmData <- function(X, ..., fatal=TRUE){
 as.owin.ppmData <- function(W,...,fatal=TRUE){
 
   if(isa(W$window,"SpatRaster")){
-  win <- spatstat.geom::as.owin(terra2im(object$window))
+  win <- spatstat.geom::as.owin(terra2im(W$window))
   } else {
   bb <- get_bbox(W$presences.original)
   win <- spatstat.geom::owin(bb[1:2],bb[3:4])

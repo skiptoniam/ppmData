@@ -73,7 +73,7 @@ quasiRandomWeights <- function(presences,
                                quadrature,
                                window,
                                coord,
-                               species.id,
+                               mark.id,
                                unit,
                                crs = sf::st_crs("EPSG:4326")){#, returnDirtess){
 
@@ -89,7 +89,7 @@ quasiRandomWeights <- function(presences,
 
   ## Tracking of site and species ids
   allpts$id <- seq_len(nrow(allpts))
-  allpts$dataset <- allpts.id[,species.id]
+  allpts$dataset <- allpts.id[,mark.id]
 
   ## Do the Dirichlet with me
   dirareas <- getDirichlet(allpts,
