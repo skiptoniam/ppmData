@@ -7,7 +7,7 @@
 Raster data set of environmental and social covariates clipped to Tasmania
 }
 \details{
-The a subset of ANUCLIM v6 layers are included in the package, but have been clipped to the Tasmanian extent. A distance from roads layer is also included which is calculated as the distance from main roads, based on the road network dataset from OpenStreetMap (OSM) across the geographic area of Tasmania
+The a subset of the ANUCLIM v6 layers are included in the package, but have been clipped to the Tasmanian extent. A distance from roads layer is also included which is calculated as the distance from main roads, based on the road network dataset from OpenStreetMap (OSM) across the geographic area of Tasmania
 
 \itemize{
 \item{ precip_of_driest_month.tif}{ Precipitation of the driest month}
