@@ -1,5 +1,3 @@
-context('ppmData multiple species')
-
 testthat::test_that('ppmData multiple species', {
 
 library(ppmData)
