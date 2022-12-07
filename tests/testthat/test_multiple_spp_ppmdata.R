@@ -45,10 +45,47 @@ testthat::test_that('ppmData multiple species plot', {
   presences <- snails
   npoints <- 1000
 
-  # test with just pres & window
+  # test that plot works
   ppmdata <- ppmData(npoints = npoints, presences=presences, window = preds[[1]])
   p <- plot(ppmdata)
   expect_type(p,"list")
 
 })
+
+testthat::test_that('ppmData multiple species test for errors', {
+
+  library(ppmData)
+  library(terra)
+  path <- system.file("extdata", package = "ppmData")
+  lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+  preds <- rast(lst)
+  presences <- snails
+  npoints <- 1000
+
+  # expect error if no presences
+  expect_error(ppmData(npoints = npoints, window = preds[[1]]))
+
+  # expect error if wrong mark.id
+  expect_error(ppmData(presences = presences,
+          npoints = npoints,
+          window = preds[[1]],
+          mark.id = "species"))
+
+  # expect error if wrong quad.method
+  expect_error(ppmData(presences = presences,
+                       npoints = npoints,
+                       window = preds[[1]],
+                       quad.method = "quasirandom"))
+
+  # expect error if wrong interp method
+  expect_error(ppmData(presences = presences,
+                       npoints = npoints,
+                       window = preds[[1]],
+                       interpolation = "nearest"))
+
+})
+
+
+
+
 
