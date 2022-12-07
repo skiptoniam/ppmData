@@ -19,6 +19,6 @@ testthat::test_that('test spatstat utils', {
   expect_s3_class(as.owin(pd),"owin")
 
   ## check to see that ppmdata to ppp works
-  expect_s3_class(class(as.ppp(pd)),"ppp")
+  expect_s3_class(as.ppp(pd),"ppp")
 
   })
