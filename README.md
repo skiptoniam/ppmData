@@ -13,7 +13,7 @@ Status](https://codecov.io/github/skiptoniam/ppmData/coverage.svg?branch=master)
 The approach uses quasi-random sampling (Grafston & Tille, 2013, Foster
 et al., 2018) to generate a quadrature scheme for numerical
 approximation of a Poisson point process model (Berman & Turner 1992;
-Warton & Shepard 2010). Quasi-random sampling quadrature are form of
+Warton & Shepard 2010). Quasi-random sampling quadrature are a form of
 spatially-balanced survey design or point stratification that aims to
 reduce the frequency of placing samples close to each other (relative to
 pseudo-random or grid designs). A quasi-random quadrature design
