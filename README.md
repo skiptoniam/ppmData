@@ -74,8 +74,7 @@ plot(ppmdata1)
 Once the `ppmData` object has been set up it is quiet easy to fit a
 point process model in R. You can use something like `glm`, `gam` or
 even convert the `ppmData` object to work directly with `spatstat::ppm`.
-
-Here is a brief example of how you might fit a ppm using `glm`.
+Here is a brief example of how you might fit a ppm using `glm`:
 
 ``` r
 ppp <- ppmdata1$ppmData
@@ -97,6 +96,7 @@ pred <- predict(covariates,
                 ft.ppm,
                 type="response")
 plot(pred*prod(res(pred))) # scale response by area of cell.
+points(presences[!duplicated(presences),1:2],pch=16,cex=0.75,col=gray(0.2,0.75))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
