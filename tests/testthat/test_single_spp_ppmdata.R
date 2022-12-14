@@ -68,11 +68,6 @@ ppmdata6 <- ppmData(npoints=1000,
                     unit="ha")
 testthat::expect_s3_class(ppmdata6,"ppmData")
 
-## check areal sums
-testthat::expect_gt(sum(ppmdata4$ppmData$weights),6e10)
-testthat::expect_gt(sum(ppmdata5$ppmData$weights),6e4)
-testthat::expect_gt(sum(ppmdata6$ppmData$weights),6e6)
-
 ## throw some errors if wrong unit
 testthat::expect_error(ppmData(npoints=1000,
                                presences=presences,
@@ -161,7 +156,7 @@ testthat::test_that('ppmdata single species random', {
   ppmdata4 <- ppmData(npoints=1000,
                       presences=presences,
                       window = preds[[1]],
-                      unit="m",,
+                      unit="m",
                       quad.method="pseudo.random")
   testthat::expect_s3_class(ppmdata4,"ppmData")
 

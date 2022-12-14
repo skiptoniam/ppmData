@@ -101,6 +101,42 @@ points(presences[!duplicated(presences),1:2],pch=16,cex=0.75,col=gray(0.2,0.75))
 
 ![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
+### Quick comparison of quasirandom quadrature speeds for `ppmData` & `spatstat`
+
+Using `ppmData` to generate a quasi-random scheme
+
+``` r
+system.time(ppmdata2 <- ppmData(npoints = 100000,
+                                presences=presences,
+                                window = covariates[[1]],
+                                covariates=covariates))
+```
+
+    ## There were 119 duplicated points unique to X, Y & SpeciesID, they have been removed.
+
+    ## Developing a quadrature scheme for a single species dataset.
+
+    ## There are 45 presence observations for this point process
+
+    ## There are 100000 background quadrature (integration) points
+
+    ## There are a total of 100045 sites in the model.matrix
+
+    ##    user  system elapsed 
+    ##   8.080   0.050   8.129
+
+Using a simple spatstat example to generate a quasi-random scheme
+
+``` r
+suppressPackageStartupMessages(library(spatstat))
+data(simdat)
+D <- rQuasi(100000,Window(simdat))
+system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
+```
+
+    ##    user  system elapsed 
+    ## 162.234   0.242 162.505
+
 ## Code of Conduct
 
 Please note that the ppmData project is released with a [Contributor

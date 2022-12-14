@@ -5,17 +5,18 @@ getWeights <- function(quad.method,
                         coord,
                         mark.id,
                         unit,
-                        crs){
+                        crs,
+                        control){
 
   wts <- switch(quad.method,
                 grid = gridWeights(presences, quadrature, window, coord, mark.id, unit),
                 pseudo.random = pseudoRandomWeights(presences, quadrature, window, coord, mark.id, unit),
-                quasi.random = quasiRandomWeights(presences, quadrature,  window, coord, mark.id, unit, crs))
+                quasi.random = quasiRandomWeights(presences, quadrature,  window, coord, mark.id, unit, crs, control))
 
   return(wts)
 }
 
-getSingleSpeciesWeights <- function(quad.method, presences, quadrature, mark.id, window, coord, unit, crs){
+getSingleSpeciesWeights <- function(quad.method, presences, quadrature, mark.id, window, coord, unit, crs, control){
 
   quadrature[[mark.id]] <- "quad"
   # if(!is.null(quadDummy))quadDummy[[mark.id]] <- "dummy"
@@ -26,7 +27,8 @@ getSingleSpeciesWeights <- function(quad.method, presences, quadrature, mark.id,
                     coord,
                     mark.id,
                     unit,
-                    crs)
+                    crs,
+                    control)
   wts$OrigOrder <- wts$id
   wts$DatasetID <- 1
   wts$pres <- ifelse(wts$dataset=="quad",0,1)
@@ -50,7 +52,7 @@ combineDF.fun <- function( ii, xxx, yyy, coords, mark.id){
 
 getMultispeciesWeights <- function(quad.method, presences, quadrature, # quadDummy,
                                    window, coord, mark.id, mc.cores,
-                                   sppNames, unit, crs){
+                                   sppNames, unit, crs, control){
 
   presences$OrigOrder <- seq_len(nrow(presences))
   nspp <- length(unique(presences[,mark.id]))
@@ -64,7 +66,7 @@ getMultispeciesWeights <- function(quad.method, presences, quadrature, # quadDum
   # }
   sppdata <- lapply(seq_len(nspp), function(ii)presences[presences[,mark.id]==spps[ii],])
 
-  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( quad.method, sppdata[[ii]], quadrature, window, coord, mark.id, unit, crs)}, .parallel = mc.cores, .verbose = FALSE)
+  sppBckWtsList <- plapply(seq_len(nspp), function(ii) {getWeights( quad.method, sppdata[[ii]], quadrature, window, coord, mark.id, unit, crs, control)}, .parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp), combineDF.fun, xxx=sppdata, yyy=quadrature, coords=coord, mark.id = mark.id, .parallel = mc.cores, .verbose = FALSE)
   sppCounts <-  plapply(seq_len(nspp),function(ii)nrow(sppdata[[ii]]),.parallel = mc.cores, .verbose = FALSE)
   sppBckDatList <- plapply(seq_len(nspp),function(ii){sppBckDatList[[ii]]$DatasetID <- ii;sppBckDatList[[ii]]},.parallel = mc.cores, .verbose = FALSE)

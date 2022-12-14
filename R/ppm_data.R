@@ -111,7 +111,7 @@ ppmData <- function(presences,
   quad.method <- match.arg(quad.method)
   interp.method <- match.arg(interpolation)
   unit <- match.arg(unit)
-  control <- checkControl(control)
+  control <- checkControl(control, quad.method, unit)
 
   ## Make sure the column ids are characters and check for missing/wrong named coord/mark.id vars.
   if(!is.character(coord)) coord <- as.character(coord)
@@ -185,7 +185,8 @@ ppmData <- function(presences,
                                     mc.cores = control$mc.cores,
                                     sppNames = sppNames,
                                     unit = unit,
-                                    crs = crs)
+                                    crs = crs,
+                                    control = control)
 
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
@@ -204,7 +205,8 @@ ppmData <- function(presences,
                                      coord = coord,
                                      mark.id = mark.id,
                                      unit = unit,
-                                     crs = crs)
+                                     crs = crs,
+                                     control = control)
       # extract the covariate data
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
@@ -389,7 +391,7 @@ checkNumPoints <- function(npoints, presences, mark.id){
   return(npoints)
 }
 
-checkControl <- function(control){
+checkControl <- function(control, quad.method, unit){
 
   if (!("quasirandom.samples" %in% names(control)))
     control$quasirandom.samples <- NULL
@@ -401,6 +403,12 @@ checkControl <- function(control){
     control$quiet <- FALSE
   if (!("mc.cores" %in% names(control)))
     control$mc.cores <- 1
+  if (!("mc.cores" %in% names(control)))
+    control$mc.cores <- 1
+  if(quad.method=="quasi.random" && is.null(control$approx) && unit=="geo")
+    control$approx <- TRUE
+  else
+    control$approx <- FALSE
 
   return(control)
 

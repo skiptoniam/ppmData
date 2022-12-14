@@ -72,7 +72,24 @@ pred <- predict(covariates,
                 type="response")
 plot(pred*prod(res(pred))) # scale response by area of cell.
 points(presences[!duplicated(presences),1:2],pch=16,cex=0.75,col=gray(0.2,0.75))
+```
 
+### Quick comparison of quasirandom quadrature speeds for `ppmData` & `spatstat`
+
+Using `ppmData` to generate a quasi-random scheme
+```{r}
+system.time(ppmdata2 <- ppmData(npoints = 100000,
+                                presences=presences,
+                                window = covariates[[1]],
+                                covariates=covariates))
+```
+
+Using a simple spatstat example to generate a quasi-random scheme
+```{r}
+suppressPackageStartupMessages(library(spatstat))
+data(simdat)
+D <- rQuasi(100000,Window(simdat))
+system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
 ```
 
 
