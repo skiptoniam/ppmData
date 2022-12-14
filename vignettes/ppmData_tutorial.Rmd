@@ -1,0 +1,233 @@
+---
+title: "How to use ppmData to fit a Inhomogenous Poisson Point Process."
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{How to use ppmData to model a species' distribution.}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Load the required libraries
+```{r setup}
+library(ppmData)
+```
+
+## Setting up a ppm quadrature.
+Basically you need a set of environmental or spatial rasters which will be used 
+as covariates in the inhomogeneous point process models to estimate the intensity 
+of the point pattern. In this case we are using a snail species from Tasmania, 
+Australia. We aim to use `ppmData` to set up a quadrature scheme which can be 
+used in any glm style model to fit a weighted Poisson GLM. For example, users could
+use `mgcv` or `glmnet` for extra flexibility of regression coefficients or 
+regularization of covariates, respectively. 
+
+`ppmData` comes with a set of species presences and raster data to run examples 
+in the package and vignettes. There is a marked point pattern for the recorded 
+locations of a group of terrestrial snails observed in Tasmania, Australia. The 
+species identification represent a mark at each location. There is also a set of
+covariates that include some commonly used environmental gradients and a few 
+observer layers (such as distance from main roads).
+
+For this example we will just use a single species, and treat it a s regular
+point pattern. 
+```{r, cache=TRUE}
+path <- system.file("extdata", package = "ppmData")
+lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
+covariates <- rast(lst)
+presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
+presences <- presences[!duplicated(presences),]
+```
+
+We can plot the recorded presences of *Tasmaphena sinclairi*. 
+```{r, fig.width=6, fig.height=6, fig.cap="Recorded presences of *Tasmaphena sinclairi* in Tasmania, Australia.", cache=TRUE }
+plot(covariates[[1]], legend=FALSE,axes=FALSE)
+points(presences,pch=16,cex=0.75,col=gray(0.2,0.75))
+```
+
+To fit a inhomogeneous Poisson point process for *Tasmaphena sinclairi* we need to set up a
+quadrature scheme. We can do this using the ppmData function. We need to pass a 
+set of presences, a raster which represents a window or region in which the 
+presences are observed and the model is to be fitted. We also need to set  of covariates 
+which we'll use to describe the distribution of the observed presences.
+```{r, cache=TRUE}
+window <- covariates[[1]]
+ppmdata <- ppmData(presences=presences,
+                   window = window,
+                   covariates = covariates)
+```
+We can now plot the quadrature scheme and see what this looks like within our 
+window.
+```{r, fig.width=6, fig.height=6, fig.cap="Quadrature scheme for *Tasmaphena sinclairi*.", cache=TRUE}
+plot(ppmdata)
+```
+
+In the example above, we have not provided the number of quadrature (background)
+points for modelling and really need to do so if we want to generate a 
+reasonable model for point process, there is actually a trade off between the 
+number of quadrature points and the computation time required to run a ppm. As 
+the number of quadrature points ($Q$) approaches infinity ($Q_{n\to\infty}$) the
+integrate estimated using the quadrature should become more and more accurate, 
+at the cost of greater computation time. 
+
+We can increase the number of quadrature points using the `npoints` parameter in
+ppmData. Let's bump it up to say 10000, I would typically choose a few more, say
+50000 or 100000, but the best way to assess this is to compare the 
+log-likelihoods of model fits using different numbers of quadrature [e.g. Warton
+& Shepard 2010].
+
+```{r,cache=TRUE}
+ppmdata2 <- ppmData(presences=presences,
+                    window = window,
+                    covariates = covariates,
+                    npoints = 10000,
+                    na.rm=TRUE)
+```
+
+If we look at this quadrature scheme we can see that there are more background 
+points. 
+```{r, fig.width=6, fig.height=6, fig.cap="Quadrature scheme for *Tasmaphena sinclairi* with 10000 quasirandom quadrature points.",cache=TRUE}
+plot(ppmdata2)
+```
+
+We can now think about fitting a ppm using `glm` from the R `stats` package 
+[@r_core_team_r_2013]. We just need to extract the data.frame from the `ppmData`
+object and to specify a formula for the model. The only extra step is making the
+formula response equal to `presence/weights` (which gives us $z$ in the 
+@berman_approximating_1992 approximation). The right side of the formula will 
+represent the covariates and their functional forms. In this example we specify 
+independent 2$^{nd}$ degree polynomials for each covariate, except for the 
+spatial coordinates X & Y which we include in the model as interacting 2$^{nd}$ 
+degree polynomials. Once this is done, we define the weights in the `glm` 
+function call and we now can fit an IPPM using `ppmData` and `glm`.
+
+```{r, warning=FALSE}
+ppp <- ppmdata2$ppmData
+form  <- presence/weights ~ poly(X,Y, degree = 2) + 
+                            poly(max_temp_hottest_month, degree = 2) + 
+                            poly(annual_mean_precip, degree = 2) + 
+                            poly(annual_mean_temp, degree = 2) + 
+                            poly(distance_from_main_roads, degree = 2)
+
+ft.ppm <- glm(formula = form, data = ppp,
+              weights = as.numeric(ppp$weights),
+              family = poisson())
+```
+
+One we have fitted the model, we might want to do predict the relative intensity
+across the window, this will give us something similar to the expected count of 
+presences per cell or area.
+
+One thing to note, is that if we include longitude and latitude in the models 
+(X & Y), for spatial prediction we need to include rasters which represent those
+values. Below is a function: `xyFromWindow`, which will return the 
+longitude and latitude of each cell center in the a spatial raster format. We 
+can append that to the multi-layered raster object and use it for prediction. We
+can use the `terra::predict` function here to predict the ppm to the raster 
+layer data. This might not work for all model types (e.g `glmnet`). 
+
+```{r,fig.width=6, fig.height=6, fig.cap=""}
+## A function for return longitude and latitude as rasters.
+xyFromWindow <- function(window, coord.name = c("X","Y"), mask.na=FALSE){
+
+  grid.locations <- terra::xyFromCell(window,1:ncell(window))
+  X <- Y <- window
+  X[] <- grid.locations[,1]
+  Y[] <- grid.locations[,2]
+  names(X) <- coord.name[1]
+  names(Y) <- coord.name[2]
+  st.lonlat <- c(X,Y)
+  if(mask.na){
+    st.lonlat <- mask(st.lonlat,window)
+  }
+  return(st.lonlat)
+}
+
+xy <- xyFromWindow(window)
+covariates2 <- c(xy,covariates)
+
+## Here we can predict using the terra prediction methods.
+pred <- predict(covariates2,
+                ft.ppm,
+                type="response")
+```
+
+```{r glm_pred,fig.width=6, fig.height=6}
+plot(pred, col=(hcl.colors(11,palette= "Plasma")),
+     main="Predicted intensity",
+     plg=list(title=expression(paste(lambda[i])),x=142,y=-43),axes=FALSE)
+```
+
+Now we have a prediction for the fitted ppm model. By predicting the model on 
+the "response" scale, we are getting the predicted intensity. However, `glm` 
+assumes the weights for each observation for prediction equals one. So we need 
+to re-scale the prediction to the cell area size. This will give us the expected
+count of presences per cell.
+
+```{r glm_pred2,fig.width=6, fig.height=6}
+# scale prediction by area of cell
+pred2 <- pred*prod(res(pred))
+
+plot(pred2, col=(hcl.colors(11,palette= "Plasma")),
+     main="Predicted intensity per cell",
+     plg=list(title=expression(paste(lambda[i])),x=142,y=-43),axes=FALSE)
+```
+
+## Using spatstat functions
+We can port the ppmData objects to spatstat quite easily using the `as.spatstat`
+function call. Once we have done this, then it easy to use `spatstat` to do 
+analyses and model testing if so desired.
+
+```{r ss_pred,fig.width=6, fig.height=6}
+library(spatstat)
+ss <- as.spatstat(ppmdata2)
+Q <- ss$Q
+ss.covars <- ss$covariates
+ss.form <- Q ~ poly(max_temp_hottest_month, degree = 2) + 
+               poly(annual_mean_precip, degree = 2) + 
+               poly(annual_mean_temp, degree = 2) + 
+               poly(distance_from_main_roads, degree = 2)
+ss.fit <- ppm(ss.form,data=ss.covars,Poisson())
+ss.pred <- predict(ss.fit,
+                   covariates = ss.covars,
+                   type="intensity",
+                   ngrid=720)
+plot(ss.pred, main="Predicted intensity")
+```
+There are also a bunch of other functions which can covert ppmData objects to say
+a `ppp` or extract a `spatstat` `owin` from a ppmData object.
+
+```{r, fig.width=10, fig.height=6}
+library(spatstat)
+snail <- as.ppp(ppmdata2)
+ow <- as.owin(ppmdata2)
+par(mfrow=c(1,2))
+plot(snail,main=expression(paste(italic('Tasmaphena sinclairi'), " point pattern")))
+plot(ow,"spatstat owin")
+```
+
+
+<!-- Now one could look at residuals using the `diagonse.ppm` function. The plots  -->
+<!-- demonstrates some significant trend, and that the residuals are quite large in  -->
+<!-- some regions, this probably means that there is some other process not being  -->
+<!-- accounted for based on the covariates used in this model. Bias in observations  -->
+<!-- nearer to Hobart (and other human populations) could be causing this problem.  -->
+<!-- `spatstat` can fit other models such as `kppm` (log-gaussian cox process), to  -->
+<!-- account for this clustering in the point pattern. We will not explore that here, -->
+<!-- but suggest users should look into the excellent `spatstat` package for other  -->
+<!-- point process models. -->
+
+<!-- ```{r diagnose, fig.width=6, fig.height=6} -->
+<!-- diagnose.ppm(ss.fit, type="pearson") -->
+<!-- ``` -->
+
+
+
+
+
