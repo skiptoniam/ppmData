@@ -6,7 +6,7 @@
 Status](https://codecov.io/github/skiptoniam/ppmData/coverage.svg?branch=master)](https://codecov.io/github/skiptoniam/ppmData?branch=master)
 <!-- badges: end -->
 
-## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in [ecomix](https://github.com/skiptoniam/ecomix) to run multiple species Point Processes.
+## ppmData is an R package that can be used to set up a quadrature scheme for spatial point processes modelling and could be used in other packages, like [ecomix](https://github.com/skiptoniam/ecomix) to run marked poisson point processes.
 
 ## Summary
 
@@ -54,11 +54,11 @@ within Tasmania, Australia.
 library(ppmData)
 path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path, pattern='*.tif',full.names = TRUE)
-preds <- rast(lst)
+covariates <- rast(lst)
 presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")
 npoints <- 1000
 ppmdata1 <- ppmData(npoints = npoints, presences=presences,
-                    window = preds[[1]], covariates=preds)
+                    window = covariates[[1]], covariates=covariates)
 ```
 
 Here we plot the quadrature scheme. The green points represent the known
@@ -74,6 +74,32 @@ plot(ppmdata1)
 Once the `ppmData` object has been set up it is quiet easy to fit a
 point process model in R. You can use something like `glm`, `gam` or
 even convert the `ppmData` object to work directly with `spatstat::ppm`.
+
+Here is a brief example of how you might fit a ppm using `glm`.
+
+``` r
+ppp <- ppmdata1$ppmData
+form  <- presence/weights ~ poly(annual_mean_precip, degree = 2) + 
+                            poly(annual_mean_temp, degree = 2) + 
+                            poly(distance_from_main_roads, degree = 2)
+
+ft.ppm <- glm(formula = form, data = ppp,
+              weights = as.numeric(ppp$weights),
+              family = poisson())
+```
+
+One we have fitted the model, we might want to predict the relative
+intensity across the window, this will give us something similar to the
+expected count of species presences per-cell.
+
+``` r
+pred <- predict(covariates,
+                ft.ppm,
+                type="response")
+plot(pred*prod(res(pred))) # scale response by area of cell.
+```
+
+![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 ## Code of Conduct
 
