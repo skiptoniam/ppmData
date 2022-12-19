@@ -97,6 +97,15 @@ system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
   
 Please note that the ppmData project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
 
+## Reporting Bugs
+
+If you notice an issue with this repository, please report it using [Github Issues](https://github.com/skiptoniam/ppmData/issues). When reporting an implementation bug, include a small example that helps to reproduce the error. The issue will be addressed as quickly as possible.
+
+## Seeking Support
+
+If you have questions or need additional support, please open a [Github Issues](https://github.com/skiptoniam/ppmData/issues) or send a direct email to skip.woolley@csiro.au.
+
+
 ## References 
 
 Diggle, P. J., P. J. Ribeiro, *Model-based Geostatistics*. Springer Series in Statistics. Springer, 2007.

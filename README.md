@@ -123,7 +123,7 @@ system.time(ppmdata2 <- ppmData(npoints = 100000,
     ## There are a total of 100045 sites in the model.matrix
 
     ##    user  system elapsed 
-    ##   8.080   0.050   8.129
+    ##  11.546   0.062  11.696
 
 Using a simple spatstat example to generate a quasi-random scheme
 
@@ -135,7 +135,7 @@ system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
 ```
 
     ##    user  system elapsed 
-    ## 162.234   0.242 162.505
+    ## 162.697   0.355 163.132
 
 ## Code of Conduct
 
@@ -143,6 +143,19 @@ Please note that the ppmData project is released with a [Contributor
 Code of
 Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html).
 By contributing to this project, you agree to abide by its terms.
+
+## Reporting Bugs
+
+If you notice an issue with this repository, please report it using
+[Github Issues](https://github.com/skiptoniam/ppmData/issues). When
+reporting an implementation bug, include a small example that helps to
+reproduce the error. The issue will be addressed as quickly as possible.
+
+## Seeking Support
+
+If you have questions or need additional support, please open a [Github
+Issues](https://github.com/skiptoniam/ppmData/issues) or send a direct
+email to <skip.woolley@csiro.au>.
 
 ## References
 
