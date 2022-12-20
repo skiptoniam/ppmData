@@ -97,6 +97,20 @@ system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
   
 Please note that the ppmData project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
 
+## Contributing Software
+Fork the `ppmData` repository
+
+Clone your fork using the command:
+
+`git clone https://github.com/<username>/ppmData.git`
+
+Contribute to your forked repository.
+
+Create a pull request.
+
+If your code passes the necessary checks and is documented, your changes 
+and/or additions will be merged in the main `ppmData` repository.
+
 ## Reporting Bugs
 
 If you notice an issue with this repository, please report it using [Github Issues](https://github.com/skiptoniam/ppmData/issues). When reporting an implementation bug, include a small example that helps to reproduce the error. The issue will be addressed as quickly as possible.
