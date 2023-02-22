@@ -123,19 +123,27 @@ system.time(ppmdata2 <- ppmData(npoints = 100000,
     ## There are a total of 100045 sites in the model.matrix
 
     ##    user  system elapsed 
-    ##   8.385   0.049   8.449
+    ##   4.348   0.008   4.360
 
-Using a simple spatstat example to generate a quasi-random scheme
+Using a spatstat to generate a quasi-random scheme for the snails
+dataset.
 
 ``` r
 suppressPackageStartupMessages(library(spatstat))
-data(simdat)
-D <- rQuasi(100000,Window(simdat))
-system.time(Q <- quadscheme(simdat,D,method="dirichlet", exact=FALSE))
+e <- ext(covariates[[1]])
+W <- owin(e[1:2],e[3:4])
+snails_ppp <- ppp(presences[,1],presences[,2],W)
+```
+
+    ## Warning: data contain duplicated points
+
+``` r
+D <- rQuasi(100000,W)
+system.time(Q <- quadscheme(snails_ppp,D,method="dirichlet", exact=FALSE))
 ```
 
     ##    user  system elapsed 
-    ## 167.509   0.317 167.888
+    ## 266.514   0.484 267.097
 
 ## Code of Conduct
 

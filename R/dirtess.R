@@ -223,7 +223,7 @@
 
 "dirichletPolygons" <- function(x, crs = sf::st_crs("EPSG:4326"),...){
 
-  if(class(x)!="dirTess")
+  if(!isa(x,"dirTess"))
     stop("Must be a dirichlet tessellation object from 'dirTess'")
 
   ## extract the polygon lists from cpp object
