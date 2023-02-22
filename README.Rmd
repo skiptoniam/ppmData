@@ -85,7 +85,7 @@ system.time(ppmdata2 <- ppmData(npoints = 100000,
 ```
 
 Using a spatstat to generate a quasi-random scheme for the snails dataset.
-```{r}
+```{r,warning=FALSE}
 suppressPackageStartupMessages(library(spatstat))
 e <- ext(covariates[[1]])
 W <- owin(e[1:2],e[3:4])
