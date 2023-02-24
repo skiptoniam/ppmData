@@ -46,7 +46,8 @@ See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
 on the location and number of quadrature points required to converge a
 ppm likelihood.}
 
-\item{coord}{Character These are the users name of site coordinates. The default is c('X','Y').
+\item{coord}{Character These are the users name of site coordinates. The
+default is c('X','Y').
 This should match the name of the coordinates in the presences data set.}
 
 \item{mark.id}{Character This is the column name of the mark ID. The default
@@ -54,20 +55,24 @@ is "SpeciesID". But this should be changed to match the user's data. If this
 column contains multiple "species" then a marked quadrature scheme will be
 created.}
 
-\item{quad.method}{Character The quadrature generation method. Default is "quasi.random" for
-quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
-a regular grid at a set resolution (with respect to the original window resolution).}
+\item{quad.method}{Character The quadrature generation method. Default is
+"quasi.random" for quasi-random, "pseudo.random" for pseudo-random (regular
+random) and "grid" for a regular grid at a set resolution (with respect to
+the original window resolution).}
 
 \item{interpolation}{Character The interpolation method to use when extracting
-covariate data at a presence or quadrature location. Default is "bilinear", can also use "simple", this is based
+covariate data at a presence or quadrature location. Default is "bilinear",
+can also use "simple", this is based
 on the terra package  \code{\link[terra]{extract}}.}
 
 \item{unit}{Character The type of area to return. The default is "geo" and
 returns the area based on the euclidean distance between geographic
 coordinates. This will default to the values of the raster and presence
-coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.}
+coordinate system. Alternatively, meters squared "m", kilometers squared "km"
+, or hectares "ha" can be used.}
 
-\item{na.rm}{Boolean Remove NA data from covariates. Only works for single species models.}
+\item{na.rm}{Boolean Remove NA data from covariates. Only works for single
+species models.}
 
 \item{control}{list A list of control parameters for using ppmData. See
 details for uses of control parameters.}
@@ -99,12 +104,14 @@ computational efficiency we have rewritten the Delaunay triangulation and
 Dirichlet tessellation in c++ using a sweep algorithm. The control has a
 bunch of parameters you can use to tweek the ppmData object.
 \itemize{
- \item{quasirandom.samples}{ integer This sets the total number of samples to consider
-in the BAS step (rejection sampling). The default is 10000, which means that
-10000 halton numbers are drawn and then thinned according to the inclusion
-probabilities. You will need to increase the number of samples if selecting
-a large number of quadrature points. The more quasirandomSamples selected the
-slower the quasirandom quadrature scheme will be to generate.}
+ \item{quasirandom.samples}{ integer This sets the total number of samples
+ to consider in the BAS step (rejection sampling). The default is set to NULL
+ and the function internally generates 10 times the total number of
+ quadrature points needed. This means if 10000 quadrature points are required
+ for ppmData, then a halton sequence of 100000 quasi-random numbers are drawn
+ and then thinned according to the inclusion probabilities. The more
+ quasirandom.samples selected the slower the quasi-random quadrature scheme
+ will be to generate.}
  \item{buffer.NA}{ boolean If extract from \code{\link[terra]{extract}}
  returns NA for point extract, do you want us to attempt to user buffer to
  calculate cells which are NA.}
