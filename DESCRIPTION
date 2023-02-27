@@ -20,6 +20,7 @@ Imports:
     Rcpp,
     spatstat.geom
 Suggests: 
+    spatstat,
     knitr,
     testthat (>= 3.0.0),
     rmarkdown
