@@ -4,7 +4,7 @@
 \alias{gridQuad}
 \title{gridQuad}
 \usage{
-gridQuad(npoints, window, coord = c("X", "Y"))
+gridQuad(npoints, window, coord = c("X", "Y"), control)
 }
 \arguments{
 \item{npoints}{The number of background points to use. The default is 1000,
@@ -14,6 +14,8 @@ but it is generally recommended to use more when fitting a ppm.}
 and resolution of the point process model.}
 
 \item{coord}{The names of the coordinates. Default is c("X","Y").}
+
+\item{control}{A list of control options passed from ppmData}
 }
 \description{
 A relatively quick way to generate psuedo-random quadrature set
@@ -25,7 +27,7 @@ library(terra)
 path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 window <- terra::rast(lst[1])
-res <- gridQuad(10000,window)
+res <- gridQuad(10000,window,control=list(quiet=FALSE))
 plot(window)
 points(res[,1:2],pch=".")
 }

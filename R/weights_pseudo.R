@@ -6,6 +6,7 @@
 #' @param window A SpatRaster from terra package which will represent the extent
 #'  and resolution of the point process model.
 #' @param coord The names of the coordinates. Default is c("X","Y").
+#' @param control A list of control options passed from ppmData
 #' @export
 #' @author Skipton Woolley
 #' @examples
@@ -14,15 +15,16 @@
 #' path <- system.file("extdata", package = "ppmData")
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' window <- rast(lst[1])
-#' res <- pseudoRandomQuad(10000,window)
+#' res <- pseudoRandomQuad(10000,window,control=list(quiet=FALSE))
 #' plot(window)
 #' points(res[,1:2],pch=".")
 pseudoRandomQuad <- function(npoints,
                              window,
-                             coord = c("X","Y")){
+                             coord = c("X","Y"),
+                             control){
 
   if(is.null(window)) stop("This function requires a window (terra raster) to work.")
-  if(class(window)[1]!="SpatRaster") stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
+  if(!inherits(window,"SpatRaster")) stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
 
   background_sites <- terra::spatSample(x = window,
                                         size = npoints,
@@ -49,7 +51,7 @@ pseudoRandomQuad <- function(npoints,
 #' @param window A SpatRaster from terra package which will represent the extent
 #'  and resolution of the point process model.
 #' @param coord The names of the coordinates. Default is c("X","Y").
-#' @param species.id character Name of the species ID column
+#' @param mark.id character Name of the species ID column
 #' @param unit The scale of the area weights, default is kilometers squared "km"
 #' but meters squared "m" or hectars "ha" can be used.
 #' @author Skipton Woolley
@@ -62,7 +64,7 @@ pseudoRandomQuad <- function(npoints,
 #' lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 #' window <- terra::rast(lst[1])
 #' presences <- subset(snails,SpeciesID %in% "Tasmaphena sinclairi")[,1:2]
-#' quadrature <- pseudoRandomQuad(1000,window)
+#' quadrature <- pseudoRandomQuad(1000,window,control=list(quiet=FALSE))
 #' res <- pseudoRandomWeights(presences,quadrature,window,unit="geo")
 #' plot(window)
 #' points(res[res$presence==1,1:2],pch=16,cex=0.5,col='blue')
@@ -72,7 +74,7 @@ pseudoRandomWeights <- function(presences,
                                 quadrature,
                                 window,
                                 coord,
-                                species.id,
+                                mark.id,
                                 unit = c("geo","m","km","ha")){
 
   # work out what unit you want the areas in.
@@ -82,7 +84,7 @@ pseudoRandomWeights <- function(presences,
   if(is.null(quadrature)) stop("This function needs a set of quadrature sites to work")
 
   if(is.null(window)) stop("This function requires a window (terra raster) to work.")
-  if(class(window)[1]!="SpatRaster") stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
+  if(!inherits(window,"SpatRaster")) stop("'window' needs to be a 'SpatRaster' from the 'terra' package.")
 
   ## expanse broke for large raster
   npres <- nrow(presences)
@@ -94,7 +96,7 @@ pseudoRandomWeights <- function(presences,
 
   ## Tracking of site and species ids
   allpts$id <- seq_len(nrow(allpts))
-  allpts$dataset <- allpts.id[,species.id]
+  allpts$dataset <- allpts.id[,mark.id]
 
   if(unit=="geo"){
     areas <- terra::init(window,prod(terra::res(window)))
@@ -106,7 +108,6 @@ pseudoRandomWeights <- function(presences,
     bck_wts_site <- terra::extract(areas,allpts[allpts$dataset=="quad",coord],method="bilinear")[,2]
     window_area <- as.numeric(terra::global(areas, "sum", na.rm=TRUE))
     window_wts <- bck_wts_site/sum(bck_wts_site,na.rm = TRUE)
-    # sum(window_wts*window_area) # sanity check
     bck_wts  <- window_wts*window_area
   }
 

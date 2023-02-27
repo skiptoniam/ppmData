@@ -12,3 +12,6 @@
 ^\.github$
 ^LICENSE\.md$
 ^paper$
+^CODE_OF_CONDUCT\.md$
+^README_files
+^README_cache

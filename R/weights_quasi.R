@@ -36,7 +36,6 @@ quasiRandomQuad <- function(npoints,
     stop("No set of background points found for this region.  Please increase the number of possible samples.")
   samp <- samp[1:npoints,]
 
-
   randpoints <- as.data.frame(samp[,1:2])
   colnames(randpoints ) <- coord
 
@@ -74,9 +73,10 @@ quasiRandomWeights <- function(presences,
                                quadrature,
                                window,
                                coord,
-                               species.id,
+                               mark.id,
                                unit,
-                               crs = sf::st_crs("EPSG:4326")){#, returnDirtess){
+                               crs = sf::st_crs("EPSG:4326"),
+                               control){#, returnDirtess){
 
   ## Merge the presences and absences
   allpts.id <- rbind(presences, quadrature)
@@ -90,7 +90,7 @@ quasiRandomWeights <- function(presences,
 
   ## Tracking of site and species ids
   allpts$id <- seq_len(nrow(allpts))
-  allpts$dataset <- allpts.id[,species.id]
+  allpts$dataset <- allpts.id[,mark.id]
 
   ## Do the Dirichlet with me
   dirareas <- getDirichlet(allpts,
@@ -98,7 +98,8 @@ quasiRandomWeights <- function(presences,
                            unit,
                            clippy = TRUE,
                            window,
-                           crs = crs)
+                           crs = crs,
+                           control = control)
 
   ## merge with all pts
   res <- merge(allpts, dirareas$data, by='id', all=TRUE, sort=TRUE)
@@ -106,13 +107,14 @@ quasiRandomWeights <- function(presences,
   return( res)
 }
 
+#'@importFrom stats quantile
 getDirichlet <- function(allpts,
-                         # bbox,
                          coord,
                          unit,
                          clippy = TRUE,
                          window,
-                         crs = sf::st_crs("EPSG:4326")){#}, return_dirtess = TRUE ){
+                         crs = sf::st_crs("EPSG:4326"),
+                         control){#}, return_dirtess = TRUE ){
 
   ## set up the data.frame to catch the results.
   df <- data.frame(id = seq_len(nrow(allpts)), area = NA)
@@ -120,17 +122,32 @@ getDirichlet <- function(allpts,
   ## Run the tessellation
   tess <- dirTess(as.matrix(allpts[,coord]))#, bbox = bbox)
 
-  ## Take my dodgy polys and make them into sf ones.
+
+  if(control$approx){
+  quick_area <- sapply(tess$polygons$poly,function(x)x$area)[seq_len(nrow(allpts))]
+
+  ## remove polygons with very large areas and make them approx equal edge polys
+  approx_area <- quantile(quick_area,0.975)
+
+  quick_area <- ifelse(quick_area>approx_area,approx_area,quick_area)
+
+  df$area <- quick_area
+
+  } else {
+  # Take my dodgy polys and make them into sf ones.
   tess.out <- polygonise(x = tess,
                          window = window,
                          clippy = clippy,
                          crs = crs,
                          unit = unit)
+  # tess.out$polygons.areas[seq_len(nrow(tess$coords))]
 
   df$area <- tess.out$polygons.areas[seq_len(nrow(tess$coords))]
+  }
+
 
   res <- list()
-  res$polygons <- tess.out$polygons
+  # res$polygons <- tess.out$polygons
   res$data <- df
 
   return(res)

@@ -1,16 +1,49 @@
 #' @name ppmData
-#' @title Create a quadrature scheme for spatial point process modelling.
-#' @description This package is a way to efficiently generate a quasi-random set
-#' of background points for presence-only modelling of single or multiple
-#' responses. The package was set up to model multiple species presence-only
-#' data sets, but could be used for an spatial point process modelling.
-#' Quasi-random points are a nice alternative to pseudo-random samples, this is
-#' because we can generate a quasi-random sample across and areal region
-#' (X and Y coordinates). This in turn should reduce autocorrelation in
-#' quadrature scheme. The weight of each quadrature point is calculated using
-#' Dirichlet (Voronoi) Tessellation written in c++. We calculated the duel-graph
-#' of a Delaunay triangulation. The Delaunay triangulation is constructed based
-#' on a radial sweep algorithm.
+#' @description ppmData is a package for setting up quadrature to implement
+#' spatial Poisson Point process models and extensions. The approach uses quasi-
+#' random sampling (Grafston & Tille, 2013, Foster et al., 2018) to generate a
+#' quadrature scheme for numerical approximation of a Poisson point process
+#' model (Berman & Turner 1992; Warton & Shepard 2010). Quasi-random sampling
+#' quadrature are form of spatially-balanced survey design or point
+#' stratification that aims to reduce the frequency of placing samples close to
+#' each other (relative to pseudo-random or grid designs). A quasi-random
+#' quadrature design improves efficiency of background point sampling (and
+#' subsequent modelling) by reducing the amount of spatial auto-correlation
+#' between data implying that each sample is providing as much unique
+#' information as possible (Grafston & Tille, 2013, Foster et al., 2018) and
+#' thus reducing low errors for geostatistical prediction (Diggle & Ribeiro,
+#' 2007). Because the quasi-random design is not on a regular grid we use
+#' Dirichlet tessellation to generate polygons for each point in the quadrature
+#' scheme. Areal weights are then derived from these polygons.
+#'
+#' @author Skipton Woolley <skip.woolley@csiro.au> & Scott Foster <scott.foster@data61.csiro.au>
+#'
+#' @references Diggle, P. J., P. J. Ribeiro, Model-based Geostatistics. Springer Series in Statistics. Springer, 2007.
+#'
+#' Foster, S.D., Monk, J., Lawrence, E., Hayes, K.R., Hosack, G.R. and Przeslawski, R., 2018. Statistical considerations
+#' for monitoring and sampling. Field manuals for marine sampling to monitor Australian waters, pp.23-41.
+#'
+#' Grafstrom, Anton, and Yves Tille. Doubly balanced spatial sampling with spreading and restitution of auxiliary totals.
+#' Environmetrics 24.2 (2013): 120-131.
+#'
+#' Warton, D. I., and L. C. Shepherd. Poisson point process models solve the pseudo-absence problem for presence-only data #'in ecology. The Annals of Applied Statistics 4.3 (2010): 1383-1402.
+#'
+#' @useDynLib "ppmData", .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+
+#' @title Develop a quadrature scheme using quasi-random sampling for spatial
+#' point processes.
+# #' @description This package is a way to efficiently generate a quasi-random set
+# #' of background points for presence-only modelling of single or multiple
+# #' responses. The package was set up to model multiple species presence-only
+# #' data sets, but could be used for an spatial point process modelling.
+# #' Quasi-random points are a nice alternative to pseudo-random samples, this is
+# #' because we can generate a quasi-random sample across and areal region
+# #' (X and Y coordinates). This in turn should reduce autocorrelation in
+# #' quadrature scheme. The weight of each quadrature point is calculated using
+# #' Dirichlet (Voronoi) Tessellation written in c++. We calculated the duel-graph
+# #' of a Delaunay triangulation. The Delaunay triangulation is constructed based
+# #' on a radial sweep algorithm.
 #' @param presences a three column matrix or data.frame object giving the
 #' coordinates of each species' presence in (should be a matrix of nsites * 3)
 #' with the three columns being c("X","Y","SpeciesID"), where X is longitude,
@@ -33,20 +66,28 @@
 #' See Warton & Shepard (2010) or Renner et al., 2015 for useful discussions
 #' on the location and number of quadrature points required to converge a
 #' ppm likelihood.
-#' @param coord Character These are the users name of site coordinates. The default is c('X','Y').
+#' @param coord Character These are the users name of site coordinates. The
+#' default is c('X','Y').
 #' This should match the name of the coordinates in the presences data set.
-#' @param species.id Character This is the column name of the species ID in the presences data set.
-#' The default is "SpeciesID". But this should be changed to match the user's data.
-#' @param quad.method Character The quadrature generation method. Default is "quasi.random" for
-#' quasi-random, "pseudo.random" for pseudo-random (regular random) and "grid" for
-#' a regular grid at a set resolution (with respect to the original window resolution).
+#' @param mark.id Character This is the column name of the mark ID. The default
+#' is "SpeciesID". But this should be changed to match the user's data. If this
+#' column contains multiple "species" then a marked quadrature scheme will be
+#' created.
+#' @param quad.method Character The quadrature generation method. Default is
+#' "quasi.random" for quasi-random, "pseudo.random" for pseudo-random (regular
+#' random) and "grid" for a regular grid at a set resolution (with respect to
+#' the original window resolution).
 #' @param interpolation Character The interpolation method to use when extracting
-#' covariate data at a presence or quadrature location. Default is "bilinear", can also use "simple", this is based
+#' covariate data at a presence or quadrature location. Default is "bilinear",
+#' can also use "simple", this is based
 #' on the terra package  \code{\link[terra]{extract}}.
 #' @param unit Character The type of area to return. The default is "geo" and
 #' returns the area based on the euclidean distance between geographic
 #' coordinates. This will default to the values of the raster and presence
-#' coordinate system. Alternatively, meters squared "m", kilometers squared "km", or hectares "ha" can be used.
+#' coordinate system. Alternatively, meters squared "m", kilometers squared "km"
+#' , or hectares "ha" can be used.
+#' @param na.rm Boolean Remove NA data from covariates. Only works for single
+#' species models.
 #' @param control list A list of control parameters for using ppmData. See
 #' details for uses of control parameters.
 #'
@@ -57,13 +98,15 @@
 #' computational efficiency we have rewritten the Delaunay triangulation and
 #' Dirichlet tessellation in c++ using a sweep algorithm. The control has a
 #' bunch of parameters you can use to tweek the ppmData object.
-##' \itemize{
-##'  \item{quasirandom.samples}{ integer This sets the total number of samples to consider
-#' in the BAS step (rejection sampling). The default is 10000, which means that
-#' 10000 halton numbers are drawn and then thinned according to the inclusion
-#' probabilities. You will need to increase the number of samples if selecting
-#' a large number of quadrature points. The more quasirandomSamples selected the
-#' slower the quasirandom quadrature scheme will be to generate.}
+#' \itemize{
+#'  \item{quasirandom.samples}{ integer This sets the total number of samples
+#'  to consider in the BAS step (rejection sampling). The default is set to NULL
+#'  and the function internally generates 10 times the total number of
+#'  quadrature points needed. This means if 10000 quadrature points are required
+#'  for ppmData, then a halton sequence of 100000 quasi-random numbers are drawn
+#'  and then thinned according to the inclusion probabilities. The more
+#'  quasirandom.samples selected the slower the quasi-random quadrature scheme
+#'  will be to generate.}
 #'  \item{buffer.NA}{ boolean If extract from \code{\link[terra]{extract}}
 #'  returns NA for point extract, do you want us to attempt to user buffer to
 #'  calculate cells which are NA.}
@@ -96,40 +139,41 @@ ppmData <- function(presences,
                     covariates = NULL,
                     npoints = NULL,
                     coord = c('X','Y'),
-                    species.id = "SpeciesID",
+                    mark.id = "SpeciesID",
                     quad.method = c("quasi.random","pseudo.random","grid"),
                     interpolation = c("simple","bilinear"),
                     unit = c("geo","m","km","ha"),
+                    na.rm = FALSE,
                     control = list()){
 
   # default methods
   quad.method <- match.arg(quad.method)
   interp.method <- match.arg(interpolation)
   unit <- match.arg(unit)
-  control <- checkControl(control)
+  control <- checkControl(control, quad.method, unit)
 
-  ## Make sure the column ids are characters and check for missing/wrong named coord/species.id vars.
+  ## Make sure the column ids are characters and check for missing/wrong named coord/mark.id vars.
   if(!is.character(coord)) coord <- as.character(coord)
   if(all(!coord%in%colnames(presences))) stop(paste0('coord: "',coord[1],'" & "',coord[2],'" do not match any of the colnames in the presences data.frame'))
-  if(!is.character(species.id)) species.id <- as.character(species.id)
-  if(all(!species.id%in%colnames(presences))) stop(paste0('species.id: "',species.id,'" does not match any of the colnames in the presences data.frame'))
+  if(!is.character(mark.id)) mark.id <- as.character(mark.id)
+  if(all(!mark.id%in%colnames(presences))) stop(paste0('mark.id: "',mark.id,'" does not match any of the colnames in the presences data.frame'))
 
   # This should check the presences and make it returns the data in the correct format for the remaining function.
   pressies <- checkPresences(known.sites = presences,
                              window = window,
                              coord = coord,
-                             species.id = species.id)
+                             mark.id = mark.id)
 
   # Check for duplicate presences - will remove duplicated points per species.
   pressies <- checkDuplicates(presences = pressies,
                               coord = coord,
-                              species.id = species.id,
+                              mark.id = mark.id,
                               quiet = control$quiet)
 
   ## If npoints in NULL setup a default amount. This is taken from spatstat
   npoints <- checkNumPoints(npoints = npoints,
                            presences = pressies,
-                           species.id = species.id)
+                           mark.id = mark.id)
 
   ## If not window is provided provide a dummy window
   if(is.null(window)) default_window <- TRUE
@@ -142,9 +186,9 @@ ppmData <- function(presences,
   ## grab the crs of the spatial object/window - need this for dirichlet clipping
   crs <- getCRS(window)
 
-  ## Hold onto the species names from the species.id column
+  ## Hold onto the species names from the mark.id column
   sppNames <- getSppNames(presences = pressies,
-                          species.id = species.id)
+                          mark.id = mark.id)
 
   ## Create some quadrature points
   bckpts <- quadMethod(quad.method = quad.method,
@@ -159,7 +203,7 @@ ppmData <- function(presences,
                            bckpts=bckpts,
                            window=window,
                            coord=coord,
-                           species.id = species.id,
+                           mark.id = mark.id,
                            aBit=reswindow/2)
 
   pressies <- tmpPts$pressies
@@ -167,7 +211,7 @@ ppmData <- function(presences,
 
   # Check to see if the presences are for a single species or multiple.
   ismulti <- checkMultispecies(presences = pressies,
-                               species.id = species.id)
+                               mark.id = mark.id)
 
   if(ismulti){
     if(!control$quiet)message("Developing a quadrature scheme for multiple species (marked) dataset.")
@@ -176,18 +220,20 @@ ppmData <- function(presences,
                                     quadrature = quadrature,
                                     window = window,
                                     coord = coord,
-                                    species.id = species.id,
+                                    mark.id = mark.id,
                                     mc.cores = control$mc.cores,
                                     sppNames = sppNames,
                                     unit = unit,
-                                    crs = crs)
+                                    crs = crs,
+                                    control = control)
 
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
                                       interpolation = interpolation,
                                       coord = coord,
                                       buffer.NA = control$buffer.NA,
-                                      buffer.size = control$buffer.size)
+                                      buffer.size = control$buffer.size,
+                                      quiet = control$quiet)
 
     } else {
       if(!control$quiet)message("Developing a quadrature scheme for a single species dataset.")
@@ -196,16 +242,18 @@ ppmData <- function(presences,
                                      quadrature = quadrature,
                                      window = window,
                                      coord = coord,
-                                     species.id = species.id,
+                                     mark.id = mark.id,
                                      unit = unit,
-                                     crs = crs)
+                                     crs = crs,
+                                     control = control)
       # extract the covariate data
       sitecovariates <- getCovariates(pbxy = wts,
                                       covariates = covariates,
                                       interpolation = interpolation,
                                       coord = coord,
                                       buffer.NA = control$buffer.NA,
-                                      buffer.size = control$buffer.size)
+                                      buffer.size = control$buffer.size,
+                                      quiet = control$quiet)
     }
 
   # Assemble data
@@ -214,7 +262,7 @@ ppmData <- function(presences,
                           sitecovariates = sitecovariates,
                           wts = wts,
                           coord = coord,
-                          species.id = species.id,
+                          mark.id = mark.id,
                           sppNames = sppNames)
 
   if(!is.null(covariates)){
@@ -228,16 +276,19 @@ ppmData <- function(presences,
      res$ppmData <- transposePPMdata(dat, sppNames, coordNames, covarNames)
      res$marked <- TRUE
   } else {
-    res$ppmData <- cleanPPMdata(dat)
+    res$ppmData <- cleanWeightsPPMdata(dat)
+    if(na.rm)
+      res$ppmData <- cleanCovariatesPPMdata(res$ppmData)
     res$marked <- FALSE
   }
 
   res$presences.original <- presences
   res$presences.cleaned <- pressies
   res$window <- window
+  res$covariates <- covariates
   res$params <- list(quad.method = quad.method,
                      coord = coord,
-                     species.id = species.id,
+                     mark.id = mark.id,
                      interpolation = interpolation,
                      dw = default_window,
                      control = control)
@@ -248,11 +299,11 @@ ppmData <- function(presences,
   return(res)
 }
 
-jitterIfNeeded <- function( pressiesJ, bckpts, window, coord, species.id, aBit=1e-4){
+jitterIfNeeded <- function( pressiesJ, bckpts, window, coord, mark.id, aBit=1e-4){
   #the pressie bit first
   #are there any duplicates within a species?  If so, then jitter the duplicates
-  for( jj in as.character( unique( pressiesJ[,species.id]))){ #I think that we have made the assumption that this is called SpeciesID...?
-    sppJ <- which(  pressiesJ[,species.id]==jj)
+  for( jj in as.character( unique( pressiesJ[,mark.id]))){ #I think that we have made the assumption that this is called SpeciesID...?
+    sppJ <- which(  pressiesJ[,mark.id]==jj)
     dupes <- which( duplicated( pressiesJ[sppJ,coord]))  #shouldn't need to round this as deldir reportedly uses duplicated
 
     if( length( dupes)>0){
@@ -297,9 +348,9 @@ jitterIfNeeded <- function( pressiesJ, bckpts, window, coord, species.id, aBit=1
   return( list( pressies=data.frame(pressiesJ), bckpts=data.frame(bckpts)))
 }
 
-assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, species.id, sppNames){
+assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, mark.id, sppNames){
 
-  ismulti <- checkMultispecies(presences, species.id)
+  ismulti <- checkMultispecies(presences, mark.id)
 
   if(!ismulti) type <- "long"
   else type <- "wide"
@@ -312,7 +363,7 @@ assembleQuadData <- function(presences, quadrature, sitecovariates, wts, coord, 
                                    quadrature = quadrature,
                                    sitecovariates = sitecovariates, wts = wts,
                                    coord = coord,
-                                   species.id = species.id,
+                                   mark.id = mark.id,
                                    sppNames = sppNames))
 
   return(final_dat)
@@ -328,10 +379,10 @@ longData <- function(wts, sitecovariates=NULL, coord){
   return(dat2)
 }
 
-wideData <- function(presence, quadrature, sitecovariates, wts, coord, species.id, sppNames){
+wideData <- function(presence, quadrature, sitecovariates, wts, coord, mark.id, sppNames){
 
   # Assemble a data.frame with all the bits we want.
-  pamat <- fastWideMatrix(wts, species.id)
+  pamat <- fastWideMatrix(wts, mark.id)
   presences_pamat <- pamat[-which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad'))]
   quad_pamat <- pamat[which(pamat[,"quad"]==0),-which(colnames(pamat)%in%c('quad'))]
   quad_pamat[is.na(quad_pamat)]<-0
@@ -357,27 +408,29 @@ quadMethod <- function(quad.method, npoints, window, coord, control){
                                           control),
                   pseudo.random = pseudoRandomQuad(npoints,
                                             window,
-                                            coord),
+                                            coord,
+                                            control),
                   grid = gridQuad(npoints,
                                   window,
-                                  coord))
+                                  coord,
+                                  control))
   return(quad)
 }
 
-checkNumPoints <- function(npoints, presences, species.id){
+checkNumPoints <- function(npoints, presences, mark.id){
 
   if(is.null(npoints)){
 
     ## Taken from spatstat.
     ## linear scaling of quad points compared to max n presences.
-    npmx <- max(table(presences[,species.id]))
+    npmx <- max(table(presences[,mark.id]))
     nquad <- rep(pmax(32, 10 * ceiling(2 * sqrt(npmx)/10)),2)
     npoints <- prod(nquad)
   }
   return(npoints)
 }
 
-checkControl <- function(control){
+checkControl <- function(control, quad.method, unit){
 
   if (!("quasirandom.samples" %in% names(control)))
     control$quasirandom.samples <- NULL
@@ -389,6 +442,12 @@ checkControl <- function(control){
     control$quiet <- FALSE
   if (!("mc.cores" %in% names(control)))
     control$mc.cores <- 1
+  if (!("mc.cores" %in% names(control)))
+    control$mc.cores <- 1
+  if(quad.method=="quasi.random" && is.null(control$approx) && unit=="geo")
+    control$approx <- TRUE
+  else
+    control$approx <- FALSE
 
   return(control)
 
@@ -399,8 +458,8 @@ checkControl <- function(control){
 checkCovariates <- function(covariates){
 
   if(!is.null(covariates)){
-    if(!inherits(covariates, c('RasterLayer','RasterStack','RasterBrick')))
-      stop("Covariates must be a raster, rasterstack or rasterbrick of covariates which match the spatial window.")
+    if(!inherits(covariates, c('SpatRaster')))
+      stop("Covariates must be a terra SpatRaster of covariates which match the spatial window.")
     covars <- TRUE
   } else {
     covars <- FALSE
@@ -410,27 +469,28 @@ checkCovariates <- function(covariates){
 
 ## check to see if there are duplicated points per species.
 ## duplicated points are allowed across multiple species ala marked points.
-checkDuplicates <- function(presences, coord, species.id, quiet){
+checkDuplicates <- function(presences, coord, mark.id, quiet){
   if(is.null(presences))return(NULL)
   dups <- duplicated(presences)
-  if(sum(dups)>0){ if(!quiet)message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
-  dat <- presences[!dups,]
+  if(sum(dups)>0){
+    if(!quiet)message("There were ",sum(dups)," duplicated points unique to X, Y & SpeciesID, they have been removed.")
+    dat <- presences[!dups,]
   } else {
   dat <- presences
   }
   dat <- as.data.frame(dat)
-  colnames(dat) <- c(coord, species.id)
+  colnames(dat) <- c(coord, mark.id)
   dat
 }
 
 ## check to see if the presences dataset is multispecies.
-checkMultispecies <- function(presences, species.id){
-  if(length(unique(presences[,species.id]))>1) multi <- TRUE
+checkMultispecies <- function(presences, mark.id){
+  if(length(unique(presences[,mark.id]))>1) multi <- TRUE
   else multi <- FALSE
   multi
 }
 
-checkPresences <- function(known.sites, window, coord, species.id){
+checkPresences <- function(known.sites, window, coord, mark.id){
 
   # check for null sites
   if(is.null(known.sites))
@@ -439,14 +499,14 @@ checkPresences <- function(known.sites, window, coord, species.id){
   # check object classes
   expectClass(known.sites, c('matrix','data.frame'))
 
-  if(!any(colnames(known.sites)%in%species.id))
-    stop("'species.id': ",species.id," ,does not match any of the column names in your presences data.\n")
+  if(!any(colnames(known.sites)%in%mark.id))
+    stop("'mark.id': ",mark.id," ,does not match any of the column names in your presences data.\n")
   if(!any(colnames(known.sites)%in%coord))
     stop("The coordinates names: ",paste(coord,collapse = ", ")," do not match any of the column names in your presences data.\n")
 
   # try and sort out factors.
-  known.sites[[species.id]] <- factor(known.sites[[species.id]], levels = unique(known.sites[[species.id]]))
-  df <- known.sites[,c(coord,species.id)]
+  known.sites[[mark.id]] <- factor(known.sites[[mark.id]], levels = unique(known.sites[[mark.id]]))
+  df <- known.sites[,c(coord,mark.id)]
 
   return (df)
 }
@@ -455,7 +515,7 @@ checkPresences <- function(known.sites, window, coord, species.id){
 checkWindow <- function(presences, window, coord, quiet){
 
   if(!is.null(window))
-    expectClass(window,"SpatRaster") #switching to terra (as it appears to be faster)
+    inherits(window,"SpatRaster")#switching to terra (as it appears to be faster)
 
   if (is.null(window)) {
     if(!quiet) message("Window is NULL, a raster-based window will be generated based on the extent of 'presences'.\n")
@@ -465,7 +525,7 @@ checkWindow <- function(presences, window, coord, quiet){
 }
 
 ## A function to clean up the NAs and weights.
-cleanPPMdata <- function(dat){
+cleanWeightsPPMdata <- function(dat){
 
   dat <- dat[complete.cases(dat$weights),]
   dat <- dat[is.finite(dat$weights),]
@@ -474,8 +534,15 @@ cleanPPMdata <- function(dat){
   return(dat)
 }
 
+cleanCovariatesPPMdata <- function(dat){
+
+  dat <- dat[complete.cases(dat),]
+
+  return(dat)
+}
+
 ## function to extract covariates for presence and background points.
-getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA, buffer.size){
+getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA, buffer.size, quiet){
   if(is.null(covariates)){
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
   } else {
@@ -487,7 +554,7 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   if(buffer.NA){
     if(any(!complete.cases(covars))){
-        message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
+        if(!quiet)message('NA cells generated during covariate extraction. Extracting values from nearest (1 step) neighbour -- might be prudent to check imputation (and why it was imputed).')
         missXY <- which(!complete.cases(covars))
         missCoord <- covars[missXY,coord]
         if(is.null(buffer.size)){
@@ -513,11 +580,11 @@ getCRS <- function(window){
 
 }
 
-getSppNames <- function(presences, species.id){
+getSppNames <- function(presences, mark.id){
 
   sppIdx <- list()
-  sppIdx$sppNames <- unique(presences[,species.id])
-  sppIdx$sppNames <- factor(sppIdx$sppNames, levels = unique(presences[,species.id]))
+  sppIdx$sppNames <- unique(presences[,mark.id])
+  sppIdx$sppNames <- factor(sppIdx$sppNames, levels = unique(presences[,mark.id]))
   sppIdx$sppNumber <- seq_along(sppIdx$sppNames)
 
   return(sppIdx)
@@ -550,7 +617,7 @@ defaultWindow <- function (presences, coord) {
 }
 
 
-fastWideMatrix <- function(dat, species.id){
+fastWideMatrix <- function(dat, mark.id){
 
   dat[,"OrigOrder"] <- factor(dat[,"OrigOrder"])
 
@@ -612,7 +679,7 @@ transposePPMdata <- function( dat, sppNames, coordNames, covarNames){
   # expectation z
   dat1$z <- dat1$y / dat1$wts
   dat1$bkg <- apply( dat1$y, 1, function(x) all( x==0))
-  dat1$nspp <- ncol( dat1$wts)
+  dat1$nmark <- ncol( dat1$wts)
   dat1$m <- nrow( dat1$wts)
   dat1$sppNames <- colnames( dat1$wts)
   dat1$nUniquePres <- sum( !dat1$bkg)

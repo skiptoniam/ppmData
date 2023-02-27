@@ -9,7 +9,7 @@ gridWeights(
   quadrature,
   window,
   coord = c("X", "Y"),
-  species.id,
+  mark.id,
   unit = c("geo", "m", "km", "ha")
 )
 }
@@ -23,7 +23,7 @@ and resolution of the point process model.}
 
 \item{coord}{The names of the coordinates. Default is c("X","Y").}
 
-\item{species.id}{character Name of the species ID column}
+\item{mark.id}{character Name of the species ID column}
 
 \item{unit}{The scale of the area weights, default is kilometers squared "km"
 but meters squared "m" or hectars "ha" can be used.}
@@ -42,7 +42,7 @@ path <- system.file("extdata", package = "ppmData")
 lst <- list.files(path=path,pattern='*.tif',full.names = TRUE)
 window <- terra::rast(lst[1])
 presences <- subset(snails,SpeciesID \%in\% "Tasmaphena sinclairi")[,1:2]
-quadrature <- gridQuad(10000,window)
+quadrature <- gridQuad(10000,window,control=list(quiet=FALSE))
 res <- gridWeights(presences,quadrature,window)
 plot(window)
 points(res[res$presence==1,1:2],pch=16,cex=0.5,col='blue')

@@ -176,9 +176,9 @@
     clip.poly <- sf::st_as_sfc(st_bbox(c(bbox[1], bbox[2], bbox[4], bbox[3]), crs = crs))
     # clip.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
     if(!is.null(window)){
-      if(classTrue(window,"SpatRaster"))
+      if(inherits(window,"SpatRaster"))
         clip.poly <- rast_to_sf(window)
-      else if(classTrue(window,"sf"))
+      else if(inherits(window,"sf"))
         clip.poly <- window
       else
         stop("window needs to be a sf polygons or a terra SpatRaster object.")
@@ -223,7 +223,7 @@
 
 "dirichletPolygons" <- function(x, crs = sf::st_crs("EPSG:4326"),...){
 
-  if(class(x)!="dirTess")
+  if(!isa(x,"dirTess"))
     stop("Must be a dirichlet tessellation object from 'dirTess'")
 
   ## extract the polygon lists from cpp object
