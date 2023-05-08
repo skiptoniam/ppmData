@@ -547,10 +547,10 @@ getCovariates <- function(pbxy, covariates=NULL, interpolation, coord, buffer.NA
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord])
   } else {
     covars <- terra::extract(x = covariates,
-                             y = data.frame(X=as.numeric(pbxy[,coord[1]]),
-                                           Y=as.numeric(pbxy[,coord[2]])),
-                             method=interpolation,
-                             na.rm=TRUE)
+                             y = as.matrix(cbind(X=as.numeric(pbxy[,coord[1]]),
+                                                 Y=as.numeric(pbxy[,coord[2]]))),
+                             method=interpolation)#,
+                             # na.rm=TRUE) ## apparently na.rm doesn't work for matrix
     covars <- cbind(SiteID=pbxy[,"SiteID"],pbxy[,coord],covars)
   if(buffer.NA){
     if(any(!complete.cases(covars))){

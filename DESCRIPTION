@@ -24,7 +24,7 @@ Suggests:
     knitr,
     testthat (>= 3.0.0),
     rmarkdown
-Depends: R (>= 4.0.0), terra
+Depends: R (>= 4.0.0), terra (>= 1.7.29)
 Config/testthat/edition: 3
 SystemRequirements: C++11
 NeedsCompilation: yes
