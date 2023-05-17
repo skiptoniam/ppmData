@@ -1,11 +1,11 @@
 Package: ppmData
 Type: Package
-Title: Quasirandom quardature scheme using dirichlet tesselation for spatial Poisson point process models
+Title: Quasi-random Quadrature Scheme using Dirichlet Tessellation for Spatial Poisson Point Process Models
 Version: 1.0.0
 Authors@R: c(person("Skipton", "Woolley", email = "skip.woolley@csiro.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@data61.csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skip.woolley@csiro.au>
-Description: This package generates a set of quasi-random points for a quadrature scheme, we calculate each points weights using a dirichlet tesselation (voronoi) algorithm. The resulting object can be used in existing single and multiple species models in order to extend them to Point Processes.
+Description: Quasi-random sampling to generate a quadrature scheme for Poisson point process models. Quadrature weights are calculate for point using Dirichlet tessellation. The resulting object can be used in existing single and multiple species models in order to extend them to Point Processes.
 License: MIT + file LICENSE
 LazyData: TRUE
 RoxygenNote: 7.2.3

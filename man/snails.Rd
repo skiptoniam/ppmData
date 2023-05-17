@@ -13,7 +13,7 @@ A data frame with columns:
 }
 }
 \source{
-Atlas of Living Australia. \url{http://www.ala.org/}
+Atlas of Living Australia. \url{https://www.ala.org/}
 }
 \usage{
 snails
