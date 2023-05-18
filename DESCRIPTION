@@ -1,7 +1,7 @@
 Package: ppmData
 Type: Package
-Title: Quasi-random Quadrature Scheme using Dirichlet Tessellation for Spatial Poisson Point Process Models
-Version: 1.0.0
+Title: Quasi-Random Quadrature Scheme using Dirichlet Tessellation for Spatial Poisson Point Process Models
+Version: 1.0.1
 Authors@R: c(person("Skipton", "Woolley", email = "skip.woolley@csiro.au", role = c("aut", "cre")),
              person("Scott", "Foster", email = "scott.foster@data61.csiro.au", role = c("aut")))
 Maintainer: Skipton Woolley <skip.woolley@csiro.au>
@@ -26,7 +26,6 @@ Suggests:
     rmarkdown
 Depends: R (>= 4.0.0), terra (>= 1.7.29)
 Config/testthat/edition: 3
-SystemRequirements: C++11
 NeedsCompilation: yes
 VignetteBuilder: knitr
 LinkingTo: 
