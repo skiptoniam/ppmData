@@ -114,40 +114,47 @@ getDirichlet <- function(allpts,
                          clippy = TRUE,
                          window,
                          crs = sf::st_crs("EPSG:4326"),
-                         control){#}, return_dirtess = TRUE ){
+                         control){
 
   ## set up the data.frame to catch the results.
-  df <- data.frame(id = seq_len(nrow(allpts)), area = NA)
-
-  ## Run the tessellation
-  tess <- dirTess(as.matrix(allpts[,coord]))#, bbox = bbox)
-
+  npts <- nrow(allpts)
+  df <- data.frame(id = seq_len(npts), area = NA)
 
   if(control$approx){
-  quick_area <- sapply(tess$polygons$poly,function(x)x$area)[seq_len(nrow(allpts))]
+    ## Run the tessellation (unclipped, fast approximate areas)
+    tess <- dirTess(as.matrix(allpts[,coord]))
+    quick_area <- sapply(tess$polygons$poly,function(x)x$area)[seq_len(npts)]
 
-  ## remove polygons with very large areas and make them approx equal edge polys
-  approx_area <- quantile(quick_area,0.975)
-
-  quick_area <- ifelse(quick_area>approx_area,approx_area,quick_area)
-
-  df$area <- quick_area
+    ## remove polygons with very large areas and make them approx equal edge polys
+    approx_area <- quantile(quick_area,0.975)
+    quick_area <- ifelse(quick_area>approx_area,approx_area,quick_area)
+    df$area <- quick_area
 
   } else {
-  # Take my dodgy polys and make them into sf ones.
-  tess.out <- polygonise(x = tess,
-                         window = window,
-                         clippy = clippy,
-                         crs = crs,
-                         unit = unit)
-  # tess.out$polygons.areas[seq_len(nrow(tess$coords))]
+    ## C++ fast path: tessellate + clip in one call
+    pts <- as.matrix(allpts[,coord])
 
-  df$area <- tess.out$polygons.areas[seq_len(nrow(tess$coords))]
+    # Add dummy points (same logic as dirTess)
+    bbox_dummy <- get_bbox(pts, buffer = 0.05)
+    dummycoords <- get_bbox_dummy_coords(pts, bbox_dummy, n = 9)
+    pts_with_dummy <- rbind(pts, dummycoords)
+
+    # Extract clip polygon parts from window
+    clip_parts <- get_clip_polygon(window)
+
+    areas <- dirtess_clip_areas_cpp(
+      coords             = as.numeric(t(pts_with_dummy)),
+      ncoords            = npts,
+      parts_outer_x      = lapply(clip_parts, `[[`, "outer_x"),
+      parts_outer_y      = lapply(clip_parts, `[[`, "outer_y"),
+      parts_hole_x_list  = lapply(clip_parts, `[[`, "hole_x"),
+      parts_hole_y_list  = lapply(clip_parts, `[[`, "hole_y")
+    )
+
+    df$area <- as.numeric(areas)
   }
 
-
   res <- list()
-  # res$polygons <- tess.out$polygons
   res$data <- df
 
   return(res)

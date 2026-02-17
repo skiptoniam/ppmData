@@ -120,6 +120,58 @@
 }
 
 
+# Extract clip polygon coordinates from a SpatRaster or sf window.
+# Returns a list of polygon parts. Each part is a list with
+# outer_x, outer_y, hole_x (list), hole_y (list).
+# Strips closing vertex so polygons are open rings.
+# Supports MULTIPOLYGON windows by returning all parts.
+get_clip_polygon <- function(window) {
+
+  if (inherits(window, "SpatRaster")) {
+    sf_poly <- rast_to_sf(window)
+  } else if (inherits(window, "sf") || inherits(window, "sfc")) {
+    sf_poly <- window
+  } else {
+    stop("window must be a SpatRaster or sf object")
+  }
+
+  # Union all geometries into one
+  geom <- sf::st_union(sf::st_geometry(sf_poly))
+
+  # Cast to individual POLYGONs (handles both POLYGON and MULTIPOLYGON)
+  polygons <- sf::st_cast(geom, "POLYGON")
+
+  # Extract each polygon part
+  parts <- lapply(polygons, function(poly) {
+    coords <- sf::st_coordinates(sf::st_sfc(poly))
+
+    # Outer ring: L1 == 1
+    outer_idx <- coords[, "L1"] == 1
+    outer <- coords[outer_idx, , drop = FALSE]
+    n_outer <- nrow(outer)
+    outer_x <- as.numeric(outer[-n_outer, "X"])
+    outer_y <- as.numeric(outer[-n_outer, "Y"])
+
+    # Hole rings: L1 > 1
+    ring_ids <- unique(coords[, "L1"])
+    hole_ids <- ring_ids[ring_ids > 1]
+    hole_x <- lapply(hole_ids, function(id) {
+      h <- coords[coords[, "L1"] == id, , drop = FALSE]
+      as.numeric(h[-nrow(h), "X"])
+    })
+    hole_y <- lapply(hole_ids, function(id) {
+      h <- coords[coords[, "L1"] == id, , drop = FALSE]
+      as.numeric(h[-nrow(h), "Y"])
+    })
+
+    list(outer_x = outer_x, outer_y = outer_y,
+         hole_x = hole_x, hole_y = hole_y)
+  })
+
+  parts
+}
+
+
 #'plot a Dirichlet tessellation
 #'@param x dirTess object
 #'@param \\dots Additional plotting arguments
@@ -167,22 +219,61 @@
 #' @export
 "polygonise.dirTess" <- function(x, window=NULL, clippy=TRUE, crs = sf::st_crs("EPSG:4326"), unit="geo", ...){
 
-  # convert the vector of coordinates per polygon into polygons
   bbox <- x$bbox
   res <- list()
+
+  # C++ fast path: clip via Sutherland-Hodgman when window is provided
+  if (clippy && !is.null(window)) {
+    clip_parts <- get_clip_polygon(window)
+
+    pts_with_dummy <- rbind(x$coords, x$dummy.coords)
+    coords_interleaved <- as.numeric(t(pts_with_dummy))
+
+    cpp_res <- dirtess_clip_cpp(
+      coords             = coords_interleaved,
+      ncoords            = x$ncoords,
+      parts_outer_x      = lapply(clip_parts, `[[`, "outer_x"),
+      parts_outer_y      = lapply(clip_parts, `[[`, "outer_y"),
+      parts_hole_x_list  = lapply(clip_parts, `[[`, "hole_x"),
+      parts_hole_y_list  = lapply(clip_parts, `[[`, "hole_y")
+    )
+
+    # Build sf polygons from the C++ output
+    sfpoly_list <- list()
+    valid_ids <- integer(0)
+    for (i in seq_len(x$ncoords)) {
+      outer <- cpp_res$polygons[[i]]$outer
+      holes <- cpp_res$polygons[[i]]$holes
+      if (nrow(outer) < 4) next  # need at least 3 vertices + closing
+      ring_list <- list(outer)
+      if (length(holes) > 0) {
+        for (h in seq_along(holes)) {
+          if (nrow(holes[[h]]) >= 4) ring_list <- c(ring_list, list(holes[[h]]))
+        }
+      }
+      sfpoly_list <- c(sfpoly_list, list(sf::st_polygon(ring_list)))
+      valid_ids <- c(valid_ids, i)
+    }
+
+    sfc_poly <- sf::st_sfc(sfpoly_list, crs = crs)
+    sf_polys <- sf::st_sf(geometry = sfc_poly)
+    sf_polys$id <- valid_ids
+
+    polygon.clipped.areas <- switch(unit,
+      geo = cpp_res$areas[valid_ids],
+      m   = as.numeric(sf::st_area(sf_polys)),
+      km  = as.numeric(sf::st_area(sf_polys)) / 1e6,
+      ha  = as.numeric(sf::st_area(sf_polys)) / 1e4)
+
+    res$polygons <- sf_polys
+    res$polygons.areas <- polygon.clipped.areas
+    return(res)
+  }
+
+  # Original sf path
   tes.polys <- dirichletPolygons(x = x, crs = crs)
-  # res$polygons <- tes.polys
   if(clippy){
     clip.poly <- sf::st_as_sfc(st_bbox(c(bbox[1], bbox[2], bbox[4], bbox[3]), crs = crs))
-    # clip.poly <- rgeos::bbox2SP(bbox[4],bbox[3],bbox[1],bbox[2],proj4string = proj)
-    if(!is.null(window)){
-      if(inherits(window,"SpatRaster"))
-        clip.poly <- rast_to_sf(window)
-      else if(inherits(window,"sf"))
-        clip.poly <- window
-      else
-        stop("window needs to be a sf polygons or a terra SpatRaster object.")
-    }
 
     ## get the intersection between the two polygons
     tes.clip <- suppressWarnings(sf::st_intersection(tes.polys,clip.poly))
@@ -192,7 +283,6 @@
                                      m = as.numeric(sf::st_area(tes.clip)),
                                      km = as.numeric(sf::st_area(tes.clip))/1e6,
                                      ha = as.numeric(sf::st_area(tes.clip))/1e4)
-    # polygon.clipped.areas <- suppressWarnings(st_area(tes.clip))
     res$polygons <- tes.clip
     res$polygons.areas <- polygon.clipped.areas
   } else {

@@ -7,7 +7,10 @@
 #' @param pch.cols Vector of point shapes
 #' @param pchs Vector of pch codes
 #' @param plt.legend boolean plot the legend or not, default is TRUE.
+#' @param tessellation boolean If TRUE, overlay the Dirichlet tessellation on the plot. Default is FALSE.
+#' @param tess.col Colour of the tessellation polygon borders. Default is gray(0.3, 0.5).
 #' @param \\dots Ignored
+#' @importFrom sf st_geometry
 #' @export
 
 
@@ -18,7 +21,9 @@ plot.ppmData <- function(x,
                                    "#E7298A","#E6AB02",
                                    "#A6761D","#666666"),
                          pchs = 15:20,
-                         plt.legend=TRUE, ...){
+                         plt.legend=TRUE,
+                         tessellation=FALSE,
+                         tess.col=gray(0.3, 0.5), ...){
 
 
   # op <- graphics::par(no.readonly = TRUE)
@@ -78,6 +83,21 @@ plot.ppmData <- function(x,
            xpd = TRUE, horiz = TRUE, inset = c(0, -0.2),
            bty="n")
     }
+  }
+
+  if(tessellation){
+    coord <- x$params$coord
+    if(x$marked){
+      all_pts <- rbind(as.matrix(marks[, coord]),
+                       as.matrix(quad))
+    } else {
+      all_pts <- rbind(as.matrix(pressies[, coord]),
+                       as.matrix(quad))
+    }
+    crs <- getCRS(x$window)
+    tess <- dirTess(all_pts)
+    tess_polys <- polygonise(tess, window = x$window, clippy = TRUE, crs = crs)
+    plot(sf::st_geometry(tess_polys$polygons), border = tess.col, col = NA, add = TRUE)
   }
 
 }

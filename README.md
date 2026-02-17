@@ -70,7 +70,16 @@ points are generated using a quasi-random areal sample.
 plot(ppmdata1)
 ```
 
-<img src="README_files/figure-gfm/fig1-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/fig1-1.png" alt="" style="display: block; margin: auto;" />
+
+You can now also plot the underlying tessellation
+
+``` r
+plot(ppmdata1,tessellation=TRUE)
+```
+
+<img src="README_files/figure-gfm/fig2-1.png" alt="" style="display: block; margin: auto;" />
+
 Once the `ppmData` object has been set up it is quiet easy to fit a
 point process model in R. You can use something like `glm`, `gam` or
 even convert the `ppmData` object to work directly with `spatstat::ppm`.
@@ -123,7 +132,7 @@ system.time(ppmdata2 <- ppmData(npoints = 100000,
     ## There are a total of 100045 sites in the model.matrix
 
     ##    user  system elapsed 
-    ##   4.355   0.024   4.382
+    ##   8.469   0.086   8.562
 
 Using a spatstat to generate a quasi-random scheme for the snails
 dataset.
@@ -138,7 +147,7 @@ system.time(Q <- quadscheme(snails_ppp,D,method="dirichlet", exact=FALSE))
 ```
 
     ##    user  system elapsed 
-    ## 258.793   0.507 259.491
+    ## 410.971   1.049 412.430
 
 ## Code of Conduct
 

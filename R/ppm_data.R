@@ -444,9 +444,7 @@ checkControl <- function(control, quad.method, unit){
     control$mc.cores <- 1
   if (!("mc.cores" %in% names(control)))
     control$mc.cores <- 1
-  if(quad.method=="quasi.random" && is.null(control$approx) && unit=="geo")
-    control$approx <- TRUE
-  else
+  if(is.null(control$approx))
     control$approx <- FALSE
 
   return(control)

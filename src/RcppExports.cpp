@@ -10,6 +10,21 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// clip_polygon_to_bbox
+List clip_polygon_to_bbox(NumericMatrix coords, double xmin, double xmax, double ymin, double ymax);
+RcppExport SEXP _ppmData_clip_polygon_to_bbox(SEXP coordsSEXP, SEXP xminSEXP, SEXP xmaxSEXP, SEXP yminSEXP, SEXP ymaxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type coords(coordsSEXP);
+    Rcpp::traits::input_parameter< double >::type xmin(xminSEXP);
+    Rcpp::traits::input_parameter< double >::type xmax(xmaxSEXP);
+    Rcpp::traits::input_parameter< double >::type ymin(yminSEXP);
+    Rcpp::traits::input_parameter< double >::type ymax(ymaxSEXP);
+    rcpp_result_gen = Rcpp::wrap(clip_polygon_to_bbox(coords, xmin, xmax, ymin, ymax));
+    return rcpp_result_gen;
+END_RCPP
+}
 // deltri_cpp
 Rcpp::List deltri_cpp(std::vector<double> coords);
 RcppExport SEXP _ppmData_deltri_cpp(SEXP coordsSEXP) {
@@ -44,11 +59,58 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// matrices_to_polygons
+List matrices_to_polygons(List matrices);
+RcppExport SEXP _ppmData_matrices_to_polygons(SEXP matricesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type matrices(matricesSEXP);
+    rcpp_result_gen = Rcpp::wrap(matrices_to_polygons(matrices));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dirtess_clip_areas_cpp
+NumericVector dirtess_clip_areas_cpp(std::vector<double> coords, int ncoords, Rcpp::List parts_outer_x, Rcpp::List parts_outer_y, Rcpp::List parts_hole_x_list, Rcpp::List parts_hole_y_list);
+RcppExport SEXP _ppmData_dirtess_clip_areas_cpp(SEXP coordsSEXP, SEXP ncoordsSEXP, SEXP parts_outer_xSEXP, SEXP parts_outer_ySEXP, SEXP parts_hole_x_listSEXP, SEXP parts_hole_y_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type coords(coordsSEXP);
+    Rcpp::traits::input_parameter< int >::type ncoords(ncoordsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_outer_x(parts_outer_xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_outer_y(parts_outer_ySEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_hole_x_list(parts_hole_x_listSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_hole_y_list(parts_hole_y_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(dirtess_clip_areas_cpp(coords, ncoords, parts_outer_x, parts_outer_y, parts_hole_x_list, parts_hole_y_list));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dirtess_clip_cpp
+Rcpp::List dirtess_clip_cpp(std::vector<double> coords, int ncoords, Rcpp::List parts_outer_x, Rcpp::List parts_outer_y, Rcpp::List parts_hole_x_list, Rcpp::List parts_hole_y_list);
+RcppExport SEXP _ppmData_dirtess_clip_cpp(SEXP coordsSEXP, SEXP ncoordsSEXP, SEXP parts_outer_xSEXP, SEXP parts_outer_ySEXP, SEXP parts_hole_x_listSEXP, SEXP parts_hole_y_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type coords(coordsSEXP);
+    Rcpp::traits::input_parameter< int >::type ncoords(ncoordsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_outer_x(parts_outer_xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_outer_y(parts_outer_ySEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_hole_x_list(parts_hole_x_listSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parts_hole_y_list(parts_hole_y_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(dirtess_clip_cpp(coords, ncoords, parts_outer_x, parts_outer_y, parts_hole_x_list, parts_hole_y_list));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_ppmData_clip_polygon_to_bbox", (DL_FUNC) &_ppmData_clip_polygon_to_bbox, 5},
     {"_ppmData_deltri_cpp", (DL_FUNC) &_ppmData_deltri_cpp, 1},
     {"_ppmData_dirtess_poly_area", (DL_FUNC) &_ppmData_dirtess_poly_area, 2},
     {"_ppmData_dirtess_cpp", (DL_FUNC) &_ppmData_dirtess_cpp, 1},
+    {"_ppmData_matrices_to_polygons", (DL_FUNC) &_ppmData_matrices_to_polygons, 1},
+    {"_ppmData_dirtess_clip_areas_cpp", (DL_FUNC) &_ppmData_dirtess_clip_areas_cpp, 6},
+    {"_ppmData_dirtess_clip_cpp", (DL_FUNC) &_ppmData_dirtess_clip_cpp, 6},
     {NULL, NULL, 0}
 };
 
